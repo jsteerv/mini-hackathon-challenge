@@ -250,3 +250,68 @@ This will create three folders in `trees/` - `simple-cli-1`, `simple-cli-2`, and
 Claude Code will now kick off multiple agents in parallel tackling different versions of the same feature. Each version will be different simply because LLMs are not deterministic. The instructions are the same for each worktree, but the output will always be different for more than extremely simple features.
 
 5. The process for merging back into main and cleaning up the worktrees is the same as before.
+
+---
+
+## ✅ BONUS PHASE 11: CLAUDE CODE HOOKS
+
+Claude Code Hooks are a powerful feature that allows you to configure shell commands that execute automatically in response to specific events during Claude Code tool calls. This is particularly useful when combined with Git actions for automated workflows.
+
+### Setting Up Hooks
+
+1. **Create a settings file** (if it doesn't exist):
+```bash
+mkdir -p ~/.config/claude-code/
+touch ~/.config/claude-code/settings.json
+```
+
+2. **Configure hooks in your settings.json**:
+```json
+{
+  "hooks": {
+    "beforeToolCall": {
+      "command": "echo 'About to execute: $TOOL_NAME'",
+      "enabled": true
+    },
+    "afterToolCall": {
+      "command": "git status",
+      "enabled": true
+    },
+    "beforeGitCommit": {
+      "command": "npm run lint && npm run test",
+      "enabled": true
+    }
+  }
+}
+```
+
+### Common Hook Use Cases
+
+- **Pre-commit validation**: Run linting, formatting, or tests before commits
+- **Post-commit actions**: Trigger deployments or notifications
+- **File monitoring**: Watch for changes and trigger rebuilds
+- **Security scanning**: Automatically scan code changes
+
+### Example: Automated Testing Hook
+
+```json
+{
+  "hooks": {
+    "beforeGitCommit": {
+      "command": "python -m pytest tests/ && python -m flake8 .",
+      "enabled": true,
+      "description": "Run tests and linting before commits"
+    }
+  }
+}
+```
+
+This ensures your code is always tested and properly formatted before being committed by Claude Code.
+
+### Managing Hooks
+
+- Use `claude config hooks list` to see configured hooks
+- Use `claude config hooks disable <hook-name>` to temporarily disable
+- Use `claude config hooks enable <hook-name>` to re-enable
+
+Hooks make Claude Code even more powerful by automating your development workflow and ensuring code quality standards are maintained throughout your Git operations.
