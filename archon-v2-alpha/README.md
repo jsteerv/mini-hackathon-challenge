@@ -47,7 +47,7 @@ SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_KEY=your-service-key-here
 ```
 
-## Step 1: Initial Setup - Enable RAG Crawl and Document Upload
+## Initial Setup
 
 1. **Set Up Database**: In your [Supabase project](https://supabase.com/dashboard) SQL Editor, run:
    ```sql
@@ -70,58 +70,20 @@ SUPABASE_SERVICE_KEY=your-service-key-here
    - Go to **Settings** → Add your OpenAI API key
    - Test by uploading a document or crawling a website
 
-## Step 2: Install Projects Module
-
-1. **Add Project Management**: In Supabase SQL Editor, run:
-   ```sql
-   -- Copy and paste the contents of migration/2_archon_projects.sql
-   ```
-
-2. **Restart Services**:
-   ```bash
-   docker-compose restart Archon-FastAPI Archon-MCP Archon-Agents
-   ```
-
-3. **Enable Projects Feature**:
-   - Go to **Settings** in the web interface
-   - Toggle **"Enable Projects Feature"** to ON
-   - Access projects at http://localhost:3737/projects
-
-## Step 3: Enable MCP Client Management (Optional)
-
-1. **Add MCP Client Features**: In Supabase SQL Editor, run:
-   ```sql
-   -- Copy and paste the contents of migration/3_mcp_client_management.sql
-   ```
-
-2. **Restart Services**:
-   ```bash
-   docker-compose restart
-   ```
-
-3. **Configure MCP Clients**:
-   - Access MCP Dashboard at http://localhost:3737/mcp
-   - Add and manage MCP client connections
-
-## 🔄 Database Reset (Start Fresh)
+## 🔄 Database Reset (Start Fresh if Needed)
 
 If you need to completely reset your database and start fresh:
 
 <details>
-<summary>⚠️ <strong>Reset Database - This will delete ALL data!</strong></summary>
+<summary>⚠️ <strong>Reset Database - This will delete ALL data for Archon!</strong></summary>
 
 1. **Run Reset Script**: In your Supabase SQL Editor, run:
    ```sql
    -- Copy and paste the contents of migration/RESET_DB.sql
-   -- ⚠️ WARNING: This will delete all data!
+   -- ⚠️ WARNING: This will delete all data for ARchon!
    ```
 
-2. **Rebuild Database**: After reset, run the migration files in order:
-   ```sql
-   -- Step 1: Run migration/1_initial_setup.sql
-   -- Step 2: Run migration/2_archon_projects.sql
-   -- Step 3: Run migration/3_mcp_client_management.sql (optional)
-   ```
+2. **Rebuild Database**: After reset, run `migration/complete_setup.sql` to create all the tables again:
 
 3. **Restart Services**:
    ```bash
@@ -136,31 +98,6 @@ If you need to completely reset your database and start fresh:
 The reset script safely removes all tables, functions, triggers, and policies with proper dependency handling.
 
 </details>
-
-## 🔌 Connecting to Cursor IDE
-
-Add this configuration to your Cursor settings:
-
-**File**: `~/.cursor/mcp.json`
-
-```json
-{
-  "mcpServers": {
-    "archon": {
-      "command": "docker",
-      "args": [
-        "exec", 
-        "-i",
-        "-e", "TRANSPORT=stdio",
-        "-e", "HOST=localhost", 
-        "-e", "PORT=8051",
-        "archon-api",
-        "python", "src/mcp_server.py"
-      ]
-    }
-  }
-}
-```
 
 ## 📚 Documentation
 
