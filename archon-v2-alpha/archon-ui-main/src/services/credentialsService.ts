@@ -43,7 +43,7 @@ class CredentialsService {
   private getApiBaseUrl() {
     const protocol = window.location.protocol;
     const host = window.location.hostname;
-    const port = '8080'; // Backend API port
+    const port = import.meta.env.ARCHON_SERVER_PORT || '8181'; // Backend API port
     return `${protocol}//${host}:${port}`;
   }
 

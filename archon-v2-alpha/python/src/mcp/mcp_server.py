@@ -65,7 +65,7 @@ _initialization_complete = False
 _shared_context = None
 
 server_host = "0.0.0.0"  # Listen on all interfaces
-server_port = 8051       # Fixed port
+server_port = int(os.getenv("ARCHON_MCP_PORT", "8051"))  # Configurable port
 
 @dataclass
 class ArchonContext:
@@ -184,7 +184,7 @@ try:
         description="MCP server for Archon - uses HTTP calls to other services",
         lifespan=lifespan,
         host=server_host,
-        port=8000
+        port=server_port
     )
     logger.info(f"✓ FastMCP server instance created successfully")
     

@@ -15,7 +15,7 @@ export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
   // Get host and port from environment variables or use defaults
   // In Docker, we need to use the service name, not localhost
   const host = 'archon-server';  // Docker service name (matches docker-compose.yml)
-  const port = '8080';
+  const port = process.env.ARCHON_SERVER_PORT || '8181';
   
   return {
     plugins: [

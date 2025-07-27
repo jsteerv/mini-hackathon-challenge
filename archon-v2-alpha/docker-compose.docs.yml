@@ -9,7 +9,7 @@ services:
       dockerfile: Dockerfile
     container_name: Archon-Docs
     ports:
-      - "3838:80"
+      - "${ARCHON_DOCS_PORT:-3838}:80"
     networks:
       - app-network
 

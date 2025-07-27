@@ -27,9 +27,9 @@ class ServiceDiscovery:
     
     # Default service ports
     DEFAULT_PORTS = {
-        "api": 8080,
-        "mcp": 8051,
-        "agents": 8052
+        "api": int(os.getenv("ARCHON_SERVER_PORT", "8181")),
+        "mcp": int(os.getenv("ARCHON_MCP_PORT", "8051")),
+        "agents": int(os.getenv("ARCHON_AGENTS_PORT", "8052"))
     }
     
     # Service name mappings

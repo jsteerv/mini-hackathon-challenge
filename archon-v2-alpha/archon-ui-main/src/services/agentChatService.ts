@@ -68,7 +68,7 @@ class AgentChatService {
   private getWebSocketUrl(sessionId: string): string {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.hostname;
-    const port = '8080'; // Backend WebSocket port
+    const port = import.meta.env.ARCHON_SERVER_PORT || '8181'; // Backend WebSocket port
     return `${protocol}//${host}:${port}/api/agent-chat/sessions/${sessionId}/ws`;
   }
 

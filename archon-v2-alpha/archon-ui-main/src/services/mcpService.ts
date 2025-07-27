@@ -485,7 +485,7 @@ class MCPService {
     }
 
     const config = await this.getConfiguration();
-    const mcpUrl = `http://${config.host}:${config.port}/${config.transport}`;
+    const mcpUrl = `http://${config.host}:${config.port}/mcp`;
     
     // Generate unique request ID
     const id = Math.random().toString(36).substring(2);

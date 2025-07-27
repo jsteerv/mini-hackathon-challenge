@@ -60,10 +60,10 @@ SUPABASE_SERVICE_KEY=your-service-key-here
    ```
    
    This starts the core microservices:
-   - **Archon-MCP**: Lightweight MCP server (Port 8051)
-   - **Archon-FastAPI**: Web crawling & document processing (Port 8080)
-   - **Archon-Agents**: AI/ML operations & reranking (Port 8052)
-   - **Archon-UI**: Web interface (Port 3737)
+   - **Archon-MCP**: Lightweight MCP server (Default Port: 8051)
+   - **Archon-FastAPI**: Web crawling & document processing (Default Port: 8181)
+   - **Archon-Agents**: AI/ML operations & reranking (Default Port: 8052)
+   - **Archon-UI**: Web interface (Default Port: 3737)
 
 3. **Configure API Key**:
    - Open http://localhost:3737
@@ -103,10 +103,10 @@ The reset script safely removes all tables, functions, triggers, and policies wi
 
 ### Core Services
 
-| Service | Container Name | URL | Purpose |
-|---------|---------------|-----|---------|
+| Service | Container Name | Default URL | Purpose |
+|---------|---------------|-------------|---------|
 | **Web Interface** | Archon-UI | http://localhost:3737 | Main dashboard and controls |
-| **API Service** | Archon-FastAPI | http://localhost:8080 | Web crawling, document processing |
+| **API Service** | Archon-FastAPI | http://localhost:8181 | Web crawling, document processing |
 | **MCP Server** | Archon-MCP | http://localhost:8051 | Model Context Protocol interface |
 | **Agents Service** | Archon-Agents | http://localhost:8052 | AI/ML operations, reranking |
 
@@ -145,6 +145,39 @@ Archon uses a true microservices architecture with:
 - **Service separation**: Each service has only its required dependencies
 - **HTTP-based communication**: Services communicate via internal REST APIs
 - **Optimized containers**: 50-90% size reduction compared to monolithic approach
+
+## 🔧 Configuring Custom Ports
+
+By default, Archon services run on the following ports:
+- **Archon-UI**: 3737
+- **Archon-Server**: 8181  
+- **Archon-MCP**: 8051
+- **Archon-Agents**: 8052
+- **Archon-Docs**: 3838 (optional)
+
+### Changing Ports
+
+To use custom ports, add these variables to your `.env` file:
+
+```bash
+# Service Ports Configuration
+ARCHON_UI_PORT=3737
+ARCHON_SERVER_PORT=8181
+ARCHON_MCP_PORT=8051
+ARCHON_AGENTS_PORT=8052
+ARCHON_DOCS_PORT=3838
+```
+
+Example: Running on different ports:
+```bash
+ARCHON_SERVER_PORT=8282
+ARCHON_MCP_PORT=8151
+```
+
+After changing ports:
+1. Restart Docker containers: `docker-compose down && docker-compose up -d`
+2. Access the UI at your custom port: `http://localhost:${ARCHON_UI_PORT}`
+3. Update your AI client configuration with the new MCP port
 
 ## 🔧 Development
 

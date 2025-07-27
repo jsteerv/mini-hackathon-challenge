@@ -600,10 +600,14 @@ async def get_mcp_config():
         try:
             api_logger.info("Getting MCP server configuration")
             
-            # Fixed configuration for SSE-only mode
+            # Get actual MCP port from environment or use default
+            import os
+            mcp_port = int(os.getenv('ARCHON_MCP_PORT', '8051'))
+            
+            # Configuration for SSE-only mode with actual port
             config = {
                 'host': 'localhost',
-                'port': 8051,
+                'port': mcp_port,
                 'transport': 'sse',
             }
             

@@ -179,7 +179,7 @@ export const DocsTab = ({
     
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:8080/api/projects/${project.id}`);
+      const response = await fetch(`/api/projects/${project.id}`);
       if (!response.ok) throw new Error('Failed to load project documents');
       
       const data = await response.json();
@@ -231,7 +231,7 @@ export const DocsTab = ({
       setIsSaving(true);
       
       // Get current project data
-      const projectResponse = await fetch(`http://localhost:8080/api/projects/${project.id}`);
+      const projectResponse = await fetch(`/api/projects/${project.id}`);
       if (!projectResponse.ok) throw new Error('Failed to load project');
       
       const projectData = await projectResponse.json();
@@ -241,7 +241,7 @@ export const DocsTab = ({
       const updatedDocs = [...currentDocs, newDoc];
 
       // Save updated docs back to project
-      const response = await fetch(`http://localhost:8080/api/projects/${project.id}`, {
+      const response = await fetch(`/api/projects/${project.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ docs: updatedDocs })
@@ -268,7 +268,7 @@ export const DocsTab = ({
       setIsSaving(true);
       
       // Get current project data
-      const projectResponse = await fetch(`http://localhost:8080/api/projects/${project.id}`);
+      const projectResponse = await fetch(`/api/projects/${project.id}`);
       if (!projectResponse.ok) throw new Error('Failed to load project');
       
       const projectData = await projectResponse.json();
@@ -283,7 +283,7 @@ export const DocsTab = ({
       );
 
       // Save updated docs back to project
-      const response = await fetch(`http://localhost:8080/api/projects/${project.id}`, {
+      const response = await fetch(`/api/projects/${project.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ docs: updatedDocs })
@@ -293,7 +293,7 @@ export const DocsTab = ({
       
       // Create a version entry specifically for this document change
       try {
-        await fetch(`http://localhost:8080/api/projects/${project.id}/versions`, {
+        await fetch(`/api/projects/${project.id}/versions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -328,7 +328,7 @@ export const DocsTab = ({
     if (!project?.id) return;
     
     try {
-      const response = await fetch(`http://localhost:8080/api/projects/${project.id}`);
+      const response = await fetch(`/api/projects/${project.id}`);
       if (!response.ok) throw new Error('Failed to load project data');
       
       const projectData = await response.json();
@@ -602,7 +602,7 @@ export const DocsTab = ({
                 setIsSaving(true);
                 
                 // Get current project data to update docs array
-                const projectResponse = await fetch(`http://localhost:8080/api/projects/${project?.id}`);
+                const projectResponse = await fetch(`/api/projects/${project?.id}`);
                 if (!projectResponse.ok) throw new Error('Failed to load project');
                 
                 const projectData = await projectResponse.json();
@@ -614,7 +614,7 @@ export const DocsTab = ({
                 );
 
                 // Save updated docs back to project using FastAPI
-                const response = await fetch(`http://localhost:8080/api/projects/${project?.id}`, {
+                const response = await fetch(`/api/projects/${project?.id}`, {
                   method: 'PUT',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ docs: updatedDocs })
