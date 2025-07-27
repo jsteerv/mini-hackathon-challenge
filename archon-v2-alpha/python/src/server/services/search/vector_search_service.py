@@ -95,7 +95,7 @@ def search_documents(
                 filtered_results = []
                 if response.data:
                     for result in response.data:
-                        similarity = result.get("similarity", 0.0)
+                        similarity = float(result.get("similarity", 0.0))
                         if similarity >= SIMILARITY_THRESHOLD:
                             filtered_results.append(result)
                 
@@ -203,7 +203,7 @@ async def search_documents_async(
                 filtered_results = []
                 if response.data:
                     for result in response.data:
-                        similarity = result.get("similarity", 0.0)
+                        similarity = float(result.get("similarity", 0.0))
                         if similarity >= SIMILARITY_THRESHOLD:
                             filtered_results.append(result)
                 
