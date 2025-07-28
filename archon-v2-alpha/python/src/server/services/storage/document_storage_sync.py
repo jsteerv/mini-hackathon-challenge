@@ -22,7 +22,7 @@ def add_documents_to_supabase_sync(
     contents: List[str],
     metadatas: List[Dict[str, Any]],
     url_to_full_document: Dict[str, str],
-    batch_size: int = 10,
+    batch_size: int = 25,
     progress_queue: Optional[Queue] = None,
     enable_parallel_batches: bool = True
 ) -> None:
@@ -71,7 +71,7 @@ def add_documents_to_supabase_sync(
                 # Brief pause between batches to prevent overwhelming the connection
                 if i + delete_batch_size < len(unique_urls):
                     import time
-                    time.sleep(0.1)
+                    time.sleep(0.05)  # Reduced from 0.1s
             search_logger.info(f"Deleted existing records for {len(unique_urls)} URLs in batches")
     except Exception as e:
         search_logger.warning(f"Batch delete failed: {e}. Trying smaller batches as fallback.")

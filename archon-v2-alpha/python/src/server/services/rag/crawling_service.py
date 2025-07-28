@@ -233,18 +233,18 @@ class CrawlingService:
                     
                     crawl_config = CrawlerRunConfig(
                         cache_mode=cache_mode, 
-                        stream=False,  # Disable streaming for now
+                        stream=True,  # Enable streaming for faster parallel processing
                         markdown_generator=self._get_markdown_generator(),
                         # Wait for documentation content to load
                         wait_for=wait_selector,
                         # Use domcontentloaded for problematic sites
-                        wait_until='domcontentloaded' if 'milkdown' in url.lower() else 'networkidle',
+                        wait_until='domcontentloaded',  # Always use domcontentloaded for speed
                         # Increased timeout for JavaScript rendering
-                        page_timeout=45000,  # 45 seconds
+                        page_timeout=30000,  # 30 seconds
                         # Give JavaScript time to render
-                        delay_before_return_html=2.0,
+                        delay_before_return_html=0.5,  # Reduced from 2.0s
                         # Enable image waiting for completeness
-                        wait_for_images=True,
+                        wait_for_images=False,  # Skip images for faster crawling
                         # Scan full page to trigger lazy loading
                         scan_full_page=True,
                         # Keep images for documentation sites
@@ -258,10 +258,10 @@ class CrawlingService:
                     # Configuration for regular sites
                     crawl_config = CrawlerRunConfig(
                         cache_mode=cache_mode, 
-                        stream=False,
+                        stream=True,  # Enable streaming
                         markdown_generator=self._get_markdown_generator(),
                         wait_until='networkidle',  # Wait for network to be idle
-                        delay_before_return_html=1.0,  # Give time for rendering
+                        delay_before_return_html=0.3,  # Reduced from 1.0s
                         scan_full_page=True  # Trigger lazy loading
                     )
                 
@@ -396,13 +396,13 @@ class CrawlingService:
             # Use generic documentation selectors for batch crawling
             crawl_config = CrawlerRunConfig(
                 cache_mode=CacheMode.BYPASS, 
-                stream=False,  # Disable streaming for now
+                stream=True,  # Enable streaming for faster parallel processing
                 markdown_generator=self._get_markdown_generator(),
                 wait_for='body',  # Simple selector for batch
-                wait_until='networkidle',  # Wait for network idle
+                wait_until='domcontentloaded',  # Faster than networkidle for docs
                 page_timeout=30000,  # 30 seconds for JavaScript sites
-                delay_before_return_html=2.0,  # JavaScript rendering time
-                wait_for_images=True,
+                delay_before_return_html=1.0,  # Reduced delay
+                wait_for_images=False,  # Skip images for faster crawling
                 scan_full_page=True,  # Trigger lazy loading
                 exclude_all_images=False,
                 remove_overlay_elements=True,
@@ -412,15 +412,15 @@ class CrawlingService:
             # Configuration for regular batch crawling
             crawl_config = CrawlerRunConfig(
                 cache_mode=CacheMode.BYPASS, 
-                stream=False,
+                stream=True,  # Enable streaming
                 markdown_generator=self._get_markdown_generator(),
-                wait_until='networkidle',
-                delay_before_return_html=1.0,
+                wait_until='domcontentloaded',  # Faster than networkidle
+                delay_before_return_html=0.5,  # Reduced delay
                 scan_full_page=True
             )
         dispatcher = MemoryAdaptiveDispatcher(
-            memory_threshold_percent=70.0,
-            check_interval=1.0,
+            memory_threshold_percent=80.0,  # Increased threshold
+            check_interval=0.5,  # Reduced check interval for faster response
             max_session_permit=max_concurrent
         )
 
@@ -433,7 +433,7 @@ class CrawlingService:
         await report_progress(start_progress, f'Starting to crawl {total_urls} URLs...')
         
         # Process URLs in batches for better performance
-        batch_size = min(20, max_concurrent)  # Increased to 20 for faster processing
+        batch_size = min(50, max_concurrent)  # Increased to 50 for much faster processing
         successful_results = []
         processed = 0
         
@@ -454,48 +454,31 @@ class CrawlingService:
             progress_percentage = start_progress + int((i / total_urls) * (end_progress - start_progress))
             await report_progress(progress_percentage, f'Processing batch {batch_start+1}-{batch_end} of {total_urls} URLs...')
             
-            # Crawl this batch
+            # Crawl this batch using arun_many with streaming
+            logger.info(f"Starting parallel crawl of batch {batch_start+1}-{batch_end} ({len(batch_urls)} URLs)")
             batch_results = await self.crawler.arun_many(urls=batch_urls, config=crawl_config, dispatcher=dispatcher)
             
-            # Check if we got a streaming result
-            if hasattr(batch_results, '__aiter__'):
-                # Handle streaming results
-                j = 0
-                async for result in batch_results:
-                    processed += 1
-                    if result.success and result.markdown:
-                        # Map back to original URL
-                        original_url = url_mapping.get(result.url, result.url)
-                        successful_results.append({
-                            'url': original_url, 
-                            'markdown': result.markdown,
-                            'html': result.html  # Use raw HTML
-                        })
-                    
-                    # Report individual URL progress with smooth increments
-                    progress_percentage = start_progress + int((processed / total_urls) * (end_progress - start_progress))
-                    # Report more frequently for smoother progress
-                    if processed % 5 == 0 or processed == total_urls:  # Report every 5 URLs or at the end
-                        await report_progress(progress_percentage, f'Crawled {processed}/{total_urls} pages ({len(successful_results)} successful)')
-                    j += 1
-            else:
-                # Handle non-streaming results (list)
-                for j, result in enumerate(batch_results):
-                    processed += 1
-                    if result.success and result.markdown:
-                        # Map back to original URL
-                        original_url = url_mapping.get(result.url, result.url)
-                        successful_results.append({
-                            'url': original_url, 
-                            'markdown': result.markdown,
-                            'html': result.html  # Use raw HTML
-                        })
-                    
-                    # Report individual URL progress with smooth increments
-                    progress_percentage = start_progress + int((processed / total_urls) * (end_progress - start_progress))
-                    # Report more frequently for smoother progress
-                    if processed % 5 == 0 or processed == total_urls:  # Report every 5 URLs or at the end
-                        await report_progress(progress_percentage, f'Crawled {processed}/{total_urls} pages ({len(successful_results)} successful)')
+            # Handle streaming results
+            j = 0
+            async for result in batch_results:
+                processed += 1
+                if result.success and result.markdown:
+                    # Map back to original URL
+                    original_url = url_mapping.get(result.url, result.url)
+                    successful_results.append({
+                        'url': original_url, 
+                        'markdown': result.markdown,
+                        'html': result.html  # Use raw HTML
+                    })
+                else:
+                    logger.warning(f"Failed to crawl {result.url}: {getattr(result, 'error_message', 'Unknown error')}")
+                
+                # Report individual URL progress with smooth increments
+                progress_percentage = start_progress + int((processed / total_urls) * (end_progress - start_progress))
+                # Report more frequently for smoother progress
+                if processed % 5 == 0 or processed == total_urls:  # Report every 5 URLs or at the end
+                    await report_progress(progress_percentage, f'Crawled {processed}/{total_urls} pages ({len(successful_results)} successful)')
+                j += 1
         
         await report_progress(end_progress, f'Batch crawling completed: {len(successful_results)}/{total_urls} pages successful')
         return successful_results
@@ -517,13 +500,13 @@ class CrawlingService:
             logger.info("Detected documentation sites for recursive crawl, using enhanced configuration")
             run_config = CrawlerRunConfig(
                 cache_mode=CacheMode.BYPASS, 
-                stream=False,  # Disable streaming for now
+                stream=True,  # Enable streaming for faster parallel processing
                 markdown_generator=self._get_markdown_generator(),
                 wait_for='body',
-                wait_until='networkidle',  # Wait for network idle
+                wait_until='domcontentloaded',  # Faster than networkidle for docs
                 page_timeout=30000,  # 30 seconds
-                delay_before_return_html=2.0,  # JavaScript rendering time
-                wait_for_images=True,
+                delay_before_return_html=1.0,  # Reduced delay
+                wait_for_images=False,  # Skip images for faster crawling
                 scan_full_page=True,  # Trigger lazy loading
                 exclude_all_images=False,
                 remove_overlay_elements=True,
@@ -533,15 +516,15 @@ class CrawlingService:
             # Configuration for regular recursive crawling
             run_config = CrawlerRunConfig(
                 cache_mode=CacheMode.BYPASS, 
-                stream=False,
+                stream=True,  # Enable streaming
                 markdown_generator=self._get_markdown_generator(),
-                wait_until='networkidle',
-                delay_before_return_html=1.0,
+                wait_until='domcontentloaded',  # Faster than networkidle
+                delay_before_return_html=0.5,  # Reduced delay
                 scan_full_page=True
             )
         dispatcher = MemoryAdaptiveDispatcher(
-            memory_threshold_percent=70.0,
-            check_interval=1.0,
+            memory_threshold_percent=80.0,  # Increased threshold
+            check_interval=0.5,  # Reduced check interval for faster response
             max_session_permit=max_concurrent
         )
 
@@ -577,7 +560,7 @@ class CrawlingService:
             await report_progress(depth_start, f'Crawling depth {depth + 1}/{max_depth}: {len(urls_to_crawl)} URLs to process')
 
             # Process URLs in larger batches for better performance
-            batch_size = min(30, max_concurrent)  # Process in batches of 30 for speed
+            batch_size = min(50, max_concurrent)  # Increased batch size for better parallelism
             next_level_urls = set()
             depth_successful = 0
             
@@ -592,70 +575,49 @@ class CrawlingService:
                                     totalPages=total_processed + batch_idx, 
                                     processedPages=len(results_all))
                 
-                # Crawl this batch
+                # Use arun_many for native parallel crawling with streaming
+                logger.info(f"Starting parallel crawl of {len(batch_urls)} URLs with arun_many")
                 batch_results = await self.crawler.arun_many(urls=batch_urls, config=run_config, dispatcher=dispatcher)
                 
-                # Check if we got a streaming result
-                if hasattr(batch_results, '__aiter__'):
-                    # Handle streaming results
-                    i = 0
-                    async for result in batch_results:
-                        norm_url = normalize_url(result.url)
-                        visited.add(norm_url)
-                        total_processed += 1
+                # Handle streaming results from arun_many
+                i = 0
+                async for result in batch_results:
+                    # Map back to original URL if transformed
+                    original_url = result.url
+                    for orig_url in batch_urls:
+                        if self._transform_github_url(orig_url) == result.url:
+                            original_url = orig_url
+                            break
+                    
+                    norm_url = normalize_url(original_url)
+                    visited.add(norm_url)
+                    total_processed += 1
+                    
+                    if result.success and result.markdown:
+                        results_all.append({
+                            'url': original_url, 
+                            'markdown': result.markdown,
+                            'html': result.html  # Always use raw HTML for code extraction
+                        })
+                        depth_successful += 1
                         
-                        if result.success and result.markdown:
-                            results_all.append({
-                                'url': result.url, 
-                                'markdown': result.markdown,
-                                'html': result.html  # Always use raw HTML for code extraction
-                            })
-                            depth_successful += 1
-                            
-                            # Find internal links for next depth
-                            for link in result.links.get("internal", []):
-                                next_url = normalize_url(link["href"])
-                                if next_url not in visited:
-                                    next_level_urls.add(next_url)
-                        
-                        # Report progress every few URLs
-                        current_idx = batch_idx + i + 1
-                        if current_idx % 5 == 0 or current_idx == len(urls_to_crawl):
-                            current_progress = depth_start + int((current_idx / len(urls_to_crawl)) * (depth_end - depth_start))
-                            await report_progress(current_progress,
-                                                f'Depth {depth + 1}: processed {current_idx}/{len(urls_to_crawl)} URLs ({depth_successful} successful)',
-                                                totalPages=total_processed, 
-                                                processedPages=len(results_all))
-                        i += 1
-                else:
-                    # Handle non-streaming results (list)
-                    for i, result in enumerate(batch_results):
-                        norm_url = normalize_url(result.url)
-                        visited.add(norm_url)
-                        total_processed += 1
-                        
-                        if result.success and result.markdown:
-                            results_all.append({
-                                'url': result.url, 
-                                'markdown': result.markdown,
-                                'html': result.html  # Always use raw HTML for code extraction
-                            })
-                            depth_successful += 1
-                            
-                            # Find internal links for next depth
-                            for link in result.links.get("internal", []):
-                                next_url = normalize_url(link["href"])
-                                if next_url not in visited:
-                                    next_level_urls.add(next_url)
-                        
-                        # Report progress every few URLs
-                        current_idx = batch_idx + i + 1
-                        if current_idx % 5 == 0 or current_idx == len(urls_to_crawl):
-                            current_progress = depth_start + int((current_idx / len(urls_to_crawl)) * (depth_end - depth_start))
-                            await report_progress(current_progress,
-                                                f'Depth {depth + 1}: processed {current_idx}/{len(urls_to_crawl)} URLs ({depth_successful} successful)',
-                                                totalPages=total_processed, 
-                                                processedPages=len(results_all))
+                        # Find internal links for next depth
+                        for link in result.links.get("internal", []):
+                            next_url = normalize_url(link["href"])
+                            if next_url not in visited:
+                                next_level_urls.add(next_url)
+                    else:
+                        logger.warning(f"Failed to crawl {original_url}: {getattr(result, 'error_message', 'Unknown error')}")
+                    
+                    # Report progress every few URLs
+                    current_idx = batch_idx + i + 1
+                    if current_idx % 5 == 0 or current_idx == len(urls_to_crawl):
+                        current_progress = depth_start + int((current_idx / len(urls_to_crawl)) * (depth_end - depth_start))
+                        await report_progress(current_progress,
+                                            f'Depth {depth + 1}: processed {current_idx}/{len(urls_to_crawl)} URLs ({depth_successful} successful)',
+                                            totalPages=total_processed, 
+                                            processedPages=len(results_all))
+                    i += 1
 
             current_urls = next_level_urls
             

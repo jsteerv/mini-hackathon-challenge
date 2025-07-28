@@ -6,13 +6,33 @@ Supports OpenAI, Ollama, and Google Gemini.
 """
 import os
 import openai
-from typing import Optional, Union, Dict, Any
+import time
+from typing import Optional, Union, Dict, Any, Tuple
 from contextlib import asynccontextmanager
 
 from ..config.logfire_config import get_logger
 from .credential_service import credential_service
 
 logger = get_logger(__name__)
+
+# Settings cache with TTL
+_settings_cache: Dict[str, Tuple[Any, float]] = {}
+_CACHE_TTL_SECONDS = 300  # 5 minutes
+
+def _get_cached_settings(key: str) -> Optional[Any]:
+    """Get cached settings if not expired."""
+    if key in _settings_cache:
+        value, timestamp = _settings_cache[key]
+        if time.time() - timestamp < _CACHE_TTL_SECONDS:
+            return value
+        else:
+            # Expired, remove from cache
+            del _settings_cache[key]
+    return None
+
+def _set_cached_settings(key: str, value: Any) -> None:
+    """Cache settings with current timestamp."""
+    _settings_cache[key] = (value, time.time())
 
 
 @asynccontextmanager
@@ -38,12 +58,32 @@ async def get_llm_client(provider: Optional[str] = None, use_embedding_provider:
             # Explicit provider requested - get minimal config
             provider_name = provider
             api_key = await credential_service._get_provider_api_key(provider)
-            rag_settings = await credential_service.get_credentials_by_category("rag_strategy")
+            
+            # Check cache for rag_settings
+            cache_key = "rag_strategy_settings"
+            rag_settings = _get_cached_settings(cache_key)
+            if rag_settings is None:
+                rag_settings = await credential_service.get_credentials_by_category("rag_strategy")
+                _set_cached_settings(cache_key, rag_settings)
+                logger.debug("Fetched and cached rag_strategy settings")
+            else:
+                logger.debug("Using cached rag_strategy settings")
+            
             base_url = credential_service._get_provider_base_url(provider, rag_settings)
         else:
             # Get configured provider from database
             service_type = "embedding" if use_embedding_provider else "llm"
-            provider_config = await credential_service.get_active_provider(service_type)
+            
+            # Check cache for provider config
+            cache_key = f"provider_config_{service_type}"
+            provider_config = _get_cached_settings(cache_key)
+            if provider_config is None:
+                provider_config = await credential_service.get_active_provider(service_type)
+                _set_cached_settings(cache_key, provider_config)
+                logger.debug(f"Fetched and cached {service_type} provider config")
+            else:
+                logger.debug(f"Using cached {service_type} provider config")
+            
             provider_name = provider_config["provider"]
             api_key = provider_config["api_key"]
             base_url = provider_config["base_url"]
@@ -244,11 +284,19 @@ async def get_embedding_model(provider: Optional[str] = None) -> str:
             # Explicit provider requested
             provider_name = provider
             # Get custom model from settings if any
-            rag_settings = await credential_service.get_credentials_by_category("rag_strategy")
+            cache_key = "rag_strategy_settings"
+            rag_settings = _get_cached_settings(cache_key)
+            if rag_settings is None:
+                rag_settings = await credential_service.get_credentials_by_category("rag_strategy")
+                _set_cached_settings(cache_key, rag_settings)
             custom_model = rag_settings.get("EMBEDDING_MODEL", "")
         else:
             # Get configured provider from database
-            provider_config = await credential_service.get_active_provider("embedding")
+            cache_key = "provider_config_embedding"
+            provider_config = _get_cached_settings(cache_key)
+            if provider_config is None:
+                provider_config = await credential_service.get_active_provider("embedding")
+                _set_cached_settings(cache_key, provider_config)
             provider_name = provider_config["provider"]
             custom_model = provider_config["embedding_model"]
         

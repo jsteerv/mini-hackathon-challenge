@@ -27,7 +27,7 @@ async def add_documents_to_supabase(
     contents: List[str], 
     metadatas: List[Dict[str, Any]],
     url_to_full_document: Dict[str, str],
-    batch_size: int = 15,
+    batch_size: int = 25,
     progress_callback: Optional[Any] = None,
     enable_parallel_batches: bool = True,
     provider: Optional[str] = None
@@ -70,7 +70,7 @@ async def add_documents_to_supabase(
                     client.table("crawled_pages").delete().in_("url", batch_urls).execute()
                     # Yield control to allow Socket.IO to process messages
                     if i + delete_batch_size < len(unique_urls):
-                        await asyncio.sleep(0.1)  # Brief pause between batches
+                        await asyncio.sleep(0.05)  # Reduced pause between delete batches
                 search_logger.info(f"Deleted existing records for {len(unique_urls)} URLs in batches")
         except Exception as e:
             search_logger.warning(f"Batch delete failed: {e}. Trying smaller batches as fallback.")
@@ -146,44 +146,38 @@ async def add_documents_to_supabase(
             # Apply contextual embedding to each chunk if enabled
             if use_contextual_embeddings:
                 
-                # Prepare arguments for parallel processing
-                process_args = []
+                # Prepare full documents list for batch processing
+                full_documents = []
                 for j, content in enumerate(batch_contents):
                     url = batch_urls[j]
                     full_document = url_to_full_document.get(url, "")
-                    process_args.append((url, content, full_document))
+                    full_documents.append(full_document)
                 
-                # Track processing
-                contextual_contents = [None] * len(batch_contents)
-                
-                # Process in parallel using ThreadPoolExecutor
-                with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-                    # Submit all tasks and collect futures with their indices
-                    future_to_idx = {executor.submit(process_chunk_with_context, arg): idx 
-                                   for idx, arg in enumerate(process_args)}
+                try:
+                    # Process entire batch with a single API call using asyncio.to_thread
+                    # This runs the sync batch function in a thread pool without blocking the event loop
+                    results = await asyncio.to_thread(
+                        generate_contextual_embeddings_batch,
+                        full_documents,
+                        batch_contents
+                    )
                     
-                    # Process results as they complete
-                    for future in concurrent.futures.as_completed(future_to_idx):
-                        idx = future_to_idx[future]
-                        try:
-                            result, success = future.result()
-                            contextual_contents[idx] = result
-                            if success:
-                                batch_metadatas[idx]["contextual_embedding"] = True
-                                search_logger.debug(f"Successfully generated contextual embedding for chunk {idx} in batch {batch_num}")
-                        except Exception as e:
-                            search_logger.warning(f"Error processing chunk {idx}: {e}")
-                            # Use original content as fallback
-                            contextual_contents[idx] = batch_contents[idx]
-                
-                # Ensure all results are populated (shouldn't be None if everything worked)
-                for idx, content in enumerate(contextual_contents):
-                    if content is None:
-                        contextual_contents[idx] = batch_contents[idx]
-                
-                # Log summary of contextual embedding results
-                successful_count = sum(1 for meta in batch_metadatas if meta.get("contextual_embedding", False))
-                search_logger.info(f"Batch {batch_num}: Generated {successful_count}/{len(batch_contents)} contextual embeddings using {max_workers} workers")
+                    # Extract results
+                    contextual_contents = []
+                    successful_count = 0
+                    for idx, (contextual_text, success) in enumerate(results):
+                        contextual_contents.append(contextual_text)
+                        if success:
+                            batch_metadatas[idx]["contextual_embedding"] = True
+                            successful_count += 1
+                    
+                    search_logger.info(f"Batch {batch_num}: Generated {successful_count}/{len(batch_contents)} contextual embeddings using batch API")
+                    
+                except Exception as e:
+                    search_logger.error(f"Error in batch contextual embedding: {e}")
+                    # Fallback to original contents
+                    contextual_contents = batch_contents
+                    search_logger.warning(f"Batch {batch_num}: Falling back to original content due to error")
             else:
                 # If not using contextual embeddings, use original contents
                 contextual_contents = batch_contents
@@ -267,10 +261,10 @@ async def add_documents_to_supabase(
                         
                         search_logger.info(f"Individual inserts: {successful_inserts}/{len(batch_data)} successful")
             
-            # WebSocket-safe delay between batches
+            # Minimal delay between batches to prevent overwhelming
             if i + batch_size < len(contents):
-                delay = 1.5 if use_contextual_embeddings else 0.5
-                await asyncio.sleep(delay)
+                # Only yield control briefly to keep Socket.IO responsive
+                await asyncio.sleep(0.1)  # Reduced from 1.5s/0.5s to 0.1s
         
         # Send final 100% progress report to ensure UI shows completion
         if progress_callback and asyncio.iscoroutinefunction(progress_callback):

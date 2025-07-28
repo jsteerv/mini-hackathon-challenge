@@ -634,7 +634,7 @@ class CrawlOrchestrationService:
             contents=all_contents,  # Individual chunks
             metadatas=all_metadatas,  # Metadata per chunk
             url_to_full_document=url_to_full_document,
-            batch_size=10,
+            batch_size=25,  # Increased from 10 for better performance
             progress_callback=doc_storage_callback,  # Pass the callback for progress updates
             enable_parallel_batches=True,  # Enable parallel processing
             provider=None  # Use configured provider
@@ -1114,7 +1114,7 @@ class CrawlOrchestrationService:
                 contents=all_contents,
                 metadatas=all_metadatas,
                 url_to_full_document=url_to_full_document,
-                batch_size=10,
+                batch_size=25,  # Increased from 10 for better performance
                 progress_queue=progress_queue,  # Pass the queue directly
                 enable_parallel_batches=True  # Still uses parallel workers for contextual embeddings
             )
