@@ -60,19 +60,33 @@ async def add_documents_to_supabase(
         # Get unique URLs to delete existing records
         unique_urls = list(set(urls))
         
-        # Delete existing records for these URLs
+        # Delete existing records for these URLs in batches
         try:
             if unique_urls:
-                client.table("crawled_pages").delete().in_("url", unique_urls).execute()
-                search_logger.info(f"Deleted existing records for {len(unique_urls)} URLs")
+                # Delete in smaller batches to avoid overwhelming the database
+                delete_batch_size = 50  # Supabase can handle this size well
+                for i in range(0, len(unique_urls), delete_batch_size):
+                    batch_urls = unique_urls[i:i + delete_batch_size]
+                    client.table("crawled_pages").delete().in_("url", batch_urls).execute()
+                    # Yield control to allow Socket.IO to process messages
+                    if i + delete_batch_size < len(unique_urls):
+                        await asyncio.sleep(0.1)  # Brief pause between batches
+                search_logger.info(f"Deleted existing records for {len(unique_urls)} URLs in batches")
         except Exception as e:
-            search_logger.warning(f"Batch delete failed: {e}. Trying one-by-one deletion as fallback.")
-            # Fallback: delete records one by one
-            for url in unique_urls:
+            search_logger.warning(f"Batch delete failed: {e}. Trying smaller batches as fallback.")
+            # Fallback: delete in very small batches with rate limiting
+            failed_urls = []
+            for i in range(0, len(unique_urls), 10):  # Even smaller batches
+                batch_urls = unique_urls[i:i + 10]
                 try:
-                    client.table("crawled_pages").delete().eq("url", url).execute()
+                    client.table("crawled_pages").delete().in_("url", batch_urls).execute()
+                    await asyncio.sleep(0.05)  # Rate limit to prevent overwhelming
                 except Exception as inner_e:
-                    search_logger.error(f"Error deleting record for URL {url}: {inner_e}")
+                    search_logger.error(f"Error deleting batch of {len(batch_urls)} URLs: {inner_e}")
+                    failed_urls.extend(batch_urls)
+            
+            if failed_urls:
+                search_logger.error(f"Failed to delete {len(failed_urls)} URLs")
         
         # Check if contextual embeddings are enabled
         # Fix: Get from credential service instead of environment

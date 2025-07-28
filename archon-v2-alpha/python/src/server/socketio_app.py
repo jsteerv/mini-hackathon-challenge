@@ -49,8 +49,8 @@ def create_socketio_app(app: FastAPI) -> socketio.ASGIApp:
     # Log Socket.IO server creation
     safe_logfire_info("Creating Socket.IO server", 
                  cors_origins="*", 
-                 ping_timeout=60,
-                 ping_interval=25)
+                 ping_timeout=300,
+                 ping_interval=60)
     
     # Note: Socket.IO event handlers are registered in socketio_handlers.py
     # This module only creates the Socket.IO server instance
