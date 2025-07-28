@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings, Check, Save, Loader } from 'lucide-react';
+import { Settings, Check, Save, Loader, ChevronDown, ChevronUp, Zap, Database } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
@@ -18,6 +18,22 @@ interface RAGSettingsProps {
     LLM_PROVIDER?: string;
     LLM_BASE_URL?: string;
     EMBEDDING_MODEL?: string;
+    // Crawling Performance Settings
+    CRAWL_BATCH_SIZE?: number;
+    CRAWL_MAX_CONCURRENT?: number;
+    CRAWL_WAIT_STRATEGY?: string;
+    CRAWL_PAGE_TIMEOUT?: number;
+    CRAWL_DELAY_BEFORE_HTML?: number;
+    // Storage Performance Settings
+    DOCUMENT_STORAGE_BATCH_SIZE?: number;
+    EMBEDDING_BATCH_SIZE?: number;
+    DELETE_BATCH_SIZE?: number;
+    ENABLE_PARALLEL_BATCHES?: boolean;
+    // Advanced Settings
+    MEMORY_THRESHOLD_PERCENT?: number;
+    DISPATCHER_CHECK_INTERVAL?: number;
+    CODE_EXTRACTION_BATCH_SIZE?: number;
+    CODE_SUMMARY_MAX_WORKERS?: number;
   };
   setRagSettings: (settings: any) => void;
 }
@@ -27,15 +43,10 @@ export const RAGSettings = ({
   setRagSettings
 }: RAGSettingsProps) => {
   const [saving, setSaving] = useState(false);
+  const [showCrawlingSettings, setShowCrawlingSettings] = useState(false);
+  const [showStorageSettings, setShowStorageSettings] = useState(false);
   const { showToast } = useToast();
-  return <div>
-      <div className="flex items-center mb-4">
-        <Settings className="mr-2 text-green-500 filter drop-shadow-[0_0_8px_rgba(34,197,94,0.8)]" size={20} />
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
-          RAG Settings
-        </h2>
-      </div>
-      <Card accentColor="green" className="overflow-hidden p-8">
+  return <Card accentColor="green" className="overflow-hidden p-8">
         {/* Description */}
         <p className="text-sm text-gray-600 dark:text-zinc-400 mb-6">
           Configure Retrieval-Augmented Generation (RAG) strategies for optimal
@@ -261,8 +272,207 @@ export const RAGSettings = ({
           </div>
           <div>{/* Empty column */}</div>
         </div>
-      </Card>
-    </div>;
+
+        {/* Crawling Performance Settings */}
+        <div className="mt-6">
+          <div
+            className="flex items-center justify-between cursor-pointer p-3 rounded-lg border border-green-500/20 bg-gradient-to-r from-green-500/5 to-green-600/5 hover:from-green-500/10 hover:to-green-600/10 transition-all duration-200"
+            onClick={() => setShowCrawlingSettings(!showCrawlingSettings)}
+          >
+            <div className="flex items-center">
+              <Zap className="mr-2 text-green-500 filter drop-shadow-[0_0_8px_rgba(34,197,94,0.6)]" size={18} />
+              <h3 className="font-semibold text-gray-800 dark:text-white">Crawling Performance Settings</h3>
+            </div>
+            {showCrawlingSettings ? (
+              <ChevronUp className="text-gray-500 dark:text-gray-400" size={20} />
+            ) : (
+              <ChevronDown className="text-gray-500 dark:text-gray-400" size={20} />
+            )}
+          </div>
+          
+          {showCrawlingSettings && (
+            <div className="mt-4 p-4 border border-green-500/10 rounded-lg bg-green-500/5">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Batch Size
+                  </label>
+                  <input
+                    type="number"
+                    min="10"
+                    max="100"
+                    value={ragSettings.CRAWL_BATCH_SIZE || 50}
+                    onChange={e => setRagSettings({
+                      ...ragSettings,
+                      CRAWL_BATCH_SIZE: parseInt(e.target.value, 10) || 50
+                    })}
+                    className="w-full px-3 py-2 border border-green-500/30 rounded-md bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:border-green-500 focus:ring-1 focus:ring-green-500"
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">URLs to crawl in parallel (10-100)</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Max Concurrent
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="20"
+                    value={ragSettings.CRAWL_MAX_CONCURRENT || 10}
+                    onChange={e => setRagSettings({
+                      ...ragSettings,
+                      CRAWL_MAX_CONCURRENT: parseInt(e.target.value, 10) || 10
+                    })}
+                    className="w-full px-3 py-2 border border-green-500/30 rounded-md bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:border-green-500 focus:ring-1 focus:ring-green-500"
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Browser sessions (1-20)</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-3 gap-4 mt-4">
+                <div>
+                  <Select
+                    label="Wait Strategy"
+                    value={ragSettings.CRAWL_WAIT_STRATEGY || 'domcontentloaded'}
+                    onChange={e => setRagSettings({
+                      ...ragSettings,
+                      CRAWL_WAIT_STRATEGY: e.target.value
+                    })}
+                    accentColor="green"
+                    options={[
+                      { value: 'domcontentloaded', label: 'DOM Loaded (Fast)' },
+                      { value: 'networkidle', label: 'Network Idle (Thorough)' },
+                      { value: 'load', label: 'Full Load (Slowest)' }
+                    ]}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Page Timeout (sec)
+                  </label>
+                  <input
+                    type="number"
+                    min="5"
+                    max="120"
+                    value={(ragSettings.CRAWL_PAGE_TIMEOUT || 30000) / 1000}
+                    onChange={e => setRagSettings({
+                      ...ragSettings,
+                      CRAWL_PAGE_TIMEOUT: (parseInt(e.target.value, 10) || 30) * 1000
+                    })}
+                    className="w-full px-3 py-2 border border-green-500/30 rounded-md bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:border-green-500 focus:ring-1 focus:ring-green-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Render Delay (sec)
+                  </label>
+                  <input
+                    type="number"
+                    min="0.1"
+                    max="5"
+                    step="0.1"
+                    value={ragSettings.CRAWL_DELAY_BEFORE_HTML || 0.5}
+                    onChange={e => setRagSettings({
+                      ...ragSettings,
+                      CRAWL_DELAY_BEFORE_HTML: parseFloat(e.target.value) || 0.5
+                    })}
+                    className="w-full px-3 py-2 border border-green-500/30 rounded-md bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:border-green-500 focus:ring-1 focus:ring-green-500"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Storage Performance Settings */}
+        <div className="mt-4">
+          <div
+            className="flex items-center justify-between cursor-pointer p-3 rounded-lg border border-green-500/20 bg-gradient-to-r from-green-500/5 to-green-600/5 hover:from-green-500/10 hover:to-green-600/10 transition-all duration-200"
+            onClick={() => setShowStorageSettings(!showStorageSettings)}
+          >
+            <div className="flex items-center">
+              <Database className="mr-2 text-green-500 filter drop-shadow-[0_0_8px_rgba(34,197,94,0.6)]" size={18} />
+              <h3 className="font-semibold text-gray-800 dark:text-white">Storage Performance Settings</h3>
+            </div>
+            {showStorageSettings ? (
+              <ChevronUp className="text-gray-500 dark:text-gray-400" size={20} />
+            ) : (
+              <ChevronDown className="text-gray-500 dark:text-gray-400" size={20} />
+            )}
+          </div>
+          
+          {showStorageSettings && (
+            <div className="mt-4 p-4 border border-green-500/10 rounded-lg bg-green-500/5">
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Document Batch Size
+                  </label>
+                  <input
+                    type="number"
+                    min="10"
+                    max="100"
+                    value={ragSettings.DOCUMENT_STORAGE_BATCH_SIZE || 50}
+                    onChange={e => setRagSettings({
+                      ...ragSettings,
+                      DOCUMENT_STORAGE_BATCH_SIZE: parseInt(e.target.value, 10) || 50
+                    })}
+                    className="w-full px-3 py-2 border border-green-500/30 rounded-md bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:border-green-500 focus:ring-1 focus:ring-green-500"
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Chunks per batch (10-100)</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Embedding Batch Size
+                  </label>
+                  <input
+                    type="number"
+                    min="20"
+                    max="200"
+                    value={ragSettings.EMBEDDING_BATCH_SIZE || 100}
+                    onChange={e => setRagSettings({
+                      ...ragSettings,
+                      EMBEDDING_BATCH_SIZE: parseInt(e.target.value, 10) || 100
+                    })}
+                    className="w-full px-3 py-2 border border-green-500/30 rounded-md bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:border-green-500 focus:ring-1 focus:ring-green-500"
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Per API call (20-200)</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Code Extraction Workers
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={ragSettings.CODE_SUMMARY_MAX_WORKERS || 3}
+                    onChange={e => setRagSettings({
+                      ...ragSettings,
+                      CODE_SUMMARY_MAX_WORKERS: parseInt(e.target.value, 10) || 3
+                    })}
+                    className="w-full px-3 py-2 border border-green-500/30 rounded-md bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:border-green-500 focus:ring-1 focus:ring-green-500"
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Parallel workers (1-10)</p>
+                </div>
+              </div>
+              
+              <div className="mt-4 flex items-center">
+                <CustomCheckbox
+                  id="parallelBatches"
+                  checked={ragSettings.ENABLE_PARALLEL_BATCHES !== false}
+                  onChange={e => setRagSettings({
+                    ...ragSettings,
+                    ENABLE_PARALLEL_BATCHES: e.target.checked
+                  })}
+                  label="Enable Parallel Processing"
+                  description="Process multiple document batches simultaneously for faster storage"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+    </Card>;
 };
 
 // Helper functions for model placeholders

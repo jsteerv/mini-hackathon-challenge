@@ -22,7 +22,7 @@ def add_documents_to_supabase_sync(
     contents: List[str],
     metadatas: List[Dict[str, Any]],
     url_to_full_document: Dict[str, str],
-    batch_size: int = 25,
+    batch_size: int = None,  # Will load from settings
     progress_queue: Optional[Queue] = None,
     enable_parallel_batches: bool = True
 ) -> None:
@@ -57,14 +57,27 @@ def add_documents_to_supabase_sync(
                 update.update(batch_info)
             progress_queue.put(update)
     
+    # Load settings from database
+    try:
+        # Get settings synchronously
+        if batch_size is None:
+            batch_size = int(get_credential_sync("DOCUMENT_STORAGE_BATCH_SIZE", "50"))
+        delete_batch_size = int(get_credential_sync("DELETE_BATCH_SIZE", "50"))
+        enable_parallel = get_credential_sync("ENABLE_PARALLEL_BATCHES", "true").lower() == "true"
+    except Exception as e:
+        search_logger.warning(f"Failed to load storage settings: {e}, using defaults")
+        if batch_size is None:
+            batch_size = 50
+        delete_batch_size = 50
+        enable_parallel = True
+        
     # Get unique URLs to delete existing records
     unique_urls = list(set(urls))
     
     # Delete existing records for these URLs in batches
     try:
         if unique_urls:
-            # Delete in smaller batches to avoid overwhelming the database
-            delete_batch_size = 50  # Supabase can handle this size well
+            # Delete in configured batch sizes
             for i in range(0, len(unique_urls), delete_batch_size):
                 batch_urls = unique_urls[i:i + delete_batch_size]
                 client.table("crawled_pages").delete().in_("url", batch_urls).execute()
@@ -75,9 +88,10 @@ def add_documents_to_supabase_sync(
             search_logger.info(f"Deleted existing records for {len(unique_urls)} URLs in batches")
     except Exception as e:
         search_logger.warning(f"Batch delete failed: {e}. Trying smaller batches as fallback.")
-        # Fallback: delete in very small batches with rate limiting
+        # Fallback: delete in smaller batches with rate limiting
         failed_urls = []
-        for i in range(0, len(unique_urls), 10):  # Even smaller batches
+        fallback_batch_size = max(10, delete_batch_size // 5)
+        for i in range(0, len(unique_urls), fallback_batch_size):
             batch_urls = unique_urls[i:i + 10]
             try:
                 client.table("crawled_pages").delete().in_("url", batch_urls).execute()

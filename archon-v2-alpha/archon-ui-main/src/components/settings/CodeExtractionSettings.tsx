@@ -45,14 +45,7 @@ export const CodeExtractionSettings = ({
   };
 
   return (
-    <div>
-      <div className="flex items-center mb-4">
-        <Code className="mr-2 text-purple-500 filter drop-shadow-[0_0_8px_rgba(168,85,247,0.8)]" size={20} />
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
-          Code Extraction Settings
-        </h2>
-      </div>
-      <Card accentColor="purple" className="overflow-hidden p-8">
+      <Card accentColor="orange" className="overflow-hidden p-8">
         {/* Description */}
         <p className="text-sm text-gray-600 dark:text-zinc-400 mb-6">
           Configure how code blocks are extracted from crawled documents.
@@ -62,7 +55,7 @@ export const CodeExtractionSettings = ({
         <div className="flex justify-end mb-6">
           <Button 
             variant="outline" 
-            accentColor="purple" 
+            accentColor="orange" 
             icon={saving ? <Loader className="w-4 h-4 mr-1 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}
             className="whitespace-nowrap"
             size="md"
@@ -88,7 +81,7 @@ export const CodeExtractionSettings = ({
                 MIN_CODE_BLOCK_LENGTH: parseInt(e.target.value, 10) || 250
               })}
               placeholder="250"
-              accentColor="purple"
+              accentColor="orange"
               min="50"
               max="2000"
             />
@@ -101,7 +94,7 @@ export const CodeExtractionSettings = ({
                 MAX_CODE_BLOCK_LENGTH: parseInt(e.target.value, 10) || 5000
               })}
               placeholder="5000"
-              accentColor="purple"
+              accentColor="orange"
               min="1000"
               max="20000"
             />
@@ -201,7 +194,7 @@ export const CodeExtractionSettings = ({
                 MAX_PROSE_RATIO: parseFloat(e.target.value) || 0.15
               })}
               placeholder="0.15"
-              accentColor="purple"
+              accentColor="orange"
               min="0"
               max="1"
               step="0.05"
@@ -215,7 +208,7 @@ export const CodeExtractionSettings = ({
                 MIN_CODE_INDICATORS: parseInt(e.target.value, 10) || 3
               })}
               placeholder="3"
-              accentColor="purple"
+              accentColor="orange"
               min="1"
               max="10"
             />
@@ -228,7 +221,7 @@ export const CodeExtractionSettings = ({
                 CONTEXT_WINDOW_SIZE: parseInt(e.target.value, 10) || 1000
               })}
               placeholder="1000"
-              accentColor="purple"
+              accentColor="orange"
               min="100"
               max="5000"
             />
@@ -241,7 +234,7 @@ export const CodeExtractionSettings = ({
                 CODE_EXTRACTION_MAX_WORKERS: parseInt(e.target.value, 10) || 3
               })}
               placeholder="3"
-              accentColor="purple"
+              accentColor="orange"
               min="1"
               max="10"
             />
@@ -260,7 +253,6 @@ export const CodeExtractionSettings = ({
           </div>
         </div>
       </Card>
-    </div>
   );
 };
 

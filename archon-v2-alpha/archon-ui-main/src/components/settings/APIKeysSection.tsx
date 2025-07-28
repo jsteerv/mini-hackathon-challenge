@@ -189,12 +189,6 @@ export const APIKeysSection = () => {
   if (loading) {
     return (
       <div className="space-y-5">
-        <div className="flex items-center mb-4">
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-white flex items-center">
-            <Key className="mr-2 text-pink-500" size={20} />
-            API Keys
-          </h2>
-        </div>
         <Card accentColor="pink" className="space-y-5">
           <div className="animate-pulse space-y-4">
             <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
@@ -207,14 +201,7 @@ export const APIKeysSection = () => {
   }
 
   return (
-    <div>
-      <div className="flex items-center mb-4">
-        <Key className="mr-2 text-pink-500 filter drop-shadow-[0_0_8px_rgba(236,72,153,0.8)]" size={20} />
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
-          API Keys
-        </h2>
-      </div>
-      <Card accentColor="pink" className="p-8">
+    <Card accentColor="pink" className="p-8">
         <div className="space-y-4">
           {/* Description text */}
           <p className="text-sm text-gray-600 dark:text-zinc-400 mb-4">
@@ -366,6 +353,5 @@ export const APIKeysSection = () => {
           </div>
         </div>
       </Card>
-    </div>
   );
 };

@@ -13,6 +13,7 @@ from contextlib import asynccontextmanager
 from ...config.logfire_config import search_logger, safe_span
 from ..threading_service import get_threading_service
 from ..llm_provider_service import get_llm_client, get_llm_client_sync, get_embedding_model, get_embedding_model_sync
+from ..credential_service import credential_service
 
 
 # Use the new provider-aware client factory
@@ -179,8 +180,14 @@ async def create_embeddings_batch_async(
         
         try:
             async with get_llm_client(provider=provider, use_embedding_provider=True) as client:
-                # Split into smaller batches if needed
-                batch_size = 20  # OpenAI's batch limit
+                # Load batch size from settings
+                try:
+                    rag_settings = await credential_service.get_credentials_by_category("rag_strategy")
+                    batch_size = int(rag_settings.get("EMBEDDING_BATCH_SIZE", "100"))
+                except Exception as e:
+                    search_logger.warning(f"Failed to load embedding batch size: {e}, using default")
+                    batch_size = 100
+                
                 all_embeddings = []
                 total_tokens_used = 0
                 

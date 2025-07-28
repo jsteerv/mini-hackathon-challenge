@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Terminal, RefreshCw, Play, Square, Clock, CheckCircle, XCircle, FileText, ChevronUp, ChevronDown, BarChart, PieChart } from 'lucide-react';
-// Card component not used but preserved for future use
-// import { Card } from '../ui/Card';
+import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { TestResultsModal } from '../ui/TestResultsModal';
 import { testService, TestExecution, TestStreamMessage, TestType } from '../../services/testService';
@@ -836,7 +835,7 @@ export const TestStatus = () => {
           {testType === 'ui' && hasResults && !testState.isRunning && (
             <Button
               variant="outline"
-              accentColor="blue"
+              accentColor="cyan"
               size="sm"
               onClick={() => setShowTestResultsModal(true)}
             >
@@ -876,22 +875,23 @@ export const TestStatus = () => {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between cursor-pointer" onClick={() => setIsCollapsed(!isCollapsed)}>
-        <div className="flex items-center gap-2">
-          <Terminal className="w-5 h-5 text-orange-500 dark:text-orange-400 filter drop-shadow-[0_0_8px_rgba(251,146,60,0.8)]" />
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Archon Unit Tests</h2>
-          <div className={`transform transition-transform duration-300 ${isCollapsed ? '' : 'rotate-180'}`}>
-            <ChevronDown className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+    <Card accentColor="cyan" className="p-8">
+      <div className="space-y-6">
+        <div className="flex items-center justify-between cursor-pointer" onClick={() => setIsCollapsed(!isCollapsed)}>
+          <div className="flex items-center gap-2">
+            <Terminal className="w-5 h-5 text-orange-500 dark:text-orange-400 filter drop-shadow-[0_0_8px_rgba(251,146,60,0.8)]" />
+            <h2 className="text-lg font-medium text-gray-800 dark:text-white">Archon Unit Tests</h2>
+            <div className={`transform transition-transform duration-300 ${isCollapsed ? '' : 'rotate-180'}`}>
+              <ChevronDown className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+            </div>
           </div>
-        </div>
         
         {/* Display mode toggle - only visible when expanded */}
         {!isCollapsed && (
           <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
             <Button
               variant={displayMode === 'pretty' ? 'primary' : 'outline'}
-              accentColor="blue"
+              accentColor="cyan"
               size="sm"
               onClick={() => setDisplayMode('pretty')}
             >
@@ -919,13 +919,14 @@ export const TestStatus = () => {
           onRun={() => runTest('ui')}
           onCancel={() => cancelTest('ui')}
         />
-      </div>
+        </div>
 
-      {/* Test Results Modal */}
-      <TestResultsModal 
-        isOpen={showTestResultsModal} 
-        onClose={() => setShowTestResultsModal(false)} 
-      />
-    </div>
+        {/* Test Results Modal */}
+        <TestResultsModal 
+          isOpen={showTestResultsModal} 
+          onClose={() => setShowTestResultsModal(false)} 
+        />
+      </div>
+    </Card>
   );
 };

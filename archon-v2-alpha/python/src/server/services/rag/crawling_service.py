@@ -19,6 +19,7 @@ from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig, CacheMode
 from crawl4ai.markdown_generation_strategy import DefaultMarkdownGenerator
 from src.server.utils import get_supabase_client
 from ...config.logfire_config import get_logger
+from ..credential_service import credential_service
 
 logger = get_logger(__name__)
 
@@ -378,7 +379,7 @@ class CrawlingService:
             logger.error(traceback.format_exc())
             return []
 
-    async def crawl_batch_with_progress(self, urls: List[str], max_concurrent: int = 10, 
+    async def crawl_batch_with_progress(self, urls: List[str], max_concurrent: int = None, 
                                        progress_callback=None, start_progress: int = 15, 
                                        end_progress: int = 60) -> List[Dict[str, Any]]:
         """Batch crawl multiple URLs in parallel with progress reporting."""
@@ -387,6 +388,23 @@ class CrawlingService:
             if progress_callback:
                 await progress_callback('error', 0, 'Crawler not available')
             return []
+            
+        # Load settings from database first
+        try:
+            settings = await credential_service.get_credentials_by_category("rag_strategy")
+            batch_size = int(settings.get("CRAWL_BATCH_SIZE", "50"))
+            if max_concurrent is None:
+                max_concurrent = int(settings.get("CRAWL_MAX_CONCURRENT", "10"))
+            memory_threshold = float(settings.get("MEMORY_THRESHOLD_PERCENT", "80"))
+            check_interval = float(settings.get("DISPATCHER_CHECK_INTERVAL", "0.5"))
+        except Exception as e:
+            logger.warning(f"Failed to load crawl settings: {e}, using defaults")
+            batch_size = 50
+            if max_concurrent is None:
+                max_concurrent = 10
+            memory_threshold = 80.0
+            check_interval = 0.5
+            settings = {}  # Empty dict for defaults
             
         # Check if any URLs are documentation sites
         has_doc_sites = any(self._is_documentation_site(url) for url in urls)
@@ -399,9 +417,9 @@ class CrawlingService:
                 stream=True,  # Enable streaming for faster parallel processing
                 markdown_generator=self._get_markdown_generator(),
                 wait_for='body',  # Simple selector for batch
-                wait_until='domcontentloaded',  # Faster than networkidle for docs
-                page_timeout=30000,  # 30 seconds for JavaScript sites
-                delay_before_return_html=1.0,  # Reduced delay
+                wait_until=settings.get("CRAWL_WAIT_STRATEGY", "domcontentloaded"),
+                page_timeout=int(settings.get("CRAWL_PAGE_TIMEOUT", "30000")),
+                delay_before_return_html=float(settings.get("CRAWL_DELAY_BEFORE_HTML", "1.0")),
                 wait_for_images=False,  # Skip images for faster crawling
                 scan_full_page=True,  # Trigger lazy loading
                 exclude_all_images=False,
@@ -414,13 +432,14 @@ class CrawlingService:
                 cache_mode=CacheMode.BYPASS, 
                 stream=True,  # Enable streaming
                 markdown_generator=self._get_markdown_generator(),
-                wait_until='domcontentloaded',  # Faster than networkidle
-                delay_before_return_html=0.5,  # Reduced delay
+                wait_until=settings.get("CRAWL_WAIT_STRATEGY", "domcontentloaded"),
+                delay_before_return_html=float(settings.get("CRAWL_DELAY_BEFORE_HTML", "0.5")),
                 scan_full_page=True
             )
+            
         dispatcher = MemoryAdaptiveDispatcher(
-            memory_threshold_percent=80.0,  # Increased threshold
-            check_interval=0.5,  # Reduced check interval for faster response
+            memory_threshold_percent=memory_threshold,
+            check_interval=check_interval,
             max_session_permit=max_concurrent
         )
 
@@ -432,8 +451,7 @@ class CrawlingService:
         total_urls = len(urls)
         await report_progress(start_progress, f'Starting to crawl {total_urls} URLs...')
         
-        # Process URLs in batches for better performance
-        batch_size = min(50, max_concurrent)  # Increased to 50 for much faster processing
+        # Use configured batch size
         successful_results = []
         processed = 0
         
@@ -484,7 +502,7 @@ class CrawlingService:
         return successful_results
 
     async def crawl_recursive_with_progress(self, start_urls: List[str], max_depth: int = 3, 
-                                          max_concurrent: int = 10, progress_callback=None, 
+                                          max_concurrent: int = None, progress_callback=None, 
                                           start_progress: int = 10, end_progress: int = 60) -> List[Dict[str, Any]]:
         """Recursively crawl internal links from start URLs up to a maximum depth with progress reporting."""
         if not self.crawler:
@@ -492,6 +510,23 @@ class CrawlingService:
             if progress_callback:
                 await progress_callback('error', 0, 'Crawler not available')
             return []
+            
+        # Load settings from database
+        try:
+            settings = await credential_service.get_credentials_by_category("rag_strategy")
+            batch_size = int(settings.get("CRAWL_BATCH_SIZE", "50"))
+            if max_concurrent is None:
+                max_concurrent = int(settings.get("CRAWL_MAX_CONCURRENT", "10"))
+            memory_threshold = float(settings.get("MEMORY_THRESHOLD_PERCENT", "80"))
+            check_interval = float(settings.get("DISPATCHER_CHECK_INTERVAL", "0.5"))
+        except Exception as e:
+            logger.warning(f"Failed to load crawl settings: {e}, using defaults")
+            batch_size = 50
+            if max_concurrent is None:
+                max_concurrent = 10
+            memory_threshold = 80.0
+            check_interval = 0.5
+            settings = {}  # Empty dict for defaults
             
         # Check if start URLs include documentation sites
         has_doc_sites = any(self._is_documentation_site(url) for url in start_urls)
@@ -503,9 +538,9 @@ class CrawlingService:
                 stream=True,  # Enable streaming for faster parallel processing
                 markdown_generator=self._get_markdown_generator(),
                 wait_for='body',
-                wait_until='domcontentloaded',  # Faster than networkidle for docs
-                page_timeout=30000,  # 30 seconds
-                delay_before_return_html=1.0,  # Reduced delay
+                wait_until=settings.get("CRAWL_WAIT_STRATEGY", "domcontentloaded"),
+                page_timeout=int(settings.get("CRAWL_PAGE_TIMEOUT", "30000")),
+                delay_before_return_html=float(settings.get("CRAWL_DELAY_BEFORE_HTML", "1.0")),
                 wait_for_images=False,  # Skip images for faster crawling
                 scan_full_page=True,  # Trigger lazy loading
                 exclude_all_images=False,
@@ -518,13 +553,14 @@ class CrawlingService:
                 cache_mode=CacheMode.BYPASS, 
                 stream=True,  # Enable streaming
                 markdown_generator=self._get_markdown_generator(),
-                wait_until='domcontentloaded',  # Faster than networkidle
-                delay_before_return_html=0.5,  # Reduced delay
+                wait_until=settings.get("CRAWL_WAIT_STRATEGY", "domcontentloaded"),
+                delay_before_return_html=float(settings.get("CRAWL_DELAY_BEFORE_HTML", "0.5")),
                 scan_full_page=True
             )
+            
         dispatcher = MemoryAdaptiveDispatcher(
-            memory_threshold_percent=80.0,  # Increased threshold
-            check_interval=0.5,  # Reduced check interval for faster response
+            memory_threshold_percent=memory_threshold,
+            check_interval=check_interval,
             max_session_permit=max_concurrent
         )
 
@@ -559,8 +595,7 @@ class CrawlingService:
             
             await report_progress(depth_start, f'Crawling depth {depth + 1}/{max_depth}: {len(urls_to_crawl)} URLs to process')
 
-            # Process URLs in larger batches for better performance
-            batch_size = min(50, max_concurrent)  # Increased batch size for better parallelism
+            # Use configured batch size for recursive crawling
             next_level_urls = set()
             depth_successful = 0
             
