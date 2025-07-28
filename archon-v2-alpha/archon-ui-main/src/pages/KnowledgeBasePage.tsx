@@ -581,6 +581,19 @@ export const KnowledgeBasePage = () => {
     }
   };
 
+  const handleStopProgress = (progressId: string) => {
+    // Update the progress item to show stopping status
+    setProgressItems(prev => prev.map(item => 
+      item.progressId === progressId 
+        ? { ...item, status: 'stopping', log: 'Stopping crawl...' }
+        : item
+    ));
+    
+    // The actual stop API call is handled by the CrawlingProgressCard component
+    // This callback is mainly for UI feedback
+    showToast('Stopping crawl...', 'info');
+  };
+
   const handleStartCrawl = async (progressId: string, initialData: Partial<CrawlProgressData>) => {
     // handleStartCrawl called with progressId
     // Initial data received
@@ -806,6 +819,7 @@ export const KnowledgeBasePage = () => {
                             onProgress={handleProgressUpdate}
                             onRetry={() => handleRetryProgress(progressData.progressId)}
                             onDismiss={() => setProgressItems(prev => prev.filter(item => item.progressId !== progressData.progressId))}
+                            onStop={() => handleStopProgress(progressData.progressId)}
                           />
                         </motion.div>
                       ))}
@@ -863,6 +877,7 @@ export const KnowledgeBasePage = () => {
                           onProgress={handleProgressUpdate}
                           onRetry={() => handleRetryProgress(progressData.progressId)}
                           onDismiss={() => setProgressItems(prev => prev.filter(item => item.progressId !== progressData.progressId))}
+                          onStop={() => handleStopProgress(progressData.progressId)}
                         />
                       </motion.div>
                     ))}

@@ -50,6 +50,9 @@ sio = get_socketio_instance()
 CONCURRENT_CRAWL_LIMIT = 3  # Allow max 3 concurrent crawls
 crawl_semaphore = asyncio.Semaphore(CONCURRENT_CRAWL_LIMIT)
 
+# Track active async crawl tasks for cancellation support
+active_crawl_tasks: Dict[str, asyncio.Task] = {}
+
 # Request Models
 class KnowledgeItemRequest(BaseModel):
     url: str
@@ -252,15 +255,23 @@ async def refresh_knowledge_item(source_id: str):
         
         # Create a wrapped task that acquires the semaphore
         async def _perform_refresh_with_semaphore():
-            # Add a small delay to allow frontend WebSocket subscription to be established
-            # This prevents the "Room has 0 subscribers" issue
-            await asyncio.sleep(1.0)
-            
-            async with crawl_semaphore:
-                safe_logfire_info(f"Acquired crawl semaphore for refresh | source_id={source_id}")
-                await crawl_service.orchestrate_crawl(request_dict)
+            try:
+                # Add a small delay to allow frontend WebSocket subscription to be established
+                # This prevents the "Room has 0 subscribers" issue
+                await asyncio.sleep(1.0)
+                
+                async with crawl_semaphore:
+                    safe_logfire_info(f"Acquired crawl semaphore for refresh | source_id={source_id}")
+                    await crawl_service.orchestrate_crawl(request_dict)
+            finally:
+                # Clean up task from registry when done (success or failure)
+                if progress_id in active_crawl_tasks:
+                    del active_crawl_tasks[progress_id]
+                    safe_logfire_info(f"Cleaned up refresh task from registry | progress_id={progress_id}")
         
-        asyncio.create_task(_perform_refresh_with_semaphore())
+        task = asyncio.create_task(_perform_refresh_with_semaphore())
+        # Track the task for cancellation support
+        active_crawl_tasks[progress_id] = task
         
         return {
             'progressId': progress_id,
@@ -292,7 +303,9 @@ async def crawl_knowledge_item(request: KnowledgeItemRequest):
             'eta': 'Calculating...'
         })
         # Start background task IMMEDIATELY (like the old API)
-        asyncio.create_task(_perform_crawl_with_progress(progress_id, request))
+        task = asyncio.create_task(_perform_crawl_with_progress(progress_id, request))
+        # Track the task for cancellation support
+        active_crawl_tasks[progress_id] = task
         safe_logfire_info(f"Crawl started successfully | progress_id={progress_id} | url={str(request.url)}")
         response_data = {
             "success": True,
@@ -360,6 +373,11 @@ async def _perform_crawl_with_progress(progress_id: str, request: KnowledgeItemR
             print("=== END CRAWL ERROR ===")
             safe_logfire_error(f"Crawl exception traceback | traceback={tb}")
             await error_crawl_progress(progress_id, error_message)
+        finally:
+            # Clean up task from registry when done (success or failure)
+            if progress_id in active_crawl_tasks:
+                del active_crawl_tasks[progress_id]
+                safe_logfire_info(f"Cleaned up crawl task from registry | progress_id={progress_id}")
 
 @router.post("/documents/upload")
 async def upload_document(
@@ -396,7 +414,9 @@ async def upload_document(
             'fileType': file.content_type
         })
         # Start background task for processing with file content and metadata
-        asyncio.create_task(_perform_upload_with_progress(progress_id, file_content, file_metadata, tag_list, knowledge_type))
+        task = asyncio.create_task(_perform_upload_with_progress(progress_id, file_content, file_metadata, tag_list, knowledge_type))
+        # Track the task for cancellation support
+        active_crawl_tasks[progress_id] = task
         safe_logfire_info(f"Document upload started successfully | progress_id={progress_id} | filename={file.filename}")
         return {
             "success": True,
@@ -414,6 +434,13 @@ async def _perform_upload_with_progress(progress_id: str, file_content: bytes, f
     # Add a small delay to allow frontend WebSocket subscription to be established
     # This prevents the "Room has 0 subscribers" issue
     await asyncio.sleep(1.0)
+    
+    # Create cancellation check function for document uploads
+    def check_upload_cancellation():
+        """Check if upload task has been cancelled."""
+        task = active_crawl_tasks.get(progress_id)
+        if task and task.cancelled():
+            raise asyncio.CancelledError("Document upload was cancelled by user")
     
     # Import ProgressMapper to prevent progress from going backwards
     from ..services.knowledge.progress_mapper import ProgressMapper
@@ -474,7 +501,8 @@ async def _perform_upload_with_progress(progress_id: str, file_content: bytes, f
             source_id=source_id,
             knowledge_type=knowledge_type,
             tags=tag_list,
-            progress_callback=document_progress_callback
+            progress_callback=document_progress_callback,
+            cancellation_check=check_upload_cancellation
         )
         
         if success:
@@ -504,6 +532,11 @@ async def _perform_upload_with_progress(progress_id: str, file_content: bytes, f
         error_msg = f"Upload failed: {str(e)}"
         safe_logfire_error(f"Document upload failed | progress_id={progress_id} | filename={file_metadata.get('filename', 'unknown')} | error={str(e)}")
         await error_crawl_progress(progress_id, error_msg)
+    finally:
+        # Clean up task from registry when done (success or failure)
+        if progress_id in active_crawl_tasks:
+            del active_crawl_tasks[progress_id]
+            safe_logfire_info(f"Cleaned up upload task from registry | progress_id={progress_id}")
 
 @router.post("/rag/query")
 async def perform_rag_query(request: RagQueryRequest):
@@ -658,5 +691,32 @@ async def get_crawl_task_status(task_id: str):
         raise
     except Exception as e:
         safe_logfire_error(f"Failed to get task status | error={str(e)} | task_id={task_id}")
+        raise HTTPException(status_code=500, detail={'error': str(e)})
+
+@router.post("/knowledge-items/stop/{progress_id}")
+async def stop_crawl_task(progress_id: str):
+    """Stop a running crawl task."""
+    try:
+        from ..services.knowledge.crawl_orchestration_service import get_active_orchestration
+        
+        # Check if orchestration service exists for this progress ID
+        orchestration = get_active_orchestration(progress_id)
+        if not orchestration:
+            raise HTTPException(status_code=404, detail={'error': 'Crawl task not found'})
+        
+        # Cancel the orchestration
+        orchestration.cancel()
+        
+        safe_logfire_info(f"Successfully stopped crawl task | progress_id={progress_id}")
+        return {
+            'success': True,
+            'message': 'Crawl task stopped successfully',
+            'progressId': progress_id
+        }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        safe_logfire_error(f"Failed to stop crawl task | error={str(e)} | progress_id={progress_id}")
         raise HTTPException(status_code=500, detail={'error': str(e)}) 
 

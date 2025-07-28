@@ -251,6 +251,17 @@ class KnowledgeBaseService {
       })
     })
   }
+
+  /**
+   * Stop a running crawl task
+   */
+  async stopCrawl(progressId: string) {
+    console.log('🛑 [KnowledgeBase] Stopping crawl:', progressId);
+    
+    return apiRequest(`/knowledge-items/stop/${progressId}`, {
+      method: 'POST'
+    });
+  }
 }
 
 // Export singleton instance

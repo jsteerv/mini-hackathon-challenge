@@ -30,7 +30,8 @@ async def add_documents_to_supabase(
     batch_size: int = None,  # Will load from settings
     progress_callback: Optional[Any] = None,
     enable_parallel_batches: bool = True,
-    provider: Optional[str] = None
+    provider: Optional[str] = None,
+    cancellation_check: Optional[Any] = None
 ) -> None:
     """
     Add documents to Supabase with threading optimizations.
@@ -79,6 +80,10 @@ async def add_documents_to_supabase(
             if unique_urls:
                 # Delete in configured batch sizes
                 for i in range(0, len(unique_urls), delete_batch_size):
+                    # Check for cancellation before each delete batch
+                    if cancellation_check:
+                        cancellation_check()
+                    
                     batch_urls = unique_urls[i:i + delete_batch_size]
                     client.table("crawled_pages").delete().in_("url", batch_urls).execute()
                     # Yield control to allow Socket.IO to process messages
@@ -91,6 +96,10 @@ async def add_documents_to_supabase(
             failed_urls = []
             fallback_batch_size = max(10, delete_batch_size // 5)
             for i in range(0, len(unique_urls), fallback_batch_size):
+                # Check for cancellation before each fallback delete batch
+                if cancellation_check:
+                    cancellation_check()
+                
                 batch_urls = unique_urls[i:i + 10]
                 try:
                     client.table("crawled_pages").delete().in_("url", batch_urls).execute()
@@ -119,6 +128,10 @@ async def add_documents_to_supabase(
         
         # Process in batches to avoid memory issues
         for batch_num, i in enumerate(range(0, len(contents), batch_size), 1):
+            # Check for cancellation before each batch
+            if cancellation_check:
+                cancellation_check()
+            
             batch_end = min(i + batch_size, len(contents))
             
             # Get batch slices
@@ -167,25 +180,43 @@ async def add_documents_to_supabase(
                     full_document = url_to_full_document.get(url, "")
                     full_documents.append(full_document)
                 
+                # Get contextual embedding batch size from settings
                 try:
-                    # Process entire batch with a single API call using asyncio.to_thread
-                    # This runs the sync batch function in a thread pool without blocking the event loop
-                    results = await asyncio.to_thread(
-                        generate_contextual_embeddings_batch,
-                        full_documents,
-                        batch_contents
-                    )
-                    
-                    # Extract results
+                    contextual_batch_size = int(rag_settings.get("CONTEXTUAL_EMBEDDING_BATCH_SIZE", "50"))
+                except:
+                    contextual_batch_size = 50
+                
+                try:
+                    # Process in smaller sub-batches to avoid token limits
                     contextual_contents = []
                     successful_count = 0
-                    for idx, (contextual_text, success) in enumerate(results):
-                        contextual_contents.append(contextual_text)
-                        if success:
-                            batch_metadatas[idx]["contextual_embedding"] = True
-                            successful_count += 1
                     
-                    search_logger.info(f"Batch {batch_num}: Generated {successful_count}/{len(batch_contents)} contextual embeddings using batch API")
+                    for ctx_i in range(0, len(batch_contents), contextual_batch_size):
+                        # Check for cancellation before each contextual sub-batch
+                        if cancellation_check:
+                            cancellation_check()
+                        
+                        ctx_end = min(ctx_i + contextual_batch_size, len(batch_contents))
+                        
+                        sub_batch_contents = batch_contents[ctx_i:ctx_end]
+                        sub_batch_docs = full_documents[ctx_i:ctx_end]
+                        
+                        # Process sub-batch with a single API call using asyncio.to_thread
+                        sub_results = await asyncio.to_thread(
+                            generate_contextual_embeddings_batch,
+                            sub_batch_docs,
+                            sub_batch_contents
+                        )
+                        
+                        # Extract results from this sub-batch
+                        for idx, (contextual_text, success) in enumerate(sub_results):
+                            contextual_contents.append(contextual_text)
+                            if success:
+                                original_idx = ctx_i + idx
+                                batch_metadatas[original_idx]["contextual_embedding"] = True
+                                successful_count += 1
+                    
+                    search_logger.info(f"Batch {batch_num}: Generated {successful_count}/{len(batch_contents)} contextual embeddings using batch API (sub-batch size: {contextual_batch_size})")
                     
                 except Exception as e:
                     search_logger.error(f"Error in batch contextual embedding: {e}")
@@ -233,6 +264,10 @@ async def add_documents_to_supabase(
             retry_delay = 1.0
             
             for retry in range(max_retries):
+                # Check for cancellation before each retry attempt
+                if cancellation_check:
+                    cancellation_check()
+                
                 try:
                     client.table("crawled_pages").insert(batch_data).execute()
                     
@@ -267,6 +302,10 @@ async def add_documents_to_supabase(
                         # Try individual inserts as last resort
                         successful_inserts = 0
                         for record in batch_data:
+                            # Check for cancellation before each individual insert
+                            if cancellation_check:
+                                cancellation_check()
+                            
                             try:
                                 client.table("crawled_pages").insert(record).execute()
                                 successful_inserts += 1

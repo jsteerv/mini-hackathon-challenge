@@ -22,6 +22,22 @@ from ..source_management_service import update_source_info, extract_source_summa
 from ..background_task_manager import get_task_manager
 from .progress_mapper import ProgressMapper
 
+# Global registry to track active orchestration services for cancellation support
+_active_orchestrations: Dict[str, 'CrawlOrchestrationService'] = {}
+
+def get_active_orchestration(progress_id: str) -> Optional['CrawlOrchestrationService']:
+    """Get an active orchestration service by progress ID."""
+    return _active_orchestrations.get(progress_id)
+
+def register_orchestration(progress_id: str, orchestration: 'CrawlOrchestrationService'):
+    """Register an active orchestration service."""
+    _active_orchestrations[progress_id] = orchestration
+
+def unregister_orchestration(progress_id: str):
+    """Unregister an orchestration service."""
+    if progress_id in _active_orchestrations:
+        del _active_orchestrations[progress_id]
+
 
 class CrawlOrchestrationService:
     """
@@ -47,10 +63,26 @@ class CrawlOrchestrationService:
         self.progress_state = {'progressId': self.progress_id} if self.progress_id else {}
         # Initialize progress mapper to prevent backwards jumps
         self.progress_mapper = ProgressMapper()
+        # Cancellation support
+        self._cancelled = False
     
     def set_progress_id(self, progress_id: str):
         """Set the progress ID for Socket.IO updates."""
         self.progress_id = progress_id
+    
+    def cancel(self):
+        """Cancel the crawl operation."""
+        self._cancelled = True
+        safe_logfire_info(f"Crawl operation cancelled | progress_id={self.progress_id}")
+    
+    def is_cancelled(self) -> bool:
+        """Check if the crawl operation has been cancelled."""
+        return self._cancelled
+    
+    def _check_cancellation(self):
+        """Check if cancelled and raise an exception if so."""
+        if self._cancelled:
+            raise asyncio.CancelledError("Crawl operation was cancelled by user")
     
     def _is_documentation_site(self, url: str) -> bool:
         """Check if URL is a documentation site."""
@@ -116,11 +148,17 @@ class CrawlOrchestrationService:
             # Initial progress
             await update_mapped_progress('starting', 100, f'Starting crawl of {url}', currentUrl=url)
             
+            # Check for cancellation before proceeding
+            self._check_cancellation()
+            
             # Analyzing stage
             await update_mapped_progress('analyzing', 50, f'Analyzing URL type for {url}')
             
             # Detect URL type and perform crawl (async - stays in event loop)
             crawl_results, crawl_type = await self._crawl_by_url_type(url, request)
+            
+            # Check for cancellation after crawling
+            self._check_cancellation()
             
             # Send heartbeat after potentially long crawl operation
             await send_heartbeat_if_needed()
@@ -131,10 +169,16 @@ class CrawlOrchestrationService:
             # Processing stage
             await update_mapped_progress('processing', 50, 'Processing crawled content')
             
+            # Check for cancellation before document processing
+            self._check_cancellation()
+            
             # Process and store documents
             storage_results = await self._process_and_store_documents(
                 crawl_results, request, crawl_type
             )
+            
+            # Check for cancellation after document storage
+            self._check_cancellation()
             
             # Send heartbeat after document storage
             await send_heartbeat_if_needed()
@@ -180,6 +224,13 @@ class CrawlOrchestrationService:
                 'log': f'Crawl completed successfully!'
             })
             
+        except asyncio.CancelledError:
+            safe_logfire_info(f"Crawl operation cancelled | progress_id={self.progress_id}")
+            await self._handle_progress_update(task_id, {
+                'status': 'cancelled',
+                'percentage': -1,
+                'log': 'Crawl operation was cancelled by user'
+            })
         except Exception as e:
             safe_logfire_error(f"Async crawl orchestration failed | error={str(e)}")
             await self._handle_progress_update(task_id, {
@@ -187,6 +238,11 @@ class CrawlOrchestrationService:
                 'percentage': -1,
                 'log': f'Crawl failed: {str(e)}'
             })
+        finally:
+            # Always unregister the orchestration service
+            if self.progress_id:
+                unregister_orchestration(self.progress_id)
+                safe_logfire_info(f"Unregistered orchestration service | progress_id={self.progress_id}")
 
     async def orchestrate_crawl(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -204,6 +260,10 @@ class CrawlOrchestrationService:
         
         # Create task ID
         task_id = self.progress_id or str(uuid.uuid4())
+        
+        # Register this orchestration service for cancellation support
+        if self.progress_id:
+            register_orchestration(self.progress_id, self)
         
         # Start the crawl as an async task in the main event loop
         asyncio.create_task(self._async_orchestrate_crawl(request, task_id))
@@ -453,6 +513,9 @@ class CrawlOrchestrationService:
         
         # Process and chunk each document
         for doc_index, doc in enumerate(crawl_results):
+            # Check for cancellation during document processing
+            self._check_cancellation()
+            
             source_url = doc.get('url', '')
             markdown_content = doc.get('markdown', '')
             
@@ -637,7 +700,8 @@ class CrawlOrchestrationService:
             batch_size=25,  # Increased from 10 for better performance
             progress_callback=doc_storage_callback,  # Pass the callback for progress updates
             enable_parallel_batches=True,  # Enable parallel processing
-            provider=None  # Use configured provider
+            provider=None,  # Use configured provider
+            cancellation_check=self._check_cancellation  # Pass cancellation check
         )
         
         # Progress will be at 80% after document storage completes

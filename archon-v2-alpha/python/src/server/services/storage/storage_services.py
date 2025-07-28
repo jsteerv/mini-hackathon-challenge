@@ -31,7 +31,8 @@ class DocumentStorageService(BaseStorageService):
         knowledge_type: str = "documentation",
         tags: Optional[List[str]] = None,
         websocket: Optional[WebSocket] = None,
-        progress_callback: Optional[Any] = None
+        progress_callback: Optional[Any] = None,
+        cancellation_check: Optional[Any] = None
     ) -> Tuple[bool, Dict[str, Any]]:
         """
         Upload and process a document file with progress reporting.
@@ -144,7 +145,8 @@ class DocumentStorageService(BaseStorageService):
                     batch_size=15,
                     progress_callback=progress_callback,
                     enable_parallel_batches=True,
-                    provider=None  # Use configured provider
+                    provider=None,  # Use configured provider
+                    cancellation_check=cancellation_check
                 )
                 
                 await report_progress("Document upload completed!", 100)
@@ -198,7 +200,8 @@ class DocumentStorageService(BaseStorageService):
                 knowledge_type=doc.get('knowledge_type', 'documentation'),
                 tags=doc.get('tags'),
                 websocket=kwargs.get('websocket'),
-                progress_callback=kwargs.get('progress_callback')
+                progress_callback=kwargs.get('progress_callback'),
+                cancellation_check=kwargs.get('cancellation_check')
             )
             results.append(result)
         
