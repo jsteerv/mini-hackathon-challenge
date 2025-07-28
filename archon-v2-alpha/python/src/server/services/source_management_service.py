@@ -191,7 +191,8 @@ def update_source_info(
     content: str = "", 
     knowledge_type: str = "technical", 
     tags: Optional[List[str]] = None, 
-    update_frequency: int = 7
+    update_frequency: int = 7,
+    original_url: Optional[str] = None
 ):
     """
     Update or insert source information in the sources table.
@@ -222,6 +223,8 @@ def update_source_info(
                 "auto_generated": False,  # Mark as not auto-generated since we're preserving
                 "update_frequency": update_frequency
             }
+            if original_url:
+                metadata["original_url"] = original_url
             
             # Update existing source (preserving title)
             result = client.table('sources').update({
@@ -238,8 +241,10 @@ def update_source_info(
                 source_id, content, knowledge_type, tags
             )
             
-            # Add update_frequency to metadata
+            # Add update_frequency and original_url to metadata
             metadata["update_frequency"] = update_frequency
+            if original_url:
+                metadata["original_url"] = original_url
             
             # Insert new source
             client.table('sources').insert({

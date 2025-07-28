@@ -18,6 +18,7 @@ export interface KnowledgeItemMetadata {
   update_frequency?: number
   next_update?: string
   group_name?: string
+  original_url?: string
 }
 
 export interface KnowledgeItem {

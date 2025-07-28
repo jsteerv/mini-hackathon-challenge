@@ -261,7 +261,8 @@ class CrawlingService:
                         cache_mode=cache_mode, 
                         stream=True,  # Enable streaming
                         markdown_generator=self._get_markdown_generator(),
-                        wait_until='networkidle',  # Wait for network to be idle
+                        wait_until='domcontentloaded',  # Use domcontentloaded for better reliability
+                        page_timeout=45000,  # 45 seconds timeout
                         delay_before_return_html=0.3,  # Reduced from 1.0s
                         scan_full_page=True  # Trigger lazy loading
                     )
@@ -433,6 +434,7 @@ class CrawlingService:
                 stream=True,  # Enable streaming
                 markdown_generator=self._get_markdown_generator(),
                 wait_until=settings.get("CRAWL_WAIT_STRATEGY", "domcontentloaded"),
+                page_timeout=int(settings.get("CRAWL_PAGE_TIMEOUT", "45000")),
                 delay_before_return_html=float(settings.get("CRAWL_DELAY_BEFORE_HTML", "0.5")),
                 scan_full_page=True
             )
@@ -554,6 +556,7 @@ class CrawlingService:
                 stream=True,  # Enable streaming
                 markdown_generator=self._get_markdown_generator(),
                 wait_until=settings.get("CRAWL_WAIT_STRATEGY", "domcontentloaded"),
+                page_timeout=int(settings.get("CRAWL_PAGE_TIMEOUT", "45000")),
                 delay_before_return_html=float(settings.get("CRAWL_DELAY_BEFORE_HTML", "0.5")),
                 scan_full_page=True
             )

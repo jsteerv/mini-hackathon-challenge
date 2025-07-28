@@ -84,6 +84,8 @@ class CodeExtractionService:
             return value
         except Exception as e:
             safe_logfire_error(f"Error getting setting {key}: {e}, using default: {default}")
+            # Make sure we return the default value with correct type
+            self._settings_cache[key] = default
             return default
     
     async def _get_min_code_length(self) -> int:
@@ -277,6 +279,7 @@ class CodeExtractionService:
                     safe_logfire_info(f"Found {len(code_blocks)} code blocks from markdown | url={source_url}")
                 
                 if code_blocks:
+                    # Always extract source_id from URL
                     parsed_url = urlparse(source_url)
                     source_id = parsed_url.netloc or parsed_url.path
                     
@@ -550,7 +553,7 @@ class CodeExtractionService:
         
         return code_blocks
     
-    async def _extract_text_file_code_blocks(self, content: str, url: str, min_length: int = None) -> List[Dict[str, Any]]:
+    async def _extract_text_file_code_blocks(self, content: str, url: str, min_length: Optional[int] = None) -> List[Dict[str, Any]]:
         """
         Extract code blocks from plain text files (like .txt files).
         Handles formats like llms.txt where code blocks may be indicated by:
@@ -585,8 +588,8 @@ class CodeExtractionService:
             language = match.group(1) or ""
             code_content = match.group(2).strip()
             
-            # Use repr() to safely escape the code content for logging
-            safe_logfire_info(f"🔎 Match {i+1}: language='{language}', raw_length={len(code_content)}, first_50_chars={repr(code_content[:50])}...")
+            # Log match info without including the actual content that might break formatting
+            safe_logfire_info(f"🔎 Match {i+1}: language='{language}', raw_length={len(code_content)}")
             
             # Get position info first
             start_pos = match.start()
@@ -594,7 +597,10 @@ class CodeExtractionService:
             
             # Calculate dynamic minimum length
             context_around = content[max(0, start_pos - 500):min(len(content), end_pos + 500)]
-            actual_min_length = await self._calculate_min_length(language, context_around) if min_length is None else min_length
+            if min_length is None:
+                actual_min_length = await self._calculate_min_length(language, context_around)
+            else:
+                actual_min_length = min_length
             
             if len(code_content) >= actual_min_length:
                 # Get context
@@ -618,7 +624,7 @@ class CodeExtractionService:
                 else:
                     safe_logfire_info(f"❌ INVALID code block failed validation | language={language}")
             else:
-                safe_logfire_info(f"❌ Code block too short: {len(code_content)} < {min_length}")
+                safe_logfire_info(f"❌ Code block too short: {len(code_content)} < {actual_min_length}")
         
         # Method 2: Look for language-labeled code blocks (e.g., "TypeScript:" or "Python example:")
         language_pattern = r'(?:^|\n)((?:typescript|javascript|python|java|c\+\+|rust|go|ruby|php|swift|kotlin|scala|r|matlab|julia|dart|elixir|erlang|haskell|clojure|lua|perl|shell|bash|sql|html|css|xml|json|yaml|toml|ini|dockerfile|makefile|cmake|gradle|maven|npm|yarn|pip|cargo|gem|pod|composer|nuget|apt|yum|brew|choco|snap|flatpak|appimage|msi|exe|dmg|pkg|deb|rpm|tar|zip|7z|rar|gz|bz2|xz|zst|lz4|lzo|lzma|lzip|lzop|compress|uncompress|gzip|gunzip|bzip2|bunzip2|xz|unxz|zstd|unzstd|lz4|unlz4|lzo|unlzo|lzma|unlzma|lzip|lunzip|lzop|unlzop)\s*(?:code|example|snippet)?)[:\s]*\n((?:(?:^[ \t]+.*\n?)+)|(?:.*\n)+?)(?=\n(?:[A-Z][a-z]+\s*:|^\s*$|\n#|\n\*|\n-|\n\d+\.))'
@@ -631,7 +637,10 @@ class CodeExtractionService:
             code_content = match.group(2).strip()
             
             # Calculate dynamic minimum length for language-labeled blocks
-            actual_min_length_lang = await self._calculate_min_length(language, code_content[:500]) if min_length is None else min_length
+            if min_length is None:
+                actual_min_length_lang = await self._calculate_min_length(language, code_content[:500])
+            else:
+                actual_min_length_lang = min_length
             
             if len(code_content) >= actual_min_length_lang:
                 # Get context

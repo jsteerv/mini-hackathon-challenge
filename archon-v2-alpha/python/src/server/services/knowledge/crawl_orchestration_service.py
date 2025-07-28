@@ -134,6 +134,11 @@ class CrawlOrchestrationService:
             url = str(request.get('url', ''))
             safe_logfire_info(f"Starting async crawl orchestration | url={url} | task_id={task_id}")
             
+            # Extract source_id from the original URL
+            parsed_original_url = urlparse(url)
+            original_source_id = parsed_original_url.netloc or parsed_original_url.path
+            safe_logfire_info(f"Using source_id '{original_source_id}' from original URL '{url}'")
+            
             # Helper to update progress with mapper
             async def update_mapped_progress(stage: str, stage_progress: int, message: str, **kwargs):
                 overall_progress = self.progress_mapper.map_progress(stage, stage_progress)
@@ -174,7 +179,7 @@ class CrawlOrchestrationService:
             
             # Process and store documents
             storage_results = await self._process_and_store_documents(
-                crawl_results, request, crawl_type
+                crawl_results, request, crawl_type, original_source_id
             )
             
             # Check for cancellation after document storage
@@ -224,6 +229,11 @@ class CrawlOrchestrationService:
                 'log': f'Crawl completed successfully!'
             })
             
+            # Unregister after successful completion
+            if self.progress_id:
+                unregister_orchestration(self.progress_id)
+                safe_logfire_info(f"Unregistered orchestration service after completion | progress_id={self.progress_id}")
+            
         except asyncio.CancelledError:
             safe_logfire_info(f"Crawl operation cancelled | progress_id={self.progress_id}")
             await self._handle_progress_update(task_id, {
@@ -231,6 +241,10 @@ class CrawlOrchestrationService:
                 'percentage': -1,
                 'log': 'Crawl operation was cancelled by user'
             })
+            # Unregister on cancellation
+            if self.progress_id:
+                unregister_orchestration(self.progress_id)
+                safe_logfire_info(f"Unregistered orchestration service on cancellation | progress_id={self.progress_id}")
         except Exception as e:
             safe_logfire_error(f"Async crawl orchestration failed | error={str(e)}")
             await self._handle_progress_update(task_id, {
@@ -238,11 +252,13 @@ class CrawlOrchestrationService:
                 'percentage': -1,
                 'log': f'Crawl failed: {str(e)}'
             })
-        finally:
-            # Always unregister the orchestration service
+            # Unregister on error
             if self.progress_id:
                 unregister_orchestration(self.progress_id)
-                safe_logfire_info(f"Unregistered orchestration service | progress_id={self.progress_id}")
+                safe_logfire_info(f"Unregistered orchestration service on error | progress_id={self.progress_id}")
+        finally:
+            # Don't unregister here - let the crawl complete first
+            pass
 
     async def orchestrate_crawl(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -311,8 +327,13 @@ class CrawlOrchestrationService:
                 'percentage': 50,
                 'log': 'Processing and storing documents'
             })
+            # Extract source_id from the original URL
+            parsed_original_url = urlparse(url)
+            original_source_id = parsed_original_url.netloc or parsed_original_url.path
+            safe_logfire_info(f"Using source_id '{original_source_id}' from original URL '{url}'")
+            
             storage_results = self._process_and_store_documents_blocking(
-                crawl_results, request, crawl_type, progress_queue
+                crawl_results, request, crawl_type, progress_queue, original_source_id
             )
             
             # Extract url_to_full_document from storage results
@@ -488,7 +509,7 @@ class CrawlOrchestrationService:
         return crawl_results, crawl_type
     
     async def _process_and_store_documents(self, crawl_results: List[Dict], request: Dict[str, Any], 
-                                          crawl_type: str) -> Dict[str, Any]:
+                                          crawl_type: str, original_source_id: str) -> Dict[str, Any]:
         """
         Process crawled documents and store them in the database.
         
@@ -528,13 +549,16 @@ class CrawlOrchestrationService:
             # CHUNK THE CONTENT (restored from old implementation)
             chunks = storage_service.smart_chunk_text(markdown_content, chunk_size=5000)
             
-            # Extract source_id
-            parsed_url = urlparse(source_url)
-            source_id = parsed_url.netloc or parsed_url.path
-            safe_logfire_info(f"Extracted source_id '{source_id}' from URL '{source_url}'")
+            # Use the original source_id for all documents
+            source_id = original_source_id
+            safe_logfire_info(f"Using original source_id '{source_id}' for URL '{source_url}'")
             
             # Process each chunk
             for i, chunk in enumerate(chunks):
+                # Check for cancellation during chunk processing
+                if i % 10 == 0:  # Check every 10 chunks
+                    self._check_cancellation()
+                
                 all_urls.append(source_url)
                 all_chunk_numbers.append(i)
                 all_contents.append(chunk)
@@ -619,7 +643,8 @@ class CrawlOrchestrationService:
                         content=combined_content,
                         knowledge_type=request.get('knowledge_type', 'technical'),
                         tags=request.get('tags', []),
-                        update_frequency=0  # Set to 0 since we're using manual refresh
+                        update_frequency=0,  # Set to 0 since we're using manual refresh
+                        original_url=request.get('url')  # Store the original crawl URL
                     )
                     safe_logfire_info(f"Successfully created/updated source record for '{source_id}'")
                 except Exception as e:
@@ -636,7 +661,8 @@ class CrawlOrchestrationService:
                                 'knowledge_type': request.get('knowledge_type', 'technical'),
                                 'tags': request.get('tags', []),
                                 'auto_generated': True,
-                                'fallback_creation': True
+                                'fallback_creation': True,
+                                'original_url': request.get('url')
                             }
                         }).execute()
                         safe_logfire_info(f"Fallback source creation succeeded for '{source_id}'")
@@ -988,7 +1014,7 @@ class CrawlOrchestrationService:
     
     
     def _process_and_store_documents_blocking(self, crawl_results: List[Dict], request: Dict[str, Any], 
-                                            crawl_type: str, progress_queue: Queue) -> Dict[str, Any]:
+                                            crawl_type: str, progress_queue: Queue, original_source_id: str) -> Dict[str, Any]:
         """
         Blocking version of document processing and storage.
         
@@ -1032,13 +1058,16 @@ class CrawlOrchestrationService:
             # CHUNK THE CONTENT
             chunks = storage_service.smart_chunk_text(markdown_content, chunk_size=5000)
             
-            # Extract source_id
-            parsed_url = urlparse(source_url)
-            source_id = parsed_url.netloc or parsed_url.path
-            safe_logfire_info(f"Extracted source_id '{source_id}' from URL '{source_url}'")
+            # Use the original source_id for all documents
+            source_id = original_source_id
+            safe_logfire_info(f"Using original source_id '{source_id}' for URL '{source_url}'")
             
             # Process each chunk
             for i, chunk in enumerate(chunks):
+                # Check for cancellation during chunk processing
+                if i % 10 == 0:  # Check every 10 chunks
+                    self._check_cancellation()
+                
                 all_urls.append(source_url)
                 all_chunk_numbers.append(i)
                 all_contents.append(chunk)
@@ -1115,7 +1144,8 @@ class CrawlOrchestrationService:
                         content=combined_content,
                         knowledge_type=request.get('knowledge_type', 'technical'),
                         tags=request.get('tags', []),
-                        update_frequency=0
+                        update_frequency=0,
+                        original_url=request.get('url')  # Store the original crawl URL
                     )
                     safe_logfire_info(f"Successfully created/updated source record for '{source_id}'")
                 except Exception as e:
@@ -1132,7 +1162,8 @@ class CrawlOrchestrationService:
                                 'knowledge_type': request.get('knowledge_type', 'technical'),
                                 'tags': request.get('tags', []),
                                 'auto_generated': True,
-                                'fallback_creation': True
+                                'fallback_creation': True,
+                                'original_url': request.get('url')
                             }
                         }).execute()
                         safe_logfire_info(f"Fallback source creation succeeded for '{source_id}'")

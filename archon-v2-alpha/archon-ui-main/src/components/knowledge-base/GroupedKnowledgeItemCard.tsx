@@ -382,7 +382,7 @@ export const GroupedKnowledgeItemCard = ({
                   ? 'text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300'
                   : 'text-cyan-500 hover:text-cyan-600 dark:text-cyan-400 dark:hover:text-cyan-300'
               }`}
-              title="Refresh this knowledge item"
+              title={`Refresh from: ${item.metadata.original_url || item.url || 'URL not available'}`}
             >
               <RefreshCw className="w-3 h-3" />
               <span className="text-sm font-medium">Recrawl</span>
