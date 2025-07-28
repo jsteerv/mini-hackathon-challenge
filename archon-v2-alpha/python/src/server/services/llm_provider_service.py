@@ -130,6 +130,13 @@ async def get_llm_client(provider: Optional[str] = None, use_embedding_provider:
 
 def _get_active_provider_sync() -> Dict[str, Any]:
     """Get active provider configuration synchronously using proper credential service methods."""
+    # Check cache first
+    cache_key = "provider_config_sync"
+    cached_config = _get_cached_settings(cache_key)
+    if cached_config is not None:
+        logger.debug("Using cached sync provider config")
+        return cached_config
+    
     try:
         from .credential_service import credential_service
         
@@ -179,15 +186,19 @@ def _get_active_provider_sync() -> Dict[str, Any]:
             else:
                 base_url = None
             
-            logger.info(f"Sync provider config - Provider: {provider}, API key present: {bool(api_key)}")
+            logger.debug(f"Sync provider config - Provider: {provider}, API key present: {bool(api_key)}")
             
-            return {
+            result = {
                 "provider": provider,
                 "api_key": api_key,
                 "base_url": base_url,
                 "chat_model": rag_settings.get("MODEL_CHOICE", "gpt-4.1-nano"),
                 "embedding_model": rag_settings.get("EMBEDDING_MODEL", "")
             }
+            
+            # Cache the result
+            _set_cached_settings(cache_key, result)
+            return result
         else:
             # Fallback to environment variables
             logger.warning("Credential service cache not initialized, using environment variables")
@@ -199,13 +210,17 @@ def _get_active_provider_sync() -> Dict[str, Any]:
             else:
                 api_key = None
                 
-            return {
+            result = {
                 "provider": provider,
                 "api_key": api_key,
                 "base_url": None,
                 "chat_model": os.getenv("MODEL_CHOICE", "gpt-4.1-nano"),
                 "embedding_model": os.getenv("EMBEDDING_MODEL", "")
             }
+            
+            # Cache the result even for environment variables
+            _set_cached_settings(cache_key, result)
+            return result
             
     except Exception as e:
         logger.error(f"Error getting provider config sync: {e}")

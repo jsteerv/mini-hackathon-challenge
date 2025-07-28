@@ -354,10 +354,10 @@ export const RAGSettings = ({
                     type="number"
                     min="5"
                     max="120"
-                    value={(ragSettings.CRAWL_PAGE_TIMEOUT || 30000) / 1000}
+                    value={(ragSettings.CRAWL_PAGE_TIMEOUT || 60000) / 1000}
                     onChange={e => setRagSettings({
                       ...ragSettings,
-                      CRAWL_PAGE_TIMEOUT: (parseInt(e.target.value, 10) || 30) * 1000
+                      CRAWL_PAGE_TIMEOUT: (parseInt(e.target.value, 10) || 60) * 1000
                     })}
                     className="w-full px-3 py-2 border border-green-500/30 rounded-md bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:border-green-500 focus:ring-1 focus:ring-green-500"
                   />
