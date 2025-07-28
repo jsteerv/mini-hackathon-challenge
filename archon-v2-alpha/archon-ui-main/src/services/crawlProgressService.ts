@@ -200,6 +200,33 @@ class CrawlProgressService {
         }
       });
 
+      // Add stop event handlers
+      this.wsService.addMessageHandler('crawl:stopping', (message) => {
+        if (message.data?.progressId === progressId) {
+          onMessage({
+            progressId,
+            status: 'stopping',
+            percentage: message.data.percentage || 0,
+            log: message.data.message
+          });
+        }
+      });
+      
+      this.wsService.addMessageHandler('crawl:stopped', (message) => {
+        if (message.data?.progressId === progressId) {
+          onMessage({
+            progressId,
+            status: 'cancelled',
+            percentage: 100,
+            completed: true,
+            log: message.data.message
+          });
+          
+          // Auto-cleanup after stop
+          setTimeout(() => this.stopStreaming(progressId), 1000);
+        }
+      });
+
       // Subscribe to the crawl progress with retry logic
       console.log(`📤 Sending crawl_subscribe for ${progressId}`);
       const subscribeMessage = {

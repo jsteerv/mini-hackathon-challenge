@@ -73,17 +73,18 @@ export const CrawlingProgressCard: React.FC<CrawlingProgressCardProps> = ({
       setIsStopping(true);
       console.log('🛑 Stopping crawl with progress ID:', progressData.progressId);
       
-      const result = await knowledgeBaseService.stopCrawl(progressData.progressId);
-      console.log('🛑 Stop API result:', result);
+      // Optimistic UI update - immediately show stopping status
+      progressData.status = 'stopping';
       
-      // Call the onStop callback if provided
+      // Call the onStop callback if provided - this will handle localStorage and API call
       if (onStop) {
         console.log('🛑 Calling onStop callback');
         onStop();
       }
     } catch (error) {
       console.error('Failed to stop crawl:', error);
-      // You could show a toast notification here
+      // Revert optimistic update on error
+      progressData.status = progressData.status === 'stopping' ? 'processing' : progressData.status;
     } finally {
       setIsStopping(false);
     }

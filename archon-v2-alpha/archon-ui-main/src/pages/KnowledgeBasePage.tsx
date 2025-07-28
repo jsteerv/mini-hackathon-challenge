@@ -131,6 +131,12 @@ export const KnowledgeBasePage = () => {
               const startedAt = crawlData.startedAt || 0;
               const lastUpdated = crawlData.lastUpdated || startedAt;
               
+              // Skip cancelled crawls
+              if (crawlData.status === 'cancelled' || crawlData.cancelledAt) {
+                localStorage.removeItem(`crawl_progress_${progressId}`);
+                continue;
+              }
+              
               // Check if crawl is not too old (within 1 hour) and not completed/errored
               if (now - startedAt < ONE_HOUR && 
                   crawlData.status !== 'completed' && 
@@ -735,17 +741,41 @@ export const KnowledgeBasePage = () => {
     }
   };
 
+  const handleStopCrawl = async (progressId: string) => {
+    try {
+      // Mark as cancelled in localStorage immediately
+      const crawlDataStr = localStorage.getItem(`crawl_progress_${progressId}`);
+      if (crawlDataStr) {
+        const crawlData = JSON.parse(crawlDataStr);
+        crawlData.status = 'cancelled';
+        crawlData.cancelledAt = Date.now();
+        localStorage.setItem(`crawl_progress_${progressId}`, JSON.stringify(crawlData));
+      }
+      
+      // Call stop endpoint
+      await knowledgeBaseService.stopCrawl(progressId);
+      
+      // Update UI state
+      setProgressItems(prev => prev.map(item => 
+        item.progressId === progressId 
+          ? { ...item, status: 'cancelled', percentage: -1 }
+          : item
+      ));
+      
+      // Clean up from active crawls
+      const activeCrawls = JSON.parse(localStorage.getItem('active_crawls') || '[]');
+      const updated = activeCrawls.filter((id: string) => id !== progressId);
+      localStorage.setItem('active_crawls', JSON.stringify(updated));
+      
+    } catch (error) {
+      console.error('Failed to stop crawl:', error);
+      showToast('Failed to stop crawl', 'error');
+    }
+  };
+
   const handleStopProgress = (progressId: string) => {
-    // Update the progress item to show stopping status
-    setProgressItems(prev => prev.map(item => 
-      item.progressId === progressId 
-        ? { ...item, status: 'stopping', log: 'Stopping crawl...' }
-        : item
-    ));
-    
-    // The actual stop API call is handled by the CrawlingProgressCard component
-    // This callback is mainly for UI feedback
-    showToast('Stopping crawl...', 'info');
+    // This is called from CrawlingProgressCard
+    handleStopCrawl(progressId);
   };
 
   const handleStartCrawl = async (progressId: string, initialData: Partial<CrawlProgressData>) => {

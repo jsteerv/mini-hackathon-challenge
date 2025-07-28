@@ -51,6 +51,7 @@ All events use simple names on the root namespace:
 | `unsubscribe_progress` | Client→Server | Unsubscribe from progress | `{progress_id: string}` |
 | `crawl_subscribe` | Client→Server | Subscribe to crawl progress | `{progress_id: string}` |
 | `crawl_unsubscribe` | Client→Server | Unsubscribe from crawl | `{progress_id: string}` |
+| `crawl_stop` | Client→Server | Stop an active crawl | `{progress_id: string}` |
 
 ## Broadcast Events
 
@@ -64,6 +65,8 @@ These are emitted by the server to rooms:
 | `projects_update` | Project list changed | 'project_list' | `{projects: Array}` |
 | `project_progress` | Creation progress | progress_id | Progress data |
 | `crawl_progress` | Crawl progress | progress_id | Progress data |
+| `crawl:stopping` | Crawl is stopping | progress_id | `{progressId, status, message}` |
+| `crawl:stopped` | Crawl has stopped | progress_id | `{progressId, status, message, timestamp}` |
 
 ## Frontend Usage
 
@@ -355,6 +358,46 @@ async def update_progress(progress_id: str, percentage: int):
         'status': 'crawling',
         'timestamp': datetime.now().isoformat()
     })
+```
+
+### Crawl Cancellation
+```python
+# Client-side stop request
+ws.send({
+    type: 'crawl_stop',
+    data: { progress_id: progressId }
+});
+
+# Server-side handler
+@sio.event
+async def crawl_stop(sid, data):
+    progress_id = data.get('progress_id')
+    
+    # Emit immediate feedback
+    await sio.emit('crawl:stopping', {
+        'progressId': progress_id,
+        'status': 'stopping',
+        'message': 'Stopping crawl operation...'
+    }, room=progress_id)
+    
+    # Cancel orchestration and asyncio task
+    orchestration = get_active_orchestration(progress_id)
+    if orchestration:
+        orchestration.cancel()
+    
+    # Cancel asyncio task if exists
+    if progress_id in active_crawl_tasks:
+        task = active_crawl_tasks[progress_id]
+        if not task.done():
+            task.cancel()
+    
+    # Emit completion
+    await sio.emit('crawl:stopped', {
+        'progressId': progress_id,
+        'status': 'cancelled',
+        'message': 'Crawl operation cancelled',
+        'timestamp': datetime.utcnow().isoformat()
+    }, room=progress_id)
 ```
 
 ### Async Progress Callbacks

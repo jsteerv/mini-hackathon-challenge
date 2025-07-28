@@ -373,6 +373,12 @@ async def _perform_crawl_with_progress(progress_id: str, request: KnowledgeItemR
             orchestration_service = CrawlOrchestrationService(crawler, supabase_client)
             orchestration_service.set_progress_id(progress_id)
             
+            # Store the current task in active_crawl_tasks for cancellation support
+            current_task = asyncio.current_task()
+            if current_task:
+                active_crawl_tasks[progress_id] = current_task
+                safe_logfire_info(f"Stored current task in active_crawl_tasks | progress_id={progress_id}")
+            
             # Convert request to dict for service
             request_dict = {
                 'url': str(request.url),
@@ -389,6 +395,14 @@ async def _perform_crawl_with_progress(progress_id: str, request: KnowledgeItemR
             # The orchestration service now runs in background and handles all progress updates
             # Just log that the task was started
             safe_logfire_info(f"Crawl task started | progress_id={progress_id} | task_id={result.get('task_id')}")
+        except asyncio.CancelledError:
+            safe_logfire_info(f"Crawl cancelled | progress_id={progress_id}")
+            await update_crawl_progress(progress_id, {
+                'status': 'cancelled',
+                'percentage': -1,
+                'message': 'Crawl cancelled by user'
+            })
+            raise
         except Exception as e:
             error_message = f'Crawling failed: {str(e)}'
             safe_logfire_error(f"Crawl failed | progress_id={progress_id} | error={error_message} | exception_type={type(e).__name__}")
@@ -726,15 +740,43 @@ async def get_crawl_task_status(task_id: str):
 async def stop_crawl_task(progress_id: str):
     """Stop a running crawl task."""
     try:
-        from ..services.knowledge.crawl_orchestration_service import get_active_orchestration
+        from ..services.knowledge.crawl_orchestration_service import get_active_orchestration, unregister_orchestration
         
-        # Check if orchestration service exists for this progress ID
+        # Emit stopping status immediately
+        await sio.emit('crawl:stopping', {
+            'progressId': progress_id,
+            'message': 'Stopping crawl operation...',
+            'timestamp': datetime.utcnow().isoformat()
+        }, room=progress_id)
+        
+        safe_logfire_info(f"Emitted crawl:stopping event | progress_id={progress_id}")
+        
+        # Step 1: Cancel the orchestration service
         orchestration = get_active_orchestration(progress_id)
-        if not orchestration:
-            raise HTTPException(status_code=404, detail={'error': 'Crawl task not found'})
+        if orchestration:
+            orchestration.cancel()
         
-        # Cancel the orchestration
-        orchestration.cancel()
+        # Step 2: Cancel the asyncio task
+        if progress_id in active_crawl_tasks:
+            task = active_crawl_tasks[progress_id]
+            if not task.done():
+                task.cancel()
+                try:
+                    await asyncio.wait_for(task, timeout=2.0)
+                except (asyncio.CancelledError, asyncio.TimeoutError):
+                    pass
+            del active_crawl_tasks[progress_id]
+        
+        # Step 3: Remove from active orchestrations registry
+        unregister_orchestration(progress_id)
+        
+        # Step 4: Send Socket.IO event
+        await sio.emit('crawl:stopped', {
+            'progressId': progress_id,
+            'status': 'cancelled',
+            'message': 'Crawl cancelled by user',
+            'timestamp': datetime.utcnow().isoformat()
+        }, room=progress_id)
         
         safe_logfire_info(f"Successfully stopped crawl task | progress_id={progress_id}")
         return {

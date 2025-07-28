@@ -422,3 +422,71 @@ async def get_task_status(sid, data):
         status = await task_manager.get_task_status(task_id)
         return status
     return {'error': 'No task_id provided'}
+
+@sio.event
+async def crawl_stop(sid, data):
+    """Handle crawl stop request via Socket.IO."""
+    progress_id = data.get('progress_id')
+    if not progress_id:
+        await sio.emit('error', {'message': 'progress_id required'}, to=sid)
+        return {'success': False, 'error': 'progress_id required'}
+    
+    logger.info(f"🛑 [SOCKETIO] Received crawl_stop request | sid={sid} | progress_id={progress_id}")
+    
+    # Emit stopping status immediately
+    await sio.emit('crawl:stopping', {
+        'progressId': progress_id,
+        'message': 'Stopping crawl operation...',
+        'timestamp': time.time()
+    }, room=progress_id)
+    
+    logger.info(f"📤 [SOCKETIO] Emitted crawl:stopping event to room {progress_id}")
+    
+    try:
+        # Get the orchestration service
+        from ..services.knowledge.crawl_orchestration_service import get_active_orchestration, unregister_orchestration
+        orchestration = get_active_orchestration(progress_id)
+        
+        if orchestration:
+            # Cancel the orchestration
+            orchestration.cancel()
+            logger.info(f"✅ [SOCKETIO] Cancelled orchestration for {progress_id}")
+        else:
+            logger.warning(f"⚠️  [SOCKETIO] No active orchestration found for {progress_id}")
+        
+        # Cancel the asyncio task if it exists
+        from ..fastapi.knowledge_api import active_crawl_tasks
+        if progress_id in active_crawl_tasks:
+            task = active_crawl_tasks[progress_id]
+            if not task.done():
+                task.cancel()
+                try:
+                    await asyncio.wait_for(task, timeout=2.0)
+                except (asyncio.CancelledError, asyncio.TimeoutError):
+                    pass
+            del active_crawl_tasks[progress_id]
+            logger.info(f"✅ [SOCKETIO] Cancelled asyncio task for {progress_id}")
+        
+        # Remove from active orchestrations registry
+        unregister_orchestration(progress_id)
+        
+        # Broadcast cancellation to all clients in the room
+        await sio.emit('crawl:stopped', {
+            'progressId': progress_id,
+            'status': 'cancelled',
+            'message': 'Crawl operation cancelled',
+            'timestamp': time.time()
+        }, room=progress_id)
+        
+        logger.info(f"📤 [SOCKETIO] Emitted crawl:stopped event to room {progress_id}")
+        
+        return {'success': True, 'progressId': progress_id}
+        
+    except Exception as e:
+        logger.error(f"❌ [SOCKETIO] Failed to stop crawl | error={str(e)} | progress_id={progress_id}")
+        await sio.emit('crawl:error', {
+            'progressId': progress_id,
+            'error': str(e),
+            'message': 'Failed to stop crawl operation'
+        }, room=progress_id)
+        return {'success': False, 'error': str(e)}
