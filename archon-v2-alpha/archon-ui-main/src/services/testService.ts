@@ -39,15 +39,10 @@ export interface TestStatus {
   exit_code?: number;
 }
 
-// Dynamic API base URL that works with different hosts
-const getApiBaseUrl = () => {
-  const protocol = window.location.protocol;
-  const host = window.location.hostname;
-  const port = import.meta.env.ARCHON_SERVER_PORT || '8181'; // Backend API port
-  return `${protocol}//${host}:${port}`;
-};
+import { getApiUrl, getWebSocketUrl } from '../config/api';
 
-const API_BASE_URL = getApiBaseUrl();
+// Use unified API configuration
+const API_BASE_URL = getApiUrl();
 
 // Error class for test service errors
 export class TestServiceError extends Error {
@@ -324,7 +319,7 @@ class TestService {
     // Clean up any existing connection
     this.disconnectFromTestStream(executionId);
 
-    const wsUrl = API_BASE_URL.replace('http', 'ws') + `/api/tests/stream/${executionId}`;
+    const wsUrl = getWebSocketUrl() + `/api/tests/stream/${executionId}`;
     const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {

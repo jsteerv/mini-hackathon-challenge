@@ -50,6 +50,23 @@ export interface CrawlProgressData {
   wordCount?: number;
   duration?: string;
   sourceId?: string;
+  // Original crawl parameters for retry functionality
+  originalCrawlParams?: {
+    url: string;
+    knowledge_type?: 'technical' | 'business';
+    tags?: string[];
+    update_frequency?: number;
+    max_depth?: number;
+    crawl_options?: {
+      max_concurrent?: number;
+    };
+  };
+  // Original upload parameters for retry functionality
+  originalUploadParams?: {
+    file: File;
+    tags?: string[];
+    knowledge_type?: string;
+  };
   // Simplified batch progress (snake_case from backend)
   completed_batches?: number;
   total_batches?: number;

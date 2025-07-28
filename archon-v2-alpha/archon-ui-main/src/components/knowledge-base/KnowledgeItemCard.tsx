@@ -3,7 +3,7 @@ import { Link as LinkIcon, Upload, Trash2, RefreshCw, Code, FileText, Brain, Box
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import { Checkbox } from '../ui/Checkbox';
-import { KnowledgeItem } from '../../services/knowledgeBaseService';
+import { KnowledgeItem, knowledgeBaseService } from '../../services/knowledgeBaseService';
 import { useCardTilt } from '../../hooks/useCardTilt';
 import { CodeViewerModal, CodeExample } from '../code/CodeViewerModal';
 import { EditKnowledgeItemModal } from './EditKnowledgeItemModal';
@@ -149,6 +149,8 @@ export const KnowledgeItemCard = ({
   const [showPageTooltip, setShowPageTooltip] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [loadedCodeExamples, setLoadedCodeExamples] = useState<any[] | null>(null);
+  const [isLoadingCodeExamples, setIsLoadingCodeExamples] = useState(false);
 
   const statusColorMap = {
     active: 'green',
@@ -213,19 +215,39 @@ export const KnowledgeItemCard = ({
     }
   };
 
-  // Get code examples count
-  const codeExamplesCount = item.code_examples?.length || 0;
+  // Get code examples count from metadata
+  const codeExamplesCount = item.metadata.code_examples_count || 0;
 
-  // Format code examples for the modal
+  // Load code examples when modal opens
+  const handleOpenCodeModal = async () => {
+    setShowCodeModal(true);
+    
+    // Only load if not already loaded
+    if (!loadedCodeExamples && !isLoadingCodeExamples && codeExamplesCount > 0) {
+      setIsLoadingCodeExamples(true);
+      try {
+        const response = await knowledgeBaseService.getCodeExamples(item.source_id);
+        if (response.success) {
+          setLoadedCodeExamples(response.code_examples);
+        }
+      } catch (error) {
+        console.error('Failed to load code examples:', error);
+      } finally {
+        setIsLoadingCodeExamples(false);
+      }
+    }
+  };
+
+  // Format code examples for the modal (use loaded examples if available)
   const codeExamples: CodeExample[] = 
-    item.code_examples?.map((example: any, index: number) => ({
+    (loadedCodeExamples || item.code_examples || []).map((example: any, index: number) => ({
       id: example.id || `${item.id}-example-${index}`,
       title: example.metadata?.example_name || example.metadata?.title || example.summary?.split('\n')[0] || 'Code Example',
       description: example.summary || 'No description available',
       language: example.metadata?.language || guessLanguageFromTitle(example.metadata?.title || ''),
       code: example.content || example.metadata?.code || '// Code example not available',
       tags: example.metadata?.tags || [],
-    })) || [];
+    }));
 
   return (
     <div
@@ -366,7 +388,7 @@ export const KnowledgeItemCard = ({
               {codeExamplesCount > 0 && (
                 <div
                   className="cursor-pointer relative card-3d-layer-3"
-                  onClick={() => setShowCodeModal(true)}
+                  onClick={handleOpenCodeModal}
                   onMouseEnter={() => setShowCodeTooltip(true)}
                   onMouseLeave={() => setShowCodeTooltip(false)}
                 >
@@ -465,10 +487,11 @@ export const KnowledgeItemCard = ({
       </Card>
       
       {/* Code Examples Modal */}
-      {showCodeModal && codeExamples.length > 0 && (
+      {showCodeModal && (
         <CodeViewerModal
           examples={codeExamples}
           onClose={() => setShowCodeModal(false)}
+          isLoading={isLoadingCodeExamples}
         />
       )}
       

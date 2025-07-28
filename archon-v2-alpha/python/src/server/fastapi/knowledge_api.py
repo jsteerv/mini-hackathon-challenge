@@ -188,6 +188,34 @@ async def delete_knowledge_item(source_id: str):
         safe_logfire_error(f"Failed to delete knowledge item | error={str(e)} | source_id={source_id}")
         raise HTTPException(status_code=500, detail={'error': str(e)})
 
+@router.get("/knowledge-items/{source_id}/code-examples")
+async def get_knowledge_item_code_examples(source_id: str):
+    """Get all code examples for a specific knowledge item."""
+    try:
+        safe_logfire_info(f"Fetching code examples for source_id: {source_id}")
+        
+        # Query code examples with full content for this specific source
+        supabase = get_supabase_client()
+        result = supabase.from_('code_examples')\
+            .select('id, source_id, content, summary, metadata')\
+            .eq('source_id', source_id)\
+            .execute()
+        
+        code_examples = result.data if result.data else []
+        
+        safe_logfire_info(f"Found {len(code_examples)} code examples for {source_id}")
+        
+        return {
+            'success': True,
+            'source_id': source_id,
+            'code_examples': code_examples,
+            'count': len(code_examples)
+        }
+        
+    except Exception as e:
+        safe_logfire_error(f"Failed to fetch code examples | error={str(e)} | source_id={source_id}")
+        raise HTTPException(status_code=500, detail={'error': str(e)})
+
 @router.post("/knowledge-items/{source_id}/refresh")
 async def refresh_knowledge_item(source_id: str):
     """Refresh a knowledge item by re-crawling its URL with the same metadata."""

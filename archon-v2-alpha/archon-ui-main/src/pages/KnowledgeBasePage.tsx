@@ -119,6 +119,7 @@ export const KnowledgeBasePage = () => {
       try {
         const activeCrawls = JSON.parse(localStorage.getItem('active_crawls') || '[]');
         const now = Date.now();
+        const TWO_MINUTES = 120000; // 2 minutes in milliseconds
         const ONE_HOUR = 3600000; // 1 hour in milliseconds
         const validCrawls: string[] = [];
         
@@ -128,42 +129,76 @@ export const KnowledgeBasePage = () => {
             try {
               const crawlData = JSON.parse(crawlDataStr);
               const startedAt = crawlData.startedAt || 0;
+              const lastUpdated = crawlData.lastUpdated || startedAt;
               
               // Check if crawl is not too old (within 1 hour) and not completed/errored
               if (now - startedAt < ONE_HOUR && 
                   crawlData.status !== 'completed' && 
                   crawlData.status !== 'error') {
-                validCrawls.push(progressId);
                 
-                // Add to progress items with reconnecting status
-                setProgressItems(prev => [...prev, {
-                  ...crawlData,
-                  status: 'reconnecting',
-                  percentage: crawlData.percentage || 0,
-                  logs: [...(crawlData.logs || []), 'Reconnecting to crawl...']
-                }]);
+                // Check if crawl is stale (no updates for 2 minutes)
+                const isStale = now - lastUpdated > TWO_MINUTES;
                 
-                // Reconnect to Socket.IO room
-                await crawlProgressService.streamProgressEnhanced(progressId, {
-                  onMessage: (data: CrawlProgressData) => {
-                    console.log('🔄 Reconnected crawl progress update:', data);
-                    if (data.status === 'completed') {
-                      handleProgressComplete(data);
-                    } else if (data.error || data.status === 'error') {
-                      handleProgressError(data.error || 'Crawl failed', progressId);
-                    } else {
-                      handleProgressUpdate(data);
+                if (isStale) {
+                  // Mark as stale and allow user to dismiss
+                  setProgressItems(prev => [...prev, {
+                    ...crawlData,
+                    status: 'stale',
+                    percentage: crawlData.percentage || 0,
+                    logs: [...(crawlData.logs || []), 'Crawl appears to be stuck. You can dismiss this.'],
+                    error: 'No updates received for over 2 minutes'
+                  }]);
+                  validCrawls.push(progressId); // Keep in list but marked as stale
+                } else {
+                  validCrawls.push(progressId);
+                  
+                  // Add to progress items with reconnecting status
+                  setProgressItems(prev => [...prev, {
+                    ...crawlData,
+                    status: 'reconnecting',
+                    percentage: crawlData.percentage || 0,
+                    logs: [...(crawlData.logs || []), 'Reconnecting to crawl...']
+                  }]);
+                  
+                  // Reconnect to Socket.IO room
+                  await crawlProgressService.streamProgressEnhanced(progressId, {
+                    onMessage: (data: CrawlProgressData) => {
+                      console.log('🔄 Reconnected crawl progress update:', data);
+                      if (data.status === 'completed') {
+                        handleProgressComplete(data);
+                      } else if (data.error || data.status === 'error') {
+                        handleProgressError(data.error || 'Crawl failed', progressId);
+                      } else if (data.status === 'cancelled' || data.status === 'stopped') {
+                        // Handle cancelled/stopped status
+                        handleProgressUpdate({ ...data, status: 'cancelled' });
+                        // Clean up from progress tracking
+                        setTimeout(() => {
+                          setProgressItems(prev => prev.filter(item => item.progressId !== progressId));
+                          // Clean up from localStorage
+                          try {
+                            localStorage.removeItem(`crawl_progress_${progressId}`);
+                            const activeCrawls = JSON.parse(localStorage.getItem('active_crawls') || '[]');
+                            const updated = activeCrawls.filter((id: string) => id !== progressId);
+                            localStorage.setItem('active_crawls', JSON.stringify(updated));
+                          } catch (error) {
+                            console.error('Failed to clean up cancelled crawl:', error);
+                          }
+                          crawlProgressService.stopStreaming(progressId);
+                        }, 2000); // Show cancelled status for 2 seconds before removing
+                      } else {
+                        handleProgressUpdate(data);
+                      }
+                    },
+                    onError: (error: Error | Event) => {
+                      const errorMessage = error instanceof Error ? error.message : 'Connection error';
+                      console.error('❌ Reconnection error:', errorMessage);
+                      handleProgressError(errorMessage, progressId);
                     }
-                  },
-                  onError: (error: Error | Event) => {
-                    const errorMessage = error instanceof Error ? error.message : 'Connection error';
-                    console.error('❌ Reconnection error:', errorMessage);
-                    handleProgressError(errorMessage, progressId);
-                  }
-                }, {
-                  autoReconnect: true,
-                  reconnectDelay: 5000
-                });
+                  }, {
+                    autoReconnect: true,
+                    reconnectDelay: 5000
+                  });
+                }
               } else {
                 // Remove stale crawl data
                 localStorage.removeItem(`crawl_progress_${progressId}`);
@@ -421,6 +456,22 @@ export const KnowledgeBasePage = () => {
               handleProgressComplete(data);
             } else if (data.error || data.status === 'error') {
               handleProgressError(data.error || 'Refresh failed', response.progressId);
+            } else if (data.status === 'cancelled' || data.status === 'stopped') {
+              // Handle cancelled/stopped status
+              handleProgressUpdate({ ...data, status: 'cancelled' });
+              setTimeout(() => {
+                setProgressItems(prev => prev.filter(item => item.progressId !== response.progressId));
+                // Clean up from localStorage
+                try {
+                  localStorage.removeItem(`crawl_progress_${response.progressId}`);
+                  const activeCrawls = JSON.parse(localStorage.getItem('active_crawls') || '[]');
+                  const updated = activeCrawls.filter((id: string) => id !== response.progressId);
+                  localStorage.setItem('active_crawls', JSON.stringify(updated));
+                } catch (error) {
+                  console.error('Failed to clean up cancelled crawl:', error);
+                }
+                crawlProgressService.stopStreaming(response.progressId);
+              }, 2000); // Show cancelled status for 2 seconds before removing
             } else {
               handleProgressUpdate(data);
             }
@@ -562,7 +613,8 @@ export const KnowledgeBasePage = () => {
         localStorage.setItem(`crawl_progress_${data.progressId}`, JSON.stringify({
           ...parsed,
           ...data,
-          startedAt: parsed.startedAt // Preserve original start time
+          startedAt: parsed.startedAt, // Preserve original start time
+          lastUpdated: Date.now() // Track last update time
         }));
       }
     } catch (error) {
@@ -570,14 +622,116 @@ export const KnowledgeBasePage = () => {
     }
   };
 
-  const handleRetryProgress = (progressId: string) => {
+  const handleRetryProgress = async (progressId: string) => {
     // Find the progress item and restart the crawl
     const progressItem = progressItems.find(item => item.progressId === progressId);
-    if (progressItem) {
+    if (!progressItem) {
+      showToast('Progress item not found', 'error');
+      return;
+    }
+
+    // Check if we have original crawl parameters, or at least a URL to retry
+    if (!progressItem.originalCrawlParams && !progressItem.originalUploadParams && !progressItem.currentUrl) {
+      showToast('Cannot retry: no URL or parameters found. Please start a new crawl manually.', 'warning');
+      return;
+    }
+
+    try {
       // Remove the failed progress item
       setProgressItems(prev => prev.filter(item => item.progressId !== progressId));
-      // This would typically trigger a new crawl - but that requires knowing the original URL
-      showToast('Retry functionality not implemented yet', 'warning');
+      
+      // Clean up from localStorage
+      try {
+        localStorage.removeItem(`crawl_progress_${progressId}`);
+        const activeCrawls = JSON.parse(localStorage.getItem('active_crawls') || '[]');
+        const updated = activeCrawls.filter((id: string) => id !== progressId);
+        localStorage.setItem('active_crawls', JSON.stringify(updated));
+      } catch (error) {
+        console.error('Failed to clean up old progress:', error);
+      }
+
+      if (progressItem.originalCrawlParams) {
+        // Retry crawl
+        showToast('Retrying crawl...', 'info');
+        
+        const result = await knowledgeBaseService.crawlUrl(progressItem.originalCrawlParams);
+        
+        if ((result as any).progressId) {
+          // Start progress tracking with original parameters preserved
+          await handleStartCrawl((result as any).progressId, {
+            currentUrl: progressItem.originalCrawlParams.url,
+            totalPages: 0,
+            processedPages: 0,
+            uploadType: 'crawl',
+            originalCrawlParams: progressItem.originalCrawlParams
+          });
+          
+          showToast('Crawl restarted successfully', 'success');
+        } else {
+          showToast('Crawl completed immediately', 'success');
+          loadKnowledgeItems();
+        }
+      } else if (progressItem.originalUploadParams) {
+        // Retry upload
+        showToast('Retrying upload...', 'info');
+        
+        const formData = new FormData();
+        formData.append('file', progressItem.originalUploadParams.file);
+        formData.append('knowledge_type', progressItem.originalUploadParams.knowledge_type || 'technical');
+        
+        if (progressItem.originalUploadParams.tags && progressItem.originalUploadParams.tags.length > 0) {
+          formData.append('tags', JSON.stringify(progressItem.originalUploadParams.tags));
+        }
+        
+        const result = await knowledgeBaseService.uploadDocument(formData);
+        
+        if ((result as any).progressId) {
+          // Start progress tracking with original parameters preserved
+          await handleStartCrawl((result as any).progressId, {
+            currentUrl: `file://${progressItem.originalUploadParams.file.name}`,
+            uploadType: 'document',
+            fileName: progressItem.originalUploadParams.file.name,
+            fileType: progressItem.originalUploadParams.file.type,
+            originalUploadParams: progressItem.originalUploadParams
+          });
+          
+          showToast('Upload restarted successfully', 'success');
+        } else {
+          showToast('Upload completed immediately', 'success');
+          loadKnowledgeItems();
+        }
+      } else if (progressItem.currentUrl && !progressItem.currentUrl.startsWith('file://')) {
+        // Fallback: retry with currentUrl using default parameters
+        showToast('Retrying with basic parameters...', 'info');
+        
+        const fallbackParams = {
+          url: progressItem.currentUrl,
+          knowledge_type: 'technical' as const,
+          tags: [],
+          max_depth: 2
+        };
+        
+        const result = await knowledgeBaseService.crawlUrl(fallbackParams);
+        
+        if ((result as any).progressId) {
+          // Start progress tracking with fallback parameters
+          await handleStartCrawl((result as any).progressId, {
+            currentUrl: progressItem.currentUrl,
+            totalPages: 0,
+            processedPages: 0,
+            uploadType: 'crawl',
+            originalCrawlParams: fallbackParams
+          });
+          
+          showToast('Crawl restarted with default settings', 'success');
+        } else {
+          showToast('Crawl completed immediately', 'success');
+          loadKnowledgeItems();
+        }
+      }
+    } catch (error) {
+      console.error('Failed to retry:', error);
+      showToast(`Retry failed: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
     }
   };
 
@@ -614,7 +768,8 @@ export const KnowledgeBasePage = () => {
       // Store the crawl data
       localStorage.setItem(`crawl_progress_${progressId}`, JSON.stringify({
         ...newProgressItem,
-        startedAt: Date.now()
+        startedAt: Date.now(),
+        lastUpdated: Date.now()
       }));
       
       // Add to active crawls list
@@ -640,6 +795,22 @@ export const KnowledgeBasePage = () => {
           handleProgressComplete(data);
         } else if (data.status === 'error') {
           handleProgressError(data.error || 'Crawling failed', progressId);
+        } else if (data.status === 'cancelled' || data.status === 'stopped') {
+          // Handle cancelled/stopped status
+          handleProgressUpdate({ ...data, status: 'cancelled' });
+          setTimeout(() => {
+            setProgressItems(prev => prev.filter(item => item.progressId !== progressId));
+            // Clean up from localStorage
+            try {
+              localStorage.removeItem(`crawl_progress_${progressId}`);
+              const activeCrawls = JSON.parse(localStorage.getItem('active_crawls') || '[]');
+              const updated = activeCrawls.filter((id: string) => id !== progressId);
+              localStorage.setItem('active_crawls', JSON.stringify(updated));
+            } catch (error) {
+              console.error('Failed to clean up cancelled crawl:', error);
+            }
+            crawlProgressService.stopStreaming(progressId);
+          }, 2000); // Show cancelled status for 2 seconds before removing
         }
       }
     };
@@ -818,7 +989,19 @@ export const KnowledgeBasePage = () => {
                             onError={(error) => handleProgressError(error, progressData.progressId)}
                             onProgress={handleProgressUpdate}
                             onRetry={() => handleRetryProgress(progressData.progressId)}
-                            onDismiss={() => setProgressItems(prev => prev.filter(item => item.progressId !== progressData.progressId))}
+                            onDismiss={() => {
+                              // Remove from UI
+                              setProgressItems(prev => prev.filter(item => item.progressId !== progressData.progressId));
+                              // Clean up from localStorage
+                              try {
+                                localStorage.removeItem(`crawl_progress_${progressData.progressId}`);
+                                const activeCrawls = JSON.parse(localStorage.getItem('active_crawls') || '[]');
+                                const updated = activeCrawls.filter((id: string) => id !== progressData.progressId);
+                                localStorage.setItem('active_crawls', JSON.stringify(updated));
+                              } catch (error) {
+                                console.error('Failed to clean up dismissed crawl:', error);
+                              }
+                            }}
                             onStop={() => handleStopProgress(progressData.progressId)}
                           />
                         </motion.div>
@@ -876,7 +1059,19 @@ export const KnowledgeBasePage = () => {
                           onError={(error) => handleProgressError(error, progressData.progressId)}
                           onProgress={handleProgressUpdate}
                           onRetry={() => handleRetryProgress(progressData.progressId)}
-                          onDismiss={() => setProgressItems(prev => prev.filter(item => item.progressId !== progressData.progressId))}
+                          onDismiss={() => {
+                            // Remove from UI
+                            setProgressItems(prev => prev.filter(item => item.progressId !== progressData.progressId));
+                            // Clean up from localStorage
+                            try {
+                              localStorage.removeItem(`crawl_progress_${progressData.progressId}`);
+                              const activeCrawls = JSON.parse(localStorage.getItem('active_crawls') || '[]');
+                              const updated = activeCrawls.filter((id: string) => id !== progressData.progressId);
+                              localStorage.setItem('active_crawls', JSON.stringify(updated));
+                            } catch (error) {
+                              console.error('Failed to clean up dismissed crawl:', error);
+                            }
+                          }}
                           onStop={() => handleStopProgress(progressData.progressId)}
                         />
                       </motion.div>

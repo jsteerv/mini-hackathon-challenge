@@ -361,6 +361,12 @@ export const CrawlingProgressCard: React.FC<CrawlingProgressCardProps> = ({
           color: 'pink' as const,
           icon: <AlertTriangle className="w-4 h-4" />
         };
+      case 'stale':
+        return {
+          text: isUpload ? 'Upload appears stuck' : 'Crawl appears stuck',
+          color: 'pink' as const,
+          icon: <AlertTriangle className="w-4 h-4" />
+        };
       case 'reading':
         return {
           text: 'Reading file...',
@@ -568,14 +574,14 @@ export const CrawlingProgressCard: React.FC<CrawlingProgressCardProps> = ({
               Overall Progress
             </span>
             <span className="text-xs text-gray-500 dark:text-gray-400">
-              {Math.round(progressData.percentage)}%
+              {Math.round(Math.max(0, Math.min(100, progressData.percentage || 0)))}%
             </span>
           </div>
           <div className="w-full bg-gray-200 dark:bg-zinc-700 rounded-full h-2">
             <motion.div
               className="h-2 rounded-full bg-gradient-to-r from-blue-500 to-blue-600"
               initial={{ width: 0 }}
-              animate={{ width: `${progressData.percentage}%` }}
+              animate={{ width: `${Math.max(0, Math.min(100, progressData.percentage || 0))}%` }}
               transition={{ duration: 0.5, ease: 'easeOut' }}
             />
           </div>
@@ -893,7 +899,7 @@ export const CrawlingProgressCard: React.FC<CrawlingProgressCardProps> = ({
       )}
 
       {/* Action Buttons */}
-      {(progressData.status === 'error' || progressData.status === 'cancelled') && (onRetry || onDismiss) && (
+      {(progressData.status === 'error' || progressData.status === 'cancelled' || progressData.status === 'stale') && (onRetry || onDismiss) && (
         <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-200 dark:border-zinc-800">
           {onDismiss && (
             <Button 
@@ -905,7 +911,7 @@ export const CrawlingProgressCard: React.FC<CrawlingProgressCardProps> = ({
               Dismiss
             </Button>
           )}
-          {onRetry && (
+          {onRetry && progressData.status !== 'stale' && (
             <Button 
               onClick={onRetry}
               variant="primary" 

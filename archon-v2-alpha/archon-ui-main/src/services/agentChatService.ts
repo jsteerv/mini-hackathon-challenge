@@ -11,6 +11,7 @@ import {
   WebSocketConfig
 } from './socketIOService';
 import { serverHealthService } from './serverHealthService';
+import { getWebSocketUrl } from '../config/api';
 
 export interface ChatMessage {
   id: string;
@@ -66,10 +67,8 @@ class AgentChatService {
    * Get WebSocket URL for a session
    */
   private getWebSocketUrl(sessionId: string): string {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.hostname;
-    const port = import.meta.env.ARCHON_SERVER_PORT || '8181'; // Backend WebSocket port
-    return `${protocol}//${host}:${port}/api/agent-chat/sessions/${sessionId}/ws`;
+    // Import is added at the top of the file
+    return `${getWebSocketUrl()}/api/agent-chat/sessions/${sessionId}/ws`;
   }
 
   /**

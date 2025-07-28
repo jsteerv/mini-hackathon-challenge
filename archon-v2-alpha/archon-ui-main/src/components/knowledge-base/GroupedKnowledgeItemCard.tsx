@@ -232,16 +232,16 @@ export const GroupedKnowledgeItemCard = ({
     (sum, item) => sum + (item.metadata.word_count || 0), 0
   );
 
-  // Calculate total code examples count
+  // Calculate total code examples count from metadata
   const totalCodeExamples = useMemo(() => {
     return groupedItem.items.reduce(
-      (sum, item) => sum + (item.code_examples?.length || 0),
+      (sum, item) => sum + (item.metadata.code_examples_count || 0),
       0,
     );
   }, [groupedItem.items]);
 
-  // Calculate active item's code examples count
-  const activeCodeExamples = activeItem.code_examples?.length || 0;
+  // Calculate active item's code examples count from metadata
+  const activeCodeExamples = activeItem.metadata.code_examples_count || 0;
   
   // Calculate active item's word count
   const activeWordCount = activeItem.metadata.word_count || 0;

@@ -37,15 +37,10 @@ export interface CodeExtractionSettings {
   ENABLE_CODE_SUMMARIES: boolean;
 }
 
-class CredentialsService {
-  private baseUrl = (import.meta as any).env?.VITE_API_URL || this.getApiBaseUrl();
+import { getApiUrl } from '../config/api';
 
-  private getApiBaseUrl() {
-    const protocol = window.location.protocol;
-    const host = window.location.hostname;
-    const port = import.meta.env.ARCHON_SERVER_PORT || '8181'; // Backend API port
-    return `${protocol}//${host}:${port}`;
-  }
+class CredentialsService {
+  private baseUrl = getApiUrl();
 
   async getAllCredentials(): Promise<Credential[]> {
     const response = await fetch(`${this.baseUrl}/api/credentials`);

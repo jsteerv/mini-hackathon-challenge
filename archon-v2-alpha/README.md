@@ -146,7 +146,7 @@ Archon uses a true microservices architecture with:
 - **HTTP-based communication**: Services communicate via internal REST APIs
 - **Optimized containers**: 50-90% size reduction compared to monolithic approach
 
-## 🔧 Configuring Custom Ports
+## 🔧 Configuring Custom Ports & Hostname
 
 By default, Archon services run on the following ports:
 - **Archon-UI**: 3737
@@ -174,10 +174,29 @@ ARCHON_SERVER_PORT=8282
 ARCHON_MCP_PORT=8151
 ```
 
-After changing ports:
+### Configuring Hostname
+
+By default, Archon uses `localhost` as the hostname. You can configure a custom hostname or IP address by setting the `HOST` variable in your `.env` file:
+
+```bash
+# Hostname Configuration
+HOST=localhost  # Default
+
+# Examples of custom hostnames:
+HOST=192.168.1.100     # Use specific IP address
+HOST=archon.local      # Use custom domain
+HOST=myserver.com      # Use public domain
+```
+
+This is useful when:
+- Running Archon on a different machine and accessing it remotely
+- Using a custom domain name for your installation
+- Deploying in a network environment where `localhost` isn't accessible
+
+After changing hostname or ports:
 1. Restart Docker containers: `docker-compose down && docker-compose up -d`
-2. Access the UI at your custom port: `http://localhost:${ARCHON_UI_PORT}`
-3. Update your AI client configuration with the new MCP port
+2. Access the UI at: `http://${HOST}:${ARCHON_UI_PORT}`
+3. Update your AI client configuration with the new hostname and MCP port
 
 ## 🔧 Development
 
