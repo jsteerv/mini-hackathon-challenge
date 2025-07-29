@@ -5,6 +5,10 @@ import pytest_asyncio
 from httpx import AsyncClient
 from unittest.mock import Mock, AsyncMock, patch
 
+# Configure memory limits for tests
+MEMORY_LIMIT_MB = 256  # 256MB limit for tests
+MAX_DOCUMENT_SIZE_MB = 10  # 10MB max document size
+
 # Add src folder to path
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC_DIR = os.path.join(BASE_DIR, 'src')
@@ -120,3 +124,32 @@ def mock_socketio():
     sio.enter_room = AsyncMock()
     sio.leave_room = AsyncMock()
     return sio
+
+@pytest.fixture
+def memory_limit_fixture():
+    """Fixture for memory limit testing"""
+    return {
+        'memory_limit_mb': MEMORY_LIMIT_MB,
+        'max_document_size_mb': MAX_DOCUMENT_SIZE_MB,
+        'max_document_size_bytes': MAX_DOCUMENT_SIZE_MB * 1024 * 1024
+    }
+
+@pytest.fixture
+def mock_threading_service():
+    """Mock ThreadingService for concurrency testing"""
+    from src.server.services.threading_service import ThreadingService
+    service = Mock(spec=ThreadingService)
+    service.executor = Mock()
+    service.run_in_thread = AsyncMock()
+    service.shutdown = AsyncMock()
+    return service
+
+@pytest.fixture
+def mock_archon_session_manager():
+    """Mock ArchonSessionManager for session testing"""
+    manager = Mock()
+    manager.get_session = Mock(return_value={'session_id': 'test-session'})
+    manager.create_session = Mock(return_value='test-session')
+    manager.delete_session = Mock(return_value=True)
+    manager.sessions = {}
+    return manager

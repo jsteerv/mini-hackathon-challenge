@@ -1,12 +1,20 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import React from 'react'
 import { GroupCreationModal } from '@/components/knowledge-base/GroupCreationModal'
 import { KnowledgeItem, knowledgeBaseService } from '@/services/knowledgeBaseService'
 
 // Mock dependencies
 vi.mock('@/services/knowledgeBaseService')
-vi.mock('@/contexts/ToastContext')
+vi.mock('@/contexts/ToastContext', () => ({
+  useToast: () => ({
+    showToast: vi.fn(),
+    toasts: [],
+    dismissToast: vi.fn()
+  }),
+  ToastProvider: ({ children }: { children: React.ReactNode }) => children
+}))
 
 const mockKnowledgeItems: KnowledgeItem[] = [
   {

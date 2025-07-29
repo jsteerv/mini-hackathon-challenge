@@ -89,7 +89,10 @@ async def test_crawl_with_websocket():
                             
                             if status == "error":
                                 error = progress_data.get("error", "Unknown error")
+                                error_detail = progress_data.get("detail", "")
                                 print(f"[{datetime.now()}] Crawl failed: {error}")
+                                if error_detail:
+                                    print(f"  Detail: {error_detail}")
                                 break
                                 
                     except asyncio.TimeoutError:
@@ -99,8 +102,12 @@ async def test_crawl_with_websocket():
                         print(f"[{datetime.now()}] Error: {e}")
                         break
                         
+        except websockets.exceptions.WebSocketException as e:
+            print(f"[{datetime.now()}] WebSocket error: {e}")
+            print(f"  Error type: {type(e).__name__}")
         except Exception as e:
             print(f"[{datetime.now()}] WebSocket connection error: {e}")
+            print(f"  Error type: {type(e).__name__}")
 
 async def test_multiple_crawls():
     """Test multiple concurrent crawls."""

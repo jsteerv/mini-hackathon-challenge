@@ -239,47 +239,96 @@ class TestService {
    */
   async hasTestResults(): Promise<boolean> {
     try {
-      // Check for both test results and coverage data
-      const [testResponse, coverageResponse] = await Promise.all([
-        fetch('/test-results/test-results.json'),
-        fetch('/test-results/coverage/coverage-summary.json')
-      ]);
-      
-      // At least one file should exist for results to be available
-      return testResponse.ok || coverageResponse.ok;
+      // Check for latest test results via API
+      const response = await fetch(`${API_BASE_URL}/api/tests/latest-results`);
+      return response.ok;
     } catch {
       return false;
     }
   }
 
   /**
-   * Get coverage data for Test Results Modal
+   * Get coverage data for Test Results Modal from new API endpoints with fallback
    */
   async getCoverageData(): Promise<any> {
     try {
-      const response = await fetch('/coverage/coverage-summary.json');
-      if (!response.ok) {
-        throw new Error('Coverage data not available');
+      // Try new API endpoint first
+      const response = await callAPI<any>('/api/coverage/combined-summary');
+      return response;
+    } catch (apiError) {
+      // Fallback to static files for backward compatibility
+      try {
+        const response = await fetch('/test-results/coverage/coverage-summary.json');
+        if (!response.ok) {
+          throw new Error('Coverage data not available');
+        }
+        return await response.json();
+      } catch (staticError) {
+        throw new Error(`Failed to load coverage data: ${apiError instanceof Error ? apiError.message : 'API and static files unavailable'}`);
       }
-      return await response.json();
-    } catch (error) {
-      throw new Error(`Failed to load coverage data: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
   /**
-   * Get test results for Test Results Modal
+   * Get test results for Test Results Modal from new API endpoints with fallback
    */
   async getTestResults(): Promise<any> {
     try {
-      const response = await fetch('/coverage/test-results.json');
-      if (!response.ok) {
-        throw new Error('Test results not available');
+      // Try new API endpoint first
+      const response = await callAPI<any>('/api/tests/latest-results');
+      return response;
+    } catch (apiError) {
+      // Fallback to static files for backward compatibility
+      try {
+        const response = await fetch('/test-results/test-results.json');
+        if (!response.ok) {
+          throw new Error('Test results not available');
+        }
+        return await response.json();
+      } catch (staticError) {
+        throw new Error(`Failed to load test results: ${apiError instanceof Error ? apiError.message : 'API and static files unavailable'}`);
       }
-      return await response.json();
-    } catch (error) {
-      throw new Error(`Failed to load test results: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  }
+
+  /**
+   * Get pytest coverage data specifically
+   */
+  async getPytestCoverage(): Promise<any> {
+    try {
+      const response = await callAPI<any>('/api/coverage/pytest/json');
+      return response;
+    } catch (error) {
+      throw new Error(`Failed to load pytest coverage: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Get vitest coverage data specifically
+   */
+  async getVitestCoverage(): Promise<any> {
+    try {
+      const response = await callAPI<any>('/api/coverage/vitest/summary');
+      return response;
+    } catch (error) {
+      throw new Error(`Failed to load vitest coverage: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Get URL for coverage HTML report
+   */
+  getCoverageHtmlUrl(): string {
+    // Return URL to pytest coverage HTML report via new API endpoint
+    return '/api/coverage/pytest/html/index.html';
+  }
+
+  /**
+   * Get URL for vitest coverage HTML report
+   */
+  getVitestCoverageHtmlUrl(): string {
+    // Return URL to vitest coverage HTML report via new API endpoint
+    return '/api/coverage/vitest/html/index.html';
   }
 
   /**

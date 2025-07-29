@@ -1,3 +1,4 @@
+import { toastContextMock } from '../../mocks/ToastContext.mock'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -10,7 +11,7 @@ import { crawlProgressService } from '@/services/crawlProgressService'
 vi.mock('@/services/knowledgeBaseService')
 vi.mock('@/services/socketIOService')
 vi.mock('@/services/crawlProgressService')
-vi.mock('@/contexts/ToastContext')
+vi.mock('@/contexts/ToastContext', () => toastContextMock)
 
 const mockKnowledgeItems: KnowledgeItem[] = [
   {

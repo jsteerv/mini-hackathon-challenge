@@ -92,7 +92,7 @@ global.sessionStorage = localStorageMock as any
 
 // Mock crypto for UUID generation (handle both browser and Node environments)
 if (!global.crypto) {
-  // @ts-ignore
+  // @ts-expect-error - Legacy crypto setup for testing
   global.crypto = {}
 }
 Object.defineProperty(global.crypto, 'randomUUID', {
@@ -284,6 +284,46 @@ global.console = {
   error: vi.fn()
 }
 
+// Mock Milkdown editor
+const mockCrepeInstance = {
+  create: vi.fn().mockResolvedValue(undefined),
+  destroy: vi.fn(),
+  getMarkdown: vi.fn(() => ''),
+  setMarkdown: vi.fn(),
+  action: vi.fn(),
+  use: vi.fn(),
+  config: vi.fn()
+}
+
+vi.mock('@milkdown/crepe', () => ({
+  Crepe: vi.fn().mockImplementation(() => mockCrepeInstance),
+  CrepeFeature: {
+    HeaderMeta: 'HeaderMeta',
+    LinkTooltip: 'LinkTooltip',
+    ImageBlock: 'ImageBlock',
+    BlockEdit: 'BlockEdit',
+    ListItem: 'ListItem',
+    CodeBlock: 'CodeBlock',
+    Table: 'Table',
+    Toolbar: 'Toolbar',
+  },
+  crepe: {
+    create: vi.fn().mockResolvedValue(mockCrepeInstance)
+  }
+}))
+
+vi.mock('@milkdown/theme-nord', () => ({
+  nord: vi.fn()
+}))
+
+vi.mock('@milkdown/preset-commonmark', () => ({
+  commonmark: vi.fn()
+}))
+
+vi.mock('@milkdown/preset-gfm', () => ({
+  gfm: vi.fn()
+}))
+
 // Enhanced Toast Context mock
 const mockShowToast = vi.fn()
 const mockHideToast = vi.fn()
@@ -295,6 +335,15 @@ vi.mock('@/contexts/ToastContext', () => ({
     toasts: []
   }),
   ToastProvider: ({ children }: { children: React.ReactNode }) => children
+}))
+
+// Mock the useToast hook directly
+vi.mock('@/hooks/useToast', () => ({
+  useToast: () => ({
+    showToast: mockShowToast,
+    toasts: [],
+    dismissToast: vi.fn()
+  })
 }))
 
 // Make the mock functions available globally for tests

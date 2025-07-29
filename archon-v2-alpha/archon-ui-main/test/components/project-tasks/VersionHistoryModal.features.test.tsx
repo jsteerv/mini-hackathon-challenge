@@ -1,12 +1,20 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import React from 'react'
 import { VersionHistoryModal } from '@/components/project-tasks/VersionHistoryModal'
 import projectService from '@/services/projectService'
 
 // Mock dependencies
 vi.mock('@/services/projectService')
-vi.mock('@/contexts/ToastContext')
+vi.mock('@/contexts/ToastContext', () => ({
+  useToast: () => ({
+    showToast: vi.fn(),
+    toasts: [],
+    dismissToast: vi.fn()
+  }),
+  ToastProvider: ({ children }: { children: React.ReactNode }) => children
+}))
 
 interface Version {
   id: string;

@@ -5,12 +5,13 @@ import { KnowledgeBasePage } from '@/pages/KnowledgeBasePage'
 import { knowledgeBaseService, KnowledgeItem } from '@/services/knowledgeBaseService'
 import { knowledgeSocketIO } from '@/services/socketIOService'
 import { crawlProgressService } from '@/services/crawlProgressService'
+import { toastContextMock } from '../../mocks/ToastContext.mock'
 
 // Mock dependencies
 vi.mock('@/services/knowledgeBaseService')
 vi.mock('@/services/socketIOService')
 vi.mock('@/services/crawlProgressService')
-vi.mock('@/contexts/ToastContext')
+vi.mock('@/contexts/ToastContext', () => toastContextMock)
 
 // Mock window.confirm
 global.confirm = vi.fn()

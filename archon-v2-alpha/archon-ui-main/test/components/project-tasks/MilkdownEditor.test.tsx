@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import { renderWithProviders } from '../../test-utils'
 import { MilkdownEditor } from '@/components/project-tasks/MilkdownEditor'
 
 // Mock dependencies
@@ -13,24 +14,11 @@ vi.mock('@/services/websocketService', () => ({
   }
 }))
 
-// Mock Milkdown Crepe
-vi.mock('@milkdown/crepe', () => ({
-  Crepe: vi.fn().mockImplementation(() => ({
-    create: vi.fn().mockResolvedValue(undefined),
-    destroy: vi.fn(),
-    getMarkdown: vi.fn().mockReturnValue('# Test Document\n\nThis is a test.'),
-  })),
-  CrepeFeature: {
-    HeaderMeta: 'HeaderMeta',
-    LinkTooltip: 'LinkTooltip',
-    ImageBlock: 'ImageBlock',
-    BlockEdit: 'BlockEdit',
-    ListItem: 'ListItem',
-    CodeBlock: 'CodeBlock',
-    Table: 'Table',
-    Toolbar: 'Toolbar',
-  }
-}))
+// Mock the CSS imports
+vi.mock('@milkdown/crepe/theme/common/style.css', () => ({}))
+vi.mock('@milkdown/crepe/theme/frame.css', () => ({}))
+vi.mock('@milkdown/crepe/theme/frame-dark.css', () => ({}))
+vi.mock('./MilkdownEditor.css', () => ({}))
 
 describe('MilkdownEditor', () => {
   const mockDocument = {
@@ -54,7 +42,7 @@ describe('MilkdownEditor', () => {
   })
 
   it('should render editor with document title', async () => {
-    render(
+    renderWithProviders(
       <MilkdownEditor
         document={mockDocument}
         onSave={mockOnSave}
@@ -65,7 +53,7 @@ describe('MilkdownEditor', () => {
   })
 
   it('should show saved status initially', async () => {
-    render(
+    renderWithProviders(
       <MilkdownEditor
         document={mockDocument}
         onSave={mockOnSave}
@@ -83,7 +71,7 @@ describe('MilkdownEditor', () => {
       }
     }
 
-    render(
+    renderWithProviders(
       <MilkdownEditor
         document={docWithMarkdown}
         onSave={mockOnSave}
@@ -104,7 +92,7 @@ describe('MilkdownEditor', () => {
       }
     }
 
-    render(
+    renderWithProviders(
       <MilkdownEditor
         document={docWithObjectContent}
         onSave={mockOnSave}
@@ -120,7 +108,7 @@ describe('MilkdownEditor', () => {
       content: 'Just a plain string content'
     }
 
-    render(
+    renderWithProviders(
       <MilkdownEditor
         document={docWithStringContent}
         onSave={mockOnSave}
@@ -131,7 +119,7 @@ describe('MilkdownEditor', () => {
   })
 
   it('should handle dark mode', async () => {
-    render(
+    renderWithProviders(
       <MilkdownEditor
         document={mockDocument}
         onSave={mockOnSave}

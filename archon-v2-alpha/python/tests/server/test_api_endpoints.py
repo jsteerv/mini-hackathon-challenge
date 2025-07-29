@@ -76,7 +76,9 @@ class TestAPIEndpoints:
             '/api/knowledge-items/crawl',
             json={}
         )
-        assert response.status_code in [400, 422]  # Bad request or validation error
+        assert response.status_code == 422  # Validation error
+        error_detail = response.json()
+        assert "detail" in error_detail
         
         # Invalid URL
         response = await async_client.post(
@@ -86,7 +88,20 @@ class TestAPIEndpoints:
                 "knowledge_type": "documentation"
             }
         )
-        assert response.status_code in [400, 422]
+        assert response.status_code == 422
+        error_detail = response.json()
+        assert "detail" in error_detail
+        
+        # Missing URL
+        response = await async_client.post(
+            '/api/knowledge-items/crawl',
+            json={
+                "knowledge_type": "documentation"
+            }
+        )
+        assert response.status_code == 422
+        error_detail = response.json()
+        assert "detail" in error_detail
     
     @pytest.mark.asyncio
     async def test_search_endpoint_validation(self, async_client):
@@ -96,14 +111,18 @@ class TestAPIEndpoints:
             '/api/knowledge-items/search',
             json={}
         )
-        assert response.status_code in [400, 422]
+        assert response.status_code == 422
+        error_detail = response.json()
+        assert "detail" in error_detail
         
         # Empty query
         response = await async_client.post(
             '/api/knowledge-items/search',
             json={"query": ""}
         )
-        assert response.status_code in [400, 422]
+        assert response.status_code == 422
+        error_detail = response.json()
+        assert "detail" in error_detail
     
     @pytest.mark.asyncio
     async def test_project_creation_validation(self, async_client):
@@ -113,11 +132,15 @@ class TestAPIEndpoints:
             '/api/projects',
             json={}
         )
-        assert response.status_code in [400, 422]
+        assert response.status_code == 422
+        error_detail = response.json()
+        assert "detail" in error_detail
         
         # Empty title
         response = await async_client.post(
             '/api/projects',
             json={"title": ""}
         )
-        assert response.status_code in [400, 422]
+        assert response.status_code == 422
+        error_detail = response.json()
+        assert "detail" in error_detail

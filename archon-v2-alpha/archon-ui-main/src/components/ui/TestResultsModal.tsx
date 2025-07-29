@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { X, BarChart, AlertCircle, CheckCircle, XCircle, Activity, RefreshCw, ExternalLink, TestTube, Target, ChevronDown } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { CoverageVisualization, CoverageData } from './CoverageVisualization'
 
 interface TestResults {
   summary: {
@@ -24,14 +25,8 @@ interface TestResults {
   }>
 }
 
-interface CoverageSummary {
-  total: {
-    lines: { pct: number; covered: number; total: number }
-    statements: { pct: number; covered: number; total: number }
-    functions: { pct: number; covered: number; total: number }
-    branches: { pct: number; covered: number; total: number }
-  }
-}
+// Using CoverageData from CoverageVisualization component instead
+type CoverageSummary = CoverageData
 
 interface TestResultsModalProps {
   isOpen: boolean
@@ -403,47 +398,14 @@ export function TestResultsModal({ isOpen, onClose }: TestResultsModalProps) {
                     </div>
                   )}
 
-                  {/* Coverage Summary */}
+                  {/* Coverage Visualization */}
                   {coverage && (
                     <div className="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
-                      <div className="flex items-center gap-3 mb-4">
-                        <BarChart className="w-5 h-5 text-blue-500" />
-                        <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
-                          Coverage Analysis
-                        </h3>
-                      </div>
-
-                      <div className="space-y-4">
-                        {[
-                          { label: 'Lines', data: coverage.total.lines },
-                          { label: 'Functions', data: coverage.total.functions },
-                          { label: 'Statements', data: coverage.total.statements },
-                          { label: 'Branches', data: coverage.total.branches }
-                        ].map(({ label, data }) => (
-                          <div key={label} className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                {label}
-                              </span>
-                              <span className="text-sm font-semibold text-gray-800 dark:text-white">
-                                {data.pct.toFixed(1)}%
-                              </span>
-                            </div>
-                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                              <div 
-                                className={`h-2 rounded-full transition-all duration-500 ${
-                                  data.pct >= 80 ? 'bg-green-500' :
-                                  data.pct >= 60 ? 'bg-yellow-500' : 'bg-red-500'
-                                }`}
-                                style={{ width: `${data.pct}%` }}
-                              />
-                            </div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">
-                              {data.covered} of {data.total} covered
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                      <CoverageVisualization 
+                        coverage={coverage} 
+                        compact={true}
+                        showFileBreakdown={false}
+                      />
                     </div>
                   )}
                 </div>
@@ -458,7 +420,7 @@ export function TestResultsModal({ isOpen, onClose }: TestResultsModalProps) {
                     Refresh
                   </button>
                   <button
-                    onClick={() => window.open('/coverage/index.html', '_blank')}
+                    onClick={() => window.open('/api/coverage/pytest/html/index.html', '_blank')}
                     className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
                   >
                     <ExternalLink className="w-4 h-4" />

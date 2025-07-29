@@ -4,6 +4,7 @@ import { Terminal, RefreshCw, Play, Square, Clock, CheckCircle, XCircle, FileTex
 // import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { TestResultsModal } from '../ui/TestResultsModal';
+import { TestResultDashboard } from '../ui/TestResultDashboard';
 import { testService, TestExecution, TestStreamMessage, TestType } from '../../services/testService';
 import { useToast } from '../../contexts/ToastContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -33,11 +34,12 @@ interface TestExecutionState {
 }
 
 export const TestStatus = () => {
-  const [displayMode, setDisplayMode] = useState<'pretty'>('pretty');
+  const [displayMode, setDisplayMode] = useState<'pretty' | 'dashboard'>('pretty');
   const [mcpErrorsExpanded, setMcpErrorsExpanded] = useState(false);
   const [uiErrorsExpanded, setUiErrorsExpanded] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(true); // Start collapsed by default
   const [showTestResultsModal, setShowTestResultsModal] = useState(false);
+  const [showDashboard, setShowDashboard] = useState(false);
   const [hasResults, setHasResults] = useState(false);
   
   const [mcpTest, setMcpTest] = useState<TestExecutionState>({
@@ -651,27 +653,47 @@ export const TestStatus = () => {
               <CheckCircle className="w-4 h-4 mr-1" />
               Summary
             </Button>
+            <Button
+              variant={displayMode === 'dashboard' ? 'primary' : 'outline'}
+              accentColor="blue"
+              size="sm"
+              onClick={() => setDisplayMode('dashboard')}
+            >
+              <BarChart className="w-4 h-4 mr-1" />
+              Dashboard
+            </Button>
           </div>
         )}
       </div>
 
       {/* Collapsible content */}
       <div className={`space-y-4 transition-all duration-300 ${isCollapsed ? 'hidden' : 'block'}`}>
-        <TestSection
-          title="Python Tests"
-          testType="mcp"
-          testState={mcpTest}
-          onRun={() => runTest('mcp')}
-          onCancel={() => cancelTest('mcp')}
-        />
+        {displayMode === 'pretty' ? (
+          <>
+            <TestSection
+              title="Python Tests"
+              testType="mcp"
+              testState={mcpTest}
+              onRun={() => runTest('mcp')}
+              onCancel={() => cancelTest('mcp')}
+            />
 
-        <TestSection
-          title="React UI Tests"
-          testType="ui"
-          testState={uiTest}
-          onRun={() => runTest('ui')}
-          onCancel={() => cancelTest('ui')}
-        />
+            <TestSection
+              title="React UI Tests"
+              testType="ui"
+              testState={uiTest}
+              onRun={() => runTest('ui')}
+              onCancel={() => cancelTest('ui')}
+            />
+          </>
+        ) : (
+          <TestResultDashboard 
+            className="mt-6"
+            compact={false}
+            showCoverage={true}
+            refreshInterval={30}
+          />
+        )}
       </div>
 
       {/* Test Results Modal */}

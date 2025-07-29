@@ -1,3 +1,4 @@
+import { toastContextMock } from '../../mocks/ToastContext.mock'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -11,7 +12,7 @@ import type { Project } from '@/types/project'
 vi.mock('@/services/projectService')
 vi.mock('@/services/projectCreationProgressService')
 vi.mock('@/services/socketIOService')
-vi.mock('@/contexts/ToastContext')
+vi.mock('@/contexts/ToastContext', () => toastContextMock)
 
 const mockProjectService = {
   listProjects: vi.fn(),

@@ -5,18 +5,14 @@ Provides FastAPI endpoints for executing tests (pytest, vitest) with real-time s
 Includes WebSocket streaming, background task management, and test result tracking.
 """
 import asyncio
-import json
 import os
-import time
 import uuid
 from datetime import datetime
 from enum import Enum
-from pathlib import Path
 from typing import Dict, List, Optional, Any
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, BackgroundTasks
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 # Removed direct logging import - using unified config
@@ -133,19 +129,26 @@ websocket_manager = TestWebSocketManager()
 
 # Test execution functions
 async def execute_mcp_tests(execution_id: str) -> TestExecution:
-    """Execute Python tests using pytest with real-time streaming."""
+    """Execute Python tests using pytest with real-time streaming and coverage reporting."""
     execution = test_executions[execution_id]
     
     try:
-        # Use pytest directly for all Python tests with verbose output and real-time streaming
+        # Create coverage reports directory if it doesn't exist
+        os.makedirs("/app/coverage_reports/pytest", exist_ok=True)
+        
+        # Use pytest with coverage flags for comprehensive reporting
         cmd = [
-            "python", "-m", "pytest", 
+            "pytest", 
             "-v",  # verbose output
             "-s",  # don't capture stdout, allows real-time output
             "--tb=short",  # shorter traceback format
             "tests/server/",  # run server tests specifically
             "--no-header",  # cleaner output
-            "--disable-warnings"  # cleaner output
+            "--disable-warnings",  # cleaner output
+            "--cov=src",  # coverage for src directory
+            "--cov-report=json:/app/coverage_reports/pytest/coverage.json",  # JSON report
+            "--cov-report=html:/app/coverage_reports/pytest/htmlcov",  # HTML report
+            "--cov-report=term-missing"  # terminal report with missing lines
         ]
         
         logger.info(f"Starting Python test execution: {' '.join(cmd)}")
@@ -204,18 +207,24 @@ async def execute_mcp_tests(execution_id: str) -> TestExecution:
     return execution
 
 async def execute_ui_tests(execution_id: str) -> TestExecution:
-    """Execute React UI tests using vitest in the frontend container."""
+    """Execute React UI tests using vitest in the frontend container with coverage reporting."""
     execution = test_executions[execution_id]
     
     try:
-        # Execute React tests inside the frontend container using docker exec
-        # The frontend container has Node.js and all dependencies installed
+        # Create coverage reports directory if it doesn't exist
+        os.makedirs("/app/coverage_reports/vitest", exist_ok=True)
+        
+        # Execute React tests with coverage inside the frontend container
         cmd = [
             "docker", "exec", "archon-frontend-1",
             "npm", "run", "test", 
             "--", 
             "--reporter=verbose",  # verbose output
-            "--run"  # run once, don't watch
+            "--run",  # run once, don't watch
+            "--coverage",  # enable coverage reporting
+            "--coverage.reportsDirectory=/app/archon-ui-main/coverage",  # set coverage output dir
+            "--coverage.reporter=json-summary",  # JSON summary format
+            "--coverage.reporter=html"  # HTML format
         ]
         
         logger.info(f"Starting React UI test execution: {' '.join(cmd)}")
@@ -238,6 +247,28 @@ async def execute_ui_tests(execution_id: str) -> TestExecution:
         exit_code = await process.wait()
         execution.exit_code = exit_code
         execution.completed_at = datetime.now()
+        
+        # Copy coverage reports from frontend container to server directory
+        if exit_code == 0:
+            try:
+                # Copy coverage summary JSON
+                copy_cmd = [
+                    "docker", "cp", 
+                    "archon-frontend-1:/app/archon-ui-main/coverage/coverage-summary.json",
+                    "/app/coverage_reports/vitest/"
+                ]
+                await asyncio.create_subprocess_exec(*copy_cmd)
+                
+                # Copy HTML coverage report directory
+                copy_html_cmd = [
+                    "docker", "cp", 
+                    "archon-frontend-1:/app/archon-ui-main/coverage/",
+                    "/app/coverage_reports/vitest/html"
+                ]
+                await asyncio.create_subprocess_exec(*copy_html_cmd)
+                
+            except Exception as e:
+                logger.warning(f"Failed to copy coverage reports: {e}")
         
         if exit_code == 0:
             execution.status = TestStatus.COMPLETED
@@ -569,4 +600,47 @@ async def test_output_websocket(websocket: WebSocket, execution_id: str):
     except WebSocketDisconnect:
         pass
     finally:
-        websocket_manager.disconnect(websocket, execution_id) 
+        websocket_manager.disconnect(websocket, execution_id)
+
+# Test Results API endpoint
+
+@router.get("/latest-results")
+async def get_latest_test_results():
+    """Get the latest test results from the most recent execution."""
+    try:
+        # Get the most recent completed execution
+        if not test_executions:
+            raise HTTPException(status_code=404, detail="No test results available")
+        
+        # Sort executions by started_at descending to get the latest
+        executions = list(test_executions.values())
+        executions.sort(key=lambda x: x.started_at, reverse=True)
+        
+        # Find the most recent completed execution
+        latest_execution = None
+        for exec in executions:
+            if exec.status in [TestStatus.COMPLETED, TestStatus.FAILED]:
+                latest_execution = exec
+                break
+        
+        if not latest_execution:
+            raise HTTPException(status_code=404, detail="No completed test results available")
+        
+        # Return execution details with output
+        return {
+            "execution_id": latest_execution.execution_id,
+            "test_type": latest_execution.test_type.value,
+            "status": latest_execution.status.value,
+            "started_at": latest_execution.started_at.isoformat(),
+            "completed_at": latest_execution.completed_at.isoformat() if latest_execution.completed_at else None,
+            "duration_seconds": latest_execution.duration_seconds,
+            "exit_code": latest_execution.exit_code,
+            "summary": latest_execution.summary,
+            "output": latest_execution.output_lines
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get latest test results: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) 

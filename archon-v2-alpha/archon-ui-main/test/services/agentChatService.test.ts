@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach, test } from 'vitest'
-import { agentChatService } from '@/services/agentChatService'
 import { MockWebSocket } from '../setup'
+
+// Unmock the agentChatService for this test file to test the real implementation
+vi.unmock('@/services/agentChatService')
+
+// Import the real service after unmocking
+import { agentChatService } from '@/services/agentChatService'
 
 // Mock fetch globally
 (globalThis as any).fetch = vi.fn()

@@ -90,7 +90,7 @@ export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
               const lines = data.toString().split('\n').filter((line: string) => line.trim());
               lines.forEach((line: string) => {
                 // Strip ANSI escape codes
-                const cleanLine = line.replace(/\x1b\[[0-9;]*m/g, '');
+                const cleanLine = line.replace(/\\x1b\[[0-9;]*m/g, '');
                 res.write(`data: ${JSON.stringify({ type: 'output', message: cleanLine, timestamp: new Date().toISOString() })}\n\n`);
               });
             });
@@ -162,7 +162,7 @@ export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
               
               lines.forEach((line: string) => {
                 // Strip ANSI escape codes to get clean text
-                const cleanLine = line.replace(/\x1b\[[0-9;]*m/g, '');
+                const cleanLine = line.replace(/\\x1b\[[0-9;]*m/g, '');
                 
                 // Send all lines for verbose reporter output
                 res.write(`data: ${JSON.stringify({ type: 'output', message: cleanLine, timestamp: new Date().toISOString() })}\n\n`);
@@ -178,7 +178,7 @@ export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
               const lines = data.toString().split('\n').filter((line: string) => line.trim());
               lines.forEach((line: string) => {
                 // Strip ANSI escape codes
-                const cleanLine = line.replace(/\x1b\[[0-9;]*m/g, '');
+                const cleanLine = line.replace(/\\x1b\[[0-9;]*m/g, '');
                 res.write(`data: ${JSON.stringify({ type: 'output', message: cleanLine, timestamp: new Date().toISOString() })}\n\n`);
               });
             });

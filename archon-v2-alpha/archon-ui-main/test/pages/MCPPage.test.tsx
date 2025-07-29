@@ -1,3 +1,4 @@
+import { toastContextMock } from '../../mocks/ToastContext.mock'
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MCPPage } from '@/pages/MCPPage';
@@ -6,7 +7,7 @@ import { useToast } from '@/contexts/ToastContext';
 
 // Mock the services and contexts
 vi.mock('@/services/mcpService');
-vi.mock('@/contexts/ToastContext');
+vi.mock('@/contexts/ToastContext', () => toastContextMock);
 
 describe('MCPPage Basic Tests', () => {
   const mockShowToast = vi.fn();

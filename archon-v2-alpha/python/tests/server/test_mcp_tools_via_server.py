@@ -81,6 +81,27 @@ class TestMCPToolsViaServer:
                 assert len(data["progressId"]) > 0  # Should have a valid progress ID
     
     @pytest.mark.asyncio
+    async def test_crawl_with_exception_handling(self, async_client):
+        """Test crawl endpoint handles exceptions properly."""
+        # Mock the crawler to throw an exception
+        with patch('src.server.services.crawler_manager.get_crawler') as mock_get_crawler:
+            mock_get_crawler.side_effect = Exception("Crawler initialization failed")
+            
+            response = await async_client.post(
+                '/api/knowledge-items/crawl',
+                json={
+                    "url": "https://docs.python.org",
+                    "knowledge_type": "documentation"
+                }
+            )
+            
+            # Crawl endpoint returns 200 initially since it's a background task
+            # The error is handled via progress tracking
+            assert response.status_code == 200
+            data = response.json()
+            assert "progressId" in data
+    
+    @pytest.mark.asyncio
     async def test_perform_rag_query(self, async_client):
         """Test perform_rag_query through Server API."""
         mock_results = [
