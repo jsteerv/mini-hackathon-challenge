@@ -6,8 +6,8 @@ during background tasks and handle reconnections properly.
 """
 import pytest
 import asyncio
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
-from datetime import datetime, timedelta
+from unittest.mock import Mock, AsyncMock, patch
+from datetime import datetime
 import socketio
 
 

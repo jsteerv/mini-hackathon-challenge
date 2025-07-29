@@ -8,7 +8,7 @@ Keeps the main projects_api.py file focused on REST endpoints.
 # Removed direct logging import - using unified config
 import asyncio
 import time
-from typing import Dict, Any
+from typing import Dict
 from ..socketio_app import get_socketio_instance
 from ..services.projects.project_service import ProjectService
 from ..services.projects.source_linking_service import SourceLinkingService
@@ -48,6 +48,7 @@ async def broadcast_project_update():
         
         await sio.emit('projects_update', {'projects': formatted_projects}, room='project_list')
         logger.info(f"Broadcasted project list update with {len(formatted_projects)} projects")
+        
     except Exception as e:
         logger.error(f"Failed to broadcast project update: {e}")
 
@@ -164,7 +165,7 @@ async def connect(sid, environ):
     logger.info(f'🔌 [SOCKETIO] Query params: {query_params}')
     logger.info(f'🔌 [SOCKETIO] User-Agent: {headers.get("HTTP_USER_AGENT", "unknown")}')
     
-    print(f'🔌 [SOCKETIO DEBUG] New connection:')
+    print('🔌 [SOCKETIO DEBUG] New connection:')
     print(f'  - SID: {sid}')
     print(f'  - Address: {client_address}')
     print(f'  - Query: {query_params}')
@@ -490,3 +491,4 @@ async def crawl_stop(sid, data):
             'message': 'Failed to stop crawl operation'
         }, room=progress_id)
         return {'success': False, 'error': str(e)}
+

@@ -7,10 +7,8 @@ IMPORTANT: All tests MUST use mocks - NEVER connect to real services or database
 import pytest
 import pytest_asyncio
 import asyncio
-import aiohttp
-from datetime import datetime
 import time
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import Mock, AsyncMock
 from src.server.services.knowledge.crawl_orchestration_service import CrawlOrchestrationService
 from src.server.services.background_task_manager import BackgroundTaskManager
 from src.server.services.knowledge.progress_mapper import ProgressMapper

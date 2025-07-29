@@ -39,7 +39,7 @@ async def test_crawl_progress():
     
     try:
         # Connect to the server
-        print(f"Connecting to Socket.IO server...")
+        print("Connecting to Socket.IO server...")
         await sio.connect('http://localhost:8000', socketio_path='/socket.io/')
         
         # Wait for connection

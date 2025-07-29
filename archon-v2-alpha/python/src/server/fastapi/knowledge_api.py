@@ -11,19 +11,15 @@ This module handles all knowledge base operations including:
 
 import asyncio
 import json
-import os
-import secrets
 import uuid
 import time
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 from pydantic import BaseModel
-from pathlib import Path
 
 from ..services.client_manager import get_supabase_client
 from ..services.storage import DocumentStorageService
-from ..services.source_management_service import SourceManagementService
 from ..services.search import SearchService
 from ..services.knowledge import CrawlOrchestrationService, KnowledgeItemService, DatabaseMetricsService
 from ..services.crawler_manager import get_crawler
@@ -153,12 +149,12 @@ async def delete_knowledge_item(source_id: str):
         safe_logfire_info(f"Deleting knowledge item | source_id={source_id}")
         
         # Use SourceManagementService directly instead of going through MCP
-        print(f"DEBUG: Creating SourceManagementService...")
+        print("DEBUG: Creating SourceManagementService...")
         from ..services.source_management_service import SourceManagementService
         source_service = SourceManagementService(get_supabase_client())
-        print(f"DEBUG: Successfully created SourceManagementService")
+        print("DEBUG: Successfully created SourceManagementService")
         
-        print(f"DEBUG: Calling delete_source function...")
+        print("DEBUG: Calling delete_source function...")
         success, result_data = source_service.delete_source(source_id)
         print(f"DEBUG: delete_source returned: success={success}, data={result_data}")
         
@@ -555,7 +551,7 @@ async def _perform_upload_with_progress(progress_id: str, file_content: bytes, f
                 'status': 'completed',
                 'percentage': final_progress,
                 'currentUrl': f"file://{filename}",
-                'log': f'Document upload completed successfully!'
+                'log': 'Document upload completed successfully!'
             })
             
             # Also send the completion event with details
@@ -563,7 +559,7 @@ async def _perform_upload_with_progress(progress_id: str, file_content: bytes, f
                 'chunksStored': result.get('chunks_stored', 0),
                 'wordCount': result.get('total_word_count', 0),
                 'sourceId': result.get('source_id'),
-                'log': f'Document upload completed successfully!'
+                'log': 'Document upload completed successfully!'
             })
             
             safe_logfire_info(f"Document uploaded successfully | progress_id={progress_id} | source_id={result.get('source_id')} | chunks_stored={result.get('chunks_stored')}")

@@ -5,18 +5,14 @@ Handles storage of documents in Supabase with parallel processing support.
 """
 import os
 import asyncio
-import concurrent.futures
 from typing import List, Dict, Any, Optional
-from supabase import Client
 from urllib.parse import urlparse
 
 from ...config.logfire_config import search_logger, safe_span
 from ..embeddings.embedding_service import create_embeddings_batch_async
 from ..embeddings.contextual_embedding_service import (
-    process_chunk_with_context,
     generate_contextual_embeddings_batch
 )
-from ..client_manager import get_supabase_client
 from ..credential_service import credential_service
 
 

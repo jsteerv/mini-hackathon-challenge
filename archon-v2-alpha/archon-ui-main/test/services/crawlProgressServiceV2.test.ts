@@ -4,10 +4,10 @@ import { MockWebSocket } from '../setup'
 import type { CrawlProgressData, ProgressStep } from '@/services/crawlProgressServiceV2'
 
 // Mock environment
-(import.meta as any).env = { VITE_API_URL: 'http://localhost:8080' }
+(import.meta as any).env = { VITE_API_URL: 'http://localhost:8181' }
 
 describe('crawlProgressService', () => {
-  const wsUrl = 'ws://localhost:8080'
+  const wsUrl = 'ws://localhost:8181'
   let consoleLog: ReturnType<typeof vi.spyOn>
   let consoleWarn: ReturnType<typeof vi.spyOn>
   let consoleError: ReturnType<typeof vi.spyOn>

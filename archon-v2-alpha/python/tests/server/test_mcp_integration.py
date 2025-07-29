@@ -5,7 +5,6 @@ Tests the Server's interaction with MCP services through API endpoints,
 mocking MCP responses based on actual MCP server implementation.
 """
 import pytest
-import json
 from unittest.mock import AsyncMock, patch, MagicMock
 from datetime import datetime
 

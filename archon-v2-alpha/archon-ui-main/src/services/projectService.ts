@@ -29,7 +29,7 @@ const API_BASE_URL = '/api';
 
 // WebSocket connection for real-time updates
 let websocketConnection: WebSocket | null = null;
-let projectUpdateSubscriptions: Map<string, (event: ProjectManagementEvent) => void> = new Map();
+const projectUpdateSubscriptions: Map<string, (event: ProjectManagementEvent) => void> = new Map();
 
 // Error classes
 export class ProjectServiceError extends Error {

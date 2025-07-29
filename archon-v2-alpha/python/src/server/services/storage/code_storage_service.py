@@ -7,17 +7,15 @@ import os
 import re
 import json
 import asyncio
-import time
 from difflib import SequenceMatcher
 from typing import List, Dict, Any, Optional, Callable
 from urllib.parse import urlparse
 from supabase import Client
 
 from ...config.logfire_config import search_logger
-from ..embeddings.embedding_service import create_embeddings_batch, create_embedding, create_embeddings_batch_async, create_embedding_async
+from ..embeddings.embedding_service import create_embeddings_batch_async, create_embedding_async
 from ..embeddings.contextual_embedding_service import generate_contextual_embeddings_batch
 from ..llm_provider_service import get_llm_client_sync
-from ..credential_service import credential_service
 
 
 def _get_model_choice() -> str:
@@ -245,7 +243,7 @@ def extract_code_blocks(markdown_content: str, min_length: int = None) -> List[D
         if len(lines) > 1:
             # Check if first line is a language specifier (no spaces, common language names)
             first_line = lines[0].strip()
-            if first_line and not ' ' in first_line and len(first_line) < 20:
+            if first_line and ' ' not in first_line and len(first_line) < 20:
                 language = first_line.lower()
                 # Keep the code content with its original formatting (don't strip)
                 code_content = lines[1] if len(lines) > 1 else ""

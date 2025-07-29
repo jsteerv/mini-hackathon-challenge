@@ -6,16 +6,15 @@ MCP tools and FastAPI endpoints. It handles web crawling operations including
 single page crawling, batch crawling, and recursive crawling.
 """
 
-import json
 # Removed direct logging import - using unified config
 import asyncio
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 from urllib.parse import urlparse, urldefrag
 from xml.etree import ElementTree
 import requests
 import traceback
 
-from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig, CacheMode, MemoryAdaptiveDispatcher
+from crawl4ai import CrawlerRunConfig, CacheMode, MemoryAdaptiveDispatcher
 from crawl4ai.markdown_generation_strategy import DefaultMarkdownGenerator
 from src.server.utils import get_supabase_client
 from ...config.logfire_config import get_logger

@@ -14,10 +14,9 @@ Consolidated tools:
 """
 
 from mcp.server.fastmcp import FastMCP, Context
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 import json
 import logging
-from datetime import datetime
 
 # Import HTTP client and service discovery
 import httpx

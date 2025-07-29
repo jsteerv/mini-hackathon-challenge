@@ -5,7 +5,6 @@ Provides synchronous document storage operations for use in background threads.
 Maintains parallel processing for contextual embeddings while avoiding async/await.
 """
 import os
-import concurrent.futures
 from typing import List, Dict, Any, Optional
 from queue import Queue
 from urllib.parse import urlparse

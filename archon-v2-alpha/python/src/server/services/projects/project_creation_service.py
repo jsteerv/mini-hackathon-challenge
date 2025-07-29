@@ -44,13 +44,13 @@ class ProjectCreationService:
         logger.info(f"🏗️ [PROJECT-CREATION] Starting create_project_with_ai for progress_id: {progress_id}, title: {title}")
         try:
             # Update progress - database setup
-            logger.info(f"🏗️ [PROJECT-CREATION] About to call progress update: database_setup (30%)")
+            logger.info("🏗️ [PROJECT-CREATION] About to call progress update: database_setup (30%)")
             await self.progress_service.update_progress(progress_id, {
                 'percentage': 30,
                 'step': 'database_setup',
                 'log': '🗄️ Setting up project database...'
             })
-            logger.info(f"🏗️ [PROJECT-CREATION] Completed progress update: database_setup")
+            logger.info("🏗️ [PROJECT-CREATION] Completed progress update: database_setup")
             
             # Create basic project structure
             project_data = {
@@ -78,13 +78,13 @@ class ProjectCreationService:
             logger.info(f"Created project {project_id} in database")
             
             # Update progress - AI processing
-            logger.info(f"🏗️ [PROJECT-CREATION] About to call progress update: processing_requirements (50%)")
+            logger.info("🏗️ [PROJECT-CREATION] About to call progress update: processing_requirements (50%)")
             await self.progress_service.update_progress(progress_id, {
                 'percentage': 50,
                 'step': 'processing_requirements',
                 'log': '🧠 AI is analyzing project requirements...'
             })
-            logger.info(f"🏗️ [PROJECT-CREATION] Completed progress update: processing_requirements")
+            logger.info("🏗️ [PROJECT-CREATION] Completed progress update: processing_requirements")
             
             # Generate AI documentation if API key is available
             ai_success = await self._generate_ai_documentation(
@@ -202,7 +202,7 @@ class ProjectCreationService:
                 await self.progress_service.update_progress(progress_id, {
                     'percentage': 85,
                     'step': 'finalizing',
-                    'log': f'📝 Successfully created project documentation'
+                    'log': '📝 Successfully created project documentation'
                 })
                 return True
             else:
@@ -218,6 +218,6 @@ class ProjectCreationService:
             await self.progress_service.update_progress(progress_id, {
                 'percentage': 85,
                 'step': 'finalizing',
-                'log': f'⚠️ AI generation failed - created basic project structure'
+                'log': '⚠️ AI generation failed - created basic project structure'
             })
             return False

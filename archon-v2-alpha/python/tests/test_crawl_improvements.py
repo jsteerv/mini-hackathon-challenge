@@ -5,9 +5,7 @@ retry logic, and error handling.
 
 import pytest
 import asyncio
-import json
 from unittest.mock import Mock, AsyncMock, patch
-from datetime import datetime
 
 # Import the modules to test
 from src.server.services.rag.crawling_service import CrawlingService

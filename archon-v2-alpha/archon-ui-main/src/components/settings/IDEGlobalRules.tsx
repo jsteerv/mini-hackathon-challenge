@@ -393,7 +393,7 @@ archon:manage_task(
     let inCodeBlock = false;
     let codeBlockContent: string[] = [];
     let codeBlockLang = '';
-    let listStack: string[] = [];
+    const listStack: string[] = [];
 
     lines.forEach((line, index) => {
       // Code blocks

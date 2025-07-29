@@ -5,8 +5,6 @@ Handles generation of contextual embeddings for improved RAG retrieval.
 Includes proper rate limiting for OpenAI API calls.
 """
 import os
-import time
-import asyncio
 from typing import List, Tuple, Optional
 import openai
 
@@ -328,10 +326,10 @@ def generate_contextual_embeddings_batch(full_documents: List[str], chunks: List
     except openai.RateLimitError as e:
         if "insufficient_quota" in str(e):
             search_logger.warning(f"⚠️ QUOTA EXHAUSTED in contextual embeddings: {e}")
-            print(f"⚠️ OpenAI quota exhausted - proceeding without contextual embeddings")
+            print("⚠️ OpenAI quota exhausted - proceeding without contextual embeddings")
         else:
             search_logger.warning(f"Rate limit hit in contextual embeddings batch: {e}")
-            print(f"Rate limit hit - proceeding without contextual embeddings for this batch")
+            print("Rate limit hit - proceeding without contextual embeddings for this batch")
         # Return non-contextual for all chunks
         results = [(chunk, False) for chunk in chunks]
         

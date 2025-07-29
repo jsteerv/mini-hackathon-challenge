@@ -6,7 +6,6 @@ This script tests the enhanced WebSocket connection management for crawl progres
 
 import asyncio
 import json
-import time
 from datetime import datetime
 import websockets
 import httpx

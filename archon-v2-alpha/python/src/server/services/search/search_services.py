@@ -6,7 +6,6 @@ These services provide high-level search functionality including RAG queries, co
 hybrid search, and reranking capabilities.
 """
 
-import json
 import os
 from typing import List, Dict, Any, Optional, Tuple
 
@@ -17,7 +16,7 @@ except ImportError:
     CrossEncoder = None
 
 from ...utils import get_supabase_client
-from .vector_search_service import search_documents, search_code_examples, search_documents_async
+from .vector_search_service import search_code_examples, search_documents_async
 from ...config.logfire_config import safe_span, get_logger
 
 logger = get_logger(__name__)

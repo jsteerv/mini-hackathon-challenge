@@ -23,7 +23,6 @@ from pydantic import BaseModel
 import uvicorn
 
 # Import our PydanticAI agents
-from .base_agent import BaseAgent
 from .document_agent import DocumentAgent
 from .rag_agent import RagAgent
 
@@ -112,7 +111,7 @@ async def lifespan(app: FastAPI):
         try:
             # Pass model configuration from credentials
             model_key = f"{name.upper()}_AGENT_MODEL"
-            model = AGENT_CREDENTIALS.get(model_key, f"openai:gpt-4o-mini")
+            model = AGENT_CREDENTIALS.get(model_key, "openai:gpt-4o-mini")
             
             app.state.agents[name] = agent_class(model=model)
             logger.info(f"Initialized {name} agent with model: {model}")
@@ -261,7 +260,7 @@ async def stream_agent(agent_type: str, request: AgentRequest):
                         'content': final_result
                     })
                     yield f"data: {event_data}\n\n"
-                except Exception as e:
+                except Exception:
                     # If we can't get structured data, just send completion
                     event_data = json.dumps({
                         'type': 'stream_complete',

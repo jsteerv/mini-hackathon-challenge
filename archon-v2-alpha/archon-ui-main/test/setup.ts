@@ -4,7 +4,15 @@ import { afterEach, vi } from 'vitest'
 import React from 'react'
 
 // Setup file for Vitest with React Testing Library
-// This file is automatically loaded before each test 
+// This file is automatically loaded before each test
+
+// Configure test environment variables
+// Use ARCHON_SERVER_PORT if set, otherwise default to 8181
+const testPort = process.env.ARCHON_SERVER_PORT || '8181';
+process.env.VITE_API_URL = `http://localhost:${testPort}`
+process.env.VITE_SOCKET_URL = `http://localhost:${testPort}`
+process.env.VITE_PROJECT_API_URL = `http://localhost:${testPort}`
+process.env.VITE_PROJECT_SOCKET_URL = `http://localhost:${testPort}` 
 
 // Clean up after each test - Following documented standards
 afterEach(() => {

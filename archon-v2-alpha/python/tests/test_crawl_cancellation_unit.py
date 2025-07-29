@@ -5,7 +5,7 @@ These tests verify the cancellation logic without requiring full app setup.
 """
 import pytest
 import asyncio
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
+from unittest.mock import Mock, AsyncMock
 from datetime import datetime
 import uuid
 

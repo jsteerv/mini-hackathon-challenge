@@ -8,7 +8,6 @@ import asyncio
 from typing import Dict, Any, List, Optional
 from urllib.parse import urlparse
 from queue import Queue
-import urllib.error
 import uuid
 
 from ...config.logfire_config import safe_logfire_info, safe_logfire_error
@@ -19,7 +18,6 @@ from ..storage.document_storage_sync import add_documents_to_supabase_sync
 from .code_extraction_service import CodeExtractionService
 from ...fastapi.socketio_handlers import update_crawl_progress
 from ..source_management_service import update_source_info, extract_source_summary
-from ..background_task_manager import get_task_manager
 from .progress_mapper import ProgressMapper
 
 # Global registry to track active orchestration services for cancellation support
@@ -226,7 +224,7 @@ class CrawlOrchestrationService:
                 'processed_pages': len(crawl_results),
                 'total_pages': len(crawl_results),
                 'sourceId': storage_results.get('source_id', ''),
-                'log': f'Crawl completed successfully!'
+                'log': 'Crawl completed successfully!'
             })
             
             # Unregister after successful completion
@@ -1023,7 +1021,6 @@ class CrawlOrchestrationService:
         """
         # Import the document storage service for chunking
         from ..storage.storage_services import DocumentStorageService
-        from ..storage.document_storage_service import add_documents_to_supabase
         
         # Initialize storage service for chunking
         storage_service = DocumentStorageService(self.supabase_client)
@@ -1223,7 +1220,7 @@ class CrawlOrchestrationService:
                 'log': f'Stored {len(all_contents)} chunks with contextual embeddings'
             })
         except asyncio.TimeoutError:
-            safe_logfire_error(f"Document storage timed out after 60 seconds")
+            safe_logfire_error("Document storage timed out after 60 seconds")
             # Continue anyway - some documents may have been stored
             progress_queue.put({
                 'status': 'document_storage',

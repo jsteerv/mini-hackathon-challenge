@@ -6,13 +6,11 @@ Handles all OpenAI embedding operations with proper rate limiting and error hand
 import os
 import asyncio
 from typing import List, Optional, Any
-from fastapi import WebSocket
 import openai
-from contextlib import asynccontextmanager
 
 from ...config.logfire_config import search_logger, safe_span
 from ..threading_service import get_threading_service
-from ..llm_provider_service import get_llm_client, get_llm_client_sync, get_embedding_model, get_embedding_model_sync
+from ..llm_provider_service import get_llm_client, get_embedding_model
 from ..credential_service import credential_service
 
 

@@ -118,7 +118,7 @@ class CrawlerManager:
             tb = traceback.format_exc()
             safe_logfire_error(f"Crawler initialization traceback: {tb}")
             # Also print to stdout for Docker logs
-            print(f"=== CRAWLER INITIALIZATION ERROR ===")
+            print("=== CRAWLER INITIALIZATION ERROR ===")
             print(f"Error: {e}")
             print(f"Traceback:\n{tb}")
             print("=== END CRAWLER ERROR ===")

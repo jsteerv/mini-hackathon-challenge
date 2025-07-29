@@ -9,8 +9,7 @@ instead of direct database access or service imports.
 import httpx
 import json
 import logging
-from typing import Dict, Any, Optional, List
-from urllib.parse import urljoin
+from typing import Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
 

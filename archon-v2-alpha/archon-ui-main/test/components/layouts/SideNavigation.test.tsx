@@ -103,7 +103,7 @@ describe('SideNavigation', () => {
   describe('Navigation Behavior', () => {
     it('should navigate when items are clicked', async () => {
       const user = userEvent.setup()
-      let currentPath = '/'
+      const currentPath = '/'
       
       renderWithRouter(
         <>

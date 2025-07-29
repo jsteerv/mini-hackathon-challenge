@@ -7,7 +7,7 @@ import type { Credential, RagSettings } from '@/services/credentialsService'
 
 describe('credentialsService', () => {
   let mockFetch: ReturnType<typeof vi.fn>
-  const baseUrl = 'http://localhost:8080'
+  const baseUrl = 'http://localhost:8181'
   
   beforeEach(() => {
     vi.clearAllMocks()

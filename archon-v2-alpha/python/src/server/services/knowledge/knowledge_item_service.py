@@ -3,9 +3,7 @@ Knowledge Item Service
 
 Handles all knowledge item CRUD operations and data transformations.
 """
-import json
 from typing import Dict, Any, List, Optional, Tuple
-from urllib.parse import urlparse
 
 from ...config.logfire_config import safe_logfire_info, safe_logfire_error
 

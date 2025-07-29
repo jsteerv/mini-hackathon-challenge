@@ -6,9 +6,7 @@ text files and websites, ensuring proper async/sync separation.
 """
 import pytest
 import asyncio
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
-from urllib.parse import urlparse
-import aiohttp
+from unittest.mock import Mock, AsyncMock, patch
 
 
 class TestCrawlOrchestration:

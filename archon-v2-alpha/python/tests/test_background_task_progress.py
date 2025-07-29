@@ -7,7 +7,7 @@ and that progress never jumps backwards.
 """
 import pytest
 import asyncio
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import Mock, AsyncMock
 from datetime import datetime
 
 

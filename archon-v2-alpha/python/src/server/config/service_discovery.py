@@ -6,11 +6,10 @@ across Docker Compose and local development environments.
 """
 
 import os
-import socket
-from typing import Optional, Dict, Any
+from typing import Dict
 from enum import Enum
 import httpx
-from urllib.parse import urlparse, urlunparse
+from urllib.parse import urlparse
 
 class Environment(Enum):
     """Deployment environment types"""

@@ -10,12 +10,12 @@ import os
 import logging
 import json
 import uuid
-from typing import Optional, Dict, Any, List, Union
+from typing import Optional, Dict, Any, List
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 from pydantic import BaseModel, Field
-from pydantic_ai import Agent, RunContext, ModelRetry
+from pydantic_ai import Agent, RunContext
 
 from .base_agent import BaseAgent, ArchonDependencies
 from .mcp_client import get_mcp_client
@@ -512,14 +512,14 @@ class DocumentAgent(BaseAgent[DocumentDependencies, DocumentOperation]):
                 sql_schema = []
                 for entity in entities:
                     table_sql = f"CREATE TABLE {entity['name'].lower().replace(' ', '_')} (\n"
-                    table_sql += f"    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n"
+                    table_sql += "    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n"
                     
                     for attr in entity["attributes"]:
                         nullable = "NULL" if attr["nullable"] else "NOT NULL"
                         table_sql += f"    {attr['name'].lower().replace(' ', '_')} {attr['type']} {nullable},\n"
                     
-                    table_sql += f"    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n"
-                    table_sql += f"    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n"
+                    table_sql += "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n"
+                    table_sql += "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n"
                     table_sql += ");"
                     sql_schema.append(table_sql)
                 

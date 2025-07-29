@@ -6,7 +6,6 @@ through API endpoints and service clients. We mock MCP responses based
 on the actual MCP server implementation.
 """
 import pytest
-import json
 from unittest.mock import AsyncMock, patch, MagicMock
 from datetime import datetime
 

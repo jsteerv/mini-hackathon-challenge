@@ -14,11 +14,9 @@ Modules:
 import asyncio
 import os
 from contextlib import asynccontextmanager
-from typing import Any, Optional
 import logging
-from dataclasses import dataclass
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 # Import Logfire configuration
@@ -27,7 +25,6 @@ from .config.logfire_config import setup_logfire, api_logger
 # Import Socket.IO integration
 from .socketio_app import create_socketio_app
 # Import Socket.IO handlers to ensure they're registered
-from .fastapi import socketio_handlers
 
 # Import modular API routers
 from .fastapi.settings_api import router as settings_router
@@ -40,7 +37,6 @@ from .fastapi.internal_api import router as internal_router
 
 # Import utilities and core classes
 from .services.credential_service import initialize_credentials
-from .utils import get_supabase_client
 from .services.crawler_manager import initialize_crawler, cleanup_crawler
 from .services.background_task_manager import cleanup_task_manager
 
@@ -102,7 +98,6 @@ async def lifespan(app: FastAPI):
         # Initialize Socket.IO services
         try:
             # Import API modules to register their Socket.IO handlers
-            from .fastapi import knowledge_api, projects_api, agent_chat_api
             api_logger.info("✅ Socket.IO handlers imported from API modules")
         except Exception as e:
             api_logger.warning(f"Could not initialize Socket.IO services: {e}")
@@ -228,7 +223,6 @@ async def root():
 async def health_check():
     """Health check endpoint that indicates true readiness including credential loading."""
     from datetime import datetime
-    import os
     
     # Check if initialization is complete
     if not _initialization_complete:

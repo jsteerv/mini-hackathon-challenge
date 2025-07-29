@@ -6,8 +6,7 @@ to completion, including progress tracking and Socket.IO updates.
 """
 import pytest
 import asyncio
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
-import json
+from unittest.mock import Mock, AsyncMock, patch
 from datetime import datetime
 import os
 

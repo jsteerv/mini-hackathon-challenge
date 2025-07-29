@@ -1,0 +1,7 @@
+
+> archon-ui@0.1.0 test
+> vitest --run --reporter=json
+
+(node:1077) PromiseRejectionHandledWarning: Promise rejection was handled asynchronously (rejection id: 5)
+(Use `node --trace-warnings ...` to show where the warning was created)
+JSON report written to /Users/sean/Software/workshops/archon-v2-alpha/archon-ui-main/public/test-results/test-results.json

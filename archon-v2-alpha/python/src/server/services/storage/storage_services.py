@@ -5,17 +5,13 @@ This module contains all storage service classes that handle document and data s
 These services extend the base storage functionality with specific implementations.
 """
 
-import os
-import asyncio
 from typing import List, Dict, Any, Optional, Tuple
-from urllib.parse import urlparse
 
 from fastapi import WebSocket
 
 from .base_storage_service import BaseStorageService
 from .document_storage_service import add_documents_to_supabase
-from .code_storage_service import add_code_examples_to_supabase
-from ...config.logfire_config import search_logger, get_logger, safe_span
+from ...config.logfire_config import get_logger, safe_span
 
 logger = get_logger(__name__)
 

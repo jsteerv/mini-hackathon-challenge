@@ -7,7 +7,7 @@ import type { TestExecution, TestStreamMessage, TestStatus, TestHistory } from '
 
 describe('testService', () => {
   let mockFetch: ReturnType<typeof vi.fn>
-  const baseUrl = 'http://localhost:8080'
+  const baseUrl = 'http://localhost:8181'
   
   beforeEach(() => {
     vi.clearAllMocks()
@@ -155,7 +155,7 @@ describe('testService', () => {
 
       // Get created WebSocket
       const ws = (MockWebSocket as any).instances[0]
-      expect(ws.url).toBe(`ws://localhost:8080/api/tests/stream/${executionId}`)
+      expect(ws.url).toBe(`ws://localhost:8181/api/tests/stream/${executionId}`)
 
       // Simulate messages
       const message: TestStreamMessage = {

@@ -7,8 +7,7 @@ Tests the Socket.IO implementation for crawl and document upload progress tracki
 import pytest
 import asyncio
 import json
-from datetime import datetime
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
+from unittest.mock import Mock, AsyncMock, patch
 import os
 
 # CRITICAL: Set test environment to prevent real DB connections

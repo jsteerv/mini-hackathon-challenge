@@ -8,8 +8,8 @@ import type { ServerStatus, ServerResponse, LogEntry, ServerConfig } from '@/ser
 
 describe('mcpServerService', () => {
   let mockFetch: ReturnType<typeof vi.fn>
-  const baseUrl = 'http://localhost:8080'
-  const wsUrl = 'ws://localhost:8080'
+  const baseUrl = 'http://localhost:8181'
+  const wsUrl = 'ws://localhost:8181'
   
   beforeEach(() => {
     vi.clearAllMocks()

@@ -43,7 +43,7 @@ describe('KnowledgeBaseService', () => {
 
       const result = await knowledgeBaseService.getKnowledgeItems();
       
-      expect(fetch).toHaveBeenCalledWith('http://localhost:8080/api/knowledge-items?page=1&per_page=20', {
+      expect(fetch).toHaveBeenCalledWith('http://localhost:8181/api/knowledge-items?page=1&per_page=20', {
         headers: { 'Content-Type': 'application/json' }
       });
       expect(result).toEqual(mockResponse);
@@ -66,7 +66,7 @@ describe('KnowledgeBaseService', () => {
       });
       
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:8080/api/knowledge-items?page=2&per_page=10&knowledge_type=technical&tags=react%2Cfrontend&source_type=url&search=hooks',
+        'http://localhost:8181/api/knowledge-items?page=2&per_page=10&knowledge_type=technical&tags=react%2Cfrontend&source_type=url&search=hooks',
         {
           headers: { 'Content-Type': 'application/json' }
         }
@@ -94,7 +94,7 @@ describe('KnowledgeBaseService', () => {
 
       const result = await knowledgeBaseService.deleteKnowledgeItem('react-docs');
       
-      expect(fetch).toHaveBeenCalledWith('http://localhost:8080/api/knowledge-items/react-docs', {
+      expect(fetch).toHaveBeenCalledWith('http://localhost:8181/api/knowledge-items/react-docs', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -133,7 +133,7 @@ describe('KnowledgeBaseService', () => {
 
       const result = await knowledgeBaseService.updateKnowledgeItem('react-docs', updates);
       
-      expect(fetch).toHaveBeenCalledWith('http://localhost:8080/api/knowledge-items/react-docs', {
+      expect(fetch).toHaveBeenCalledWith('http://localhost:8181/api/knowledge-items/react-docs', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates)
@@ -178,7 +178,7 @@ describe('KnowledgeBaseService', () => {
       const result = await knowledgeBaseService.uploadDocument(mockFile, metadata);
       
       // Verify FormData was used
-      expect(fetch).toHaveBeenCalledWith('http://localhost:8080/api/documents/upload', {
+      expect(fetch).toHaveBeenCalledWith('http://localhost:8181/api/documents/upload', {
         method: 'POST',
         body: expect.any(FormData)
       });
@@ -234,7 +234,7 @@ describe('KnowledgeBaseService', () => {
 
       const result = await knowledgeBaseService.crawlUrl(crawlRequest);
       
-      expect(fetch).toHaveBeenCalledWith('http://localhost:8080/api/knowledge-items/crawl', {
+      expect(fetch).toHaveBeenCalledWith('http://localhost:8181/api/knowledge-items/crawl', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(crawlRequest)
@@ -276,7 +276,7 @@ describe('KnowledgeBaseService', () => {
 
       const result = await knowledgeBaseService.getKnowledgeItemDetails('react-docs');
       
-      expect(fetch).toHaveBeenCalledWith('http://localhost:8080/api/knowledge-items/react-docs/details', {
+      expect(fetch).toHaveBeenCalledWith('http://localhost:8181/api/knowledge-items/react-docs/details', {
         headers: { 'Content-Type': 'application/json' }
       });
       expect(result).toEqual(mockResponse);
@@ -314,7 +314,7 @@ describe('KnowledgeBaseService', () => {
         limit: 10
       });
       
-      expect(fetch).toHaveBeenCalledWith('http://localhost:8080/api/knowledge-items/search', {
+      expect(fetch).toHaveBeenCalledWith('http://localhost:8181/api/knowledge-items/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

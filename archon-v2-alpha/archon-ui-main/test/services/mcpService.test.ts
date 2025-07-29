@@ -18,7 +18,7 @@ describe('MCPService Basic Tests', () => {
 
     const result = await mcpService.startServer();
     
-    expect(fetch).toHaveBeenCalledWith('http://localhost:8080/api/mcp/start', {
+    expect(fetch).toHaveBeenCalledWith('http://localhost:8181/api/mcp/start', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
     });
@@ -34,7 +34,7 @@ describe('MCPService Basic Tests', () => {
 
     const result = await mcpService.stopServer();
     
-    expect(fetch).toHaveBeenCalledWith('http://localhost:8080/api/mcp/stop', {
+    expect(fetch).toHaveBeenCalledWith('http://localhost:8181/api/mcp/stop', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
     });
@@ -50,7 +50,7 @@ describe('MCPService Basic Tests', () => {
 
     const result = await mcpService.getStatus();
     
-    expect(fetch).toHaveBeenCalledWith('http://localhost:8080/api/mcp/status');
+    expect(fetch).toHaveBeenCalledWith('http://localhost:8181/api/mcp/status');
     expect(result).toEqual(mockStatus);
   });
 
@@ -69,6 +69,6 @@ describe('MCPService Basic Tests', () => {
     const ws = mcpService.streamLogs(mockCallback);
     
     expect(ws).toBeDefined();
-    expect(ws.url).toBe('ws://localhost:8080/api/mcp/logs/stream');
+    expect(ws.url).toBe('ws://localhost:8181/api/mcp/logs/stream');
   });
 }); 

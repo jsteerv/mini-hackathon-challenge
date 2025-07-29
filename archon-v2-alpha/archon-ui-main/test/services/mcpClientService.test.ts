@@ -7,7 +7,7 @@ import type { MCPClient, MCPClientConfig, MCPClientTool, ToolCallRequest, Client
 
 describe('mcpClientService', () => {
   let mockFetch: ReturnType<typeof vi.fn>
-  const baseUrl = 'http://localhost:8080'
+  const baseUrl = 'http://localhost:8181'
   
   const mockClient: MCPClient = {
     id: 'client-123',

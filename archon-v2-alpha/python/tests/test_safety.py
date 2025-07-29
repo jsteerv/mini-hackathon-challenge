@@ -81,11 +81,26 @@ def safety_patches():
     # Skip patching httpx for FastAPI test client
     patches = [p for p in patches if 'httpx' not in str(p)]
     
-    with patch.multiple('os.environ', 
-                       SUPABASE_URL=TEST_SUPABASE_URL,
-                       OPENAI_API_KEY=TEST_OPENAI_API_KEY,
-                       TESTING='true'):
+    # Store original values
+    original_supabase_url = os.environ.get('SUPABASE_URL')
+    original_openai_key = os.environ.get('OPENAI_API_KEY')
+    original_testing = os.environ.get('TESTING')
+    
+    # Set test values
+    os.environ['SUPABASE_URL'] = TEST_SUPABASE_URL
+    os.environ['OPENAI_API_KEY'] = TEST_OPENAI_API_KEY
+    os.environ['TESTING'] = 'true'
+    
+    try:
         yield
+    finally:
+        # Restore original values
+        if original_supabase_url is not None:
+            os.environ['SUPABASE_URL'] = original_supabase_url
+        if original_openai_key is not None:
+            os.environ['OPENAI_API_KEY'] = original_openai_key
+        if original_testing is not None:
+            os.environ['TESTING'] = original_testing
 
 
 def test_safety_check():

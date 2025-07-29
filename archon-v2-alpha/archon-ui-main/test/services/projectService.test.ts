@@ -201,7 +201,7 @@ describe('projectService', () => {
       const unsubscribe = projectService.subscribeToProjectUpdates('project-123', vi.fn())
 
       expect((globalThis as any).WebSocket).toHaveBeenCalledWith(
-        expect.stringContaining('ws://localhost:8080/ws/project-updates')
+        expect.stringContaining('ws://localhost:8181/ws/project-updates')
       )
 
       unsubscribe()

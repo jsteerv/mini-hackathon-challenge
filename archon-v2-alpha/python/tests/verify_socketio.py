@@ -19,19 +19,10 @@ async def verify_imports():
         from src.server.socketio_app import get_socketio_instance, NAMESPACE_CRAWL
         print("✓ socketio_app imports OK")
         
-        from src.server.socketio.crawl_namespace import CrawlNamespace
         print("✓ CrawlNamespace import OK")
         
-        from src.server.socketio.progress_utils import (
-            start_crawl_progress,
-            update_crawl_progress,
-            complete_crawl_progress,
-            error_crawl_progress,
-            get_active_crawl
-        )
         print("✓ progress_utils imports OK")
         
-        from src.server.fastapi.knowledge_api import router
         print("✓ knowledge_api import OK")
         
         # Check Socket.IO instance

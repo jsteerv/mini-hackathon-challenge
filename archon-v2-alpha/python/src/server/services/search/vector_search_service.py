@@ -3,7 +3,6 @@ Vector Search Service
 
 Handles vector similarity search for documents and code examples.
 """
-import os
 from typing import List, Dict, Any, Optional
 from supabase import Client
 

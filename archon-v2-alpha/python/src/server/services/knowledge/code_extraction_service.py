@@ -3,14 +3,12 @@ Code Extraction Service
 
 Handles extraction, processing, and storage of code examples from documents.
 """
-import asyncio
 import re
 from typing import List, Dict, Any, Optional, Callable
 from urllib.parse import urlparse
 
 from ...config.logfire_config import safe_logfire_info, safe_logfire_error
 from ..storage.code_storage_service import (
-    extract_code_blocks,
     generate_code_summaries_batch,
     add_code_examples_to_supabase
 )

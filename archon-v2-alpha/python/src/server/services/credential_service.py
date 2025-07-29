@@ -13,7 +13,6 @@ import time
 from typing import Dict, Optional, Any, List
 from dataclasses import dataclass
 from supabase import create_client, Client
-import asyncio
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
@@ -548,7 +547,7 @@ async def initialize_credentials() -> None:
                 env_key = key.upper()  # Convert to uppercase for env vars
                 os.environ[env_key] = str(value)
                 logger.info(f"Set environment variable: {env_key}")
-        except Exception as e:
+        except Exception:
             # This is expected for optional credentials
             logger.debug(f"Optional credential not set: {key}")
     

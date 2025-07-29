@@ -7,7 +7,7 @@ Supports OpenAI, Ollama, and Google Gemini.
 import os
 import openai
 import time
-from typing import Optional, Union, Dict, Any, Tuple
+from typing import Optional, Dict, Any, Tuple
 from contextlib import asynccontextmanager
 
 from ..config.logfire_config import get_logger

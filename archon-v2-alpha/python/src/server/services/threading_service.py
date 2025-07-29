@@ -14,7 +14,7 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 from collections import deque
 from dataclasses import dataclass, field
-from typing import Dict, Any, List, Optional, Callable, Union
+from typing import Dict, Any, List, Optional, Callable
 from contextlib import asynccontextmanager
 import gc
 # Removed direct logging import - using unified config
@@ -218,7 +218,7 @@ class MemoryAdaptiveDispatcher:
         optimal_workers = self.calculate_optimal_workers(mode)
         semaphore = asyncio.Semaphore(optimal_workers)
         
-        logfire_logger.info(f"Starting adaptive processing",
+        logfire_logger.info("Starting adaptive processing",
                           items_count=len(items),
                           workers=optimal_workers,
                           mode=mode,
@@ -317,7 +317,7 @@ class MemoryAdaptiveDispatcher:
         ]
         
         success_rate = len(successful_results) / len(items) * 100
-        logfire_logger.info(f"Adaptive processing completed",
+        logfire_logger.info("Adaptive processing completed",
                           total_items=len(items),
                           successful=len(successful_results),
                           success_rate=f"{success_rate:.1f}%",

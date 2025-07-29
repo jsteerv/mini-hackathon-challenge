@@ -5,7 +5,6 @@ This module provides core business logic for task operations that can be
 shared between MCP tools and FastAPI endpoints.
 """
 
-import json
 # Removed direct logging import - using unified config
 from datetime import datetime
 from typing import Dict, Any, List, Optional, Tuple

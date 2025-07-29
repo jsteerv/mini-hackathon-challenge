@@ -6,8 +6,7 @@ and that all resources are cleaned up correctly.
 """
 import pytest
 import asyncio
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
-from datetime import datetime
+from unittest.mock import Mock, AsyncMock, patch
 import uuid
 
 from src.server.fastapi.knowledge_api import (
