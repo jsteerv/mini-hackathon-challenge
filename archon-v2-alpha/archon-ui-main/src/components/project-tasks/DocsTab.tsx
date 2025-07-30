@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, X, Search, Upload, Link as LinkIcon, Check, Brain, Save, History } from 'lucide-react';
+import { Plus, X, Search, Upload, Link as LinkIcon, Check, Brain, Save, History, Eye, Edit3, Sparkles } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { knowledgeBaseService, KnowledgeItem } from '../../services/knowledgeBaseService';
 import { projectService } from '../../services/projectService';
@@ -12,6 +12,8 @@ import { CrawlProgressData, crawlProgressService } from '../../services/crawlPro
 import { WebSocketState } from '../../services/socketIOService';
 import { MilkdownEditor } from './MilkdownEditor';
 import { VersionHistoryModal } from './VersionHistoryModal';
+import { PRPViewer } from './PRPViewer';
+import './PRPViewer.css';
 
 
 
@@ -135,6 +137,7 @@ export const DocsTab = ({
   const [loading, setLoading] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [viewMode, setViewMode] = useState<'beautiful' | 'markdown'>('beautiful');
   
   // Dark mode detection
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -552,6 +555,34 @@ export const DocsTab = ({
               
               {selectedDocument && (
                 <div className="flex items-center gap-2">
+                  {/* View mode toggle for PRP documents */}
+                  {(selectedDocument.content?.document_type === 'prp' || selectedDocument.document_type === 'prp') && (
+                    <div className="flex items-center gap-1 bg-white/50 dark:bg-black/30 rounded-lg p-1 border border-gray-300 dark:border-gray-700">
+                      <button
+                        onClick={() => setViewMode('beautiful')}
+                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
+                          viewMode === 'beautiful' 
+                            ? 'bg-blue-500 text-white shadow-lg' 
+                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white'
+                        }`}
+                      >
+                        <Sparkles className="w-4 h-4" />
+                        Beautiful
+                      </button>
+                      <button
+                        onClick={() => setViewMode('markdown')}
+                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
+                          viewMode === 'markdown' 
+                            ? 'bg-purple-500 text-white shadow-lg' 
+                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white'
+                        }`}
+                      >
+                        <Edit3 className="w-4 h-4" />
+                        Markdown
+                      </button>
+                    </div>
+                  )}
+                  
                   {isEditing && (
                     <Button 
                       onClick={saveDocument} 
@@ -594,50 +625,60 @@ export const DocsTab = ({
             <div className="text-gray-500">Loading documents...</div>
           </div>
         ) : selectedDocument ? (
-          <MilkdownEditor
-            document={selectedDocument}
-            isDarkMode={isDarkMode}
-            onSave={async (updatedDocument) => {
-              try {
-                setIsSaving(true);
-                
-                // Get current project data to update docs array
-                const projectResponse = await fetch(`/api/projects/${project?.id}`);
-                if (!projectResponse.ok) throw new Error('Failed to load project');
-                
-                const projectData = await projectResponse.json();
-                const currentDocs = projectData.docs || [];
-                
-                // Update the specific document
-                const updatedDocs = currentDocs.map((doc: any) => 
-                  doc.id === updatedDocument.id ? updatedDocument : doc
-                );
+          // Check if this is a PRP document and in beautiful view mode
+          (selectedDocument.content?.document_type === 'prp' || selectedDocument.document_type === 'prp') && viewMode === 'beautiful' ? (
+            <div className="mb-8">
+              <PRPViewer 
+                content={selectedDocument.content} 
+                isDarkMode={isDarkMode}
+              />
+            </div>
+          ) : (
+            <MilkdownEditor
+              document={selectedDocument}
+              isDarkMode={isDarkMode}
+              onSave={async (updatedDocument) => {
+                try {
+                  setIsSaving(true);
+                  
+                  // Get current project data to update docs array
+                  const projectResponse = await fetch(`/api/projects/${project?.id}`);
+                  if (!projectResponse.ok) throw new Error('Failed to load project');
+                  
+                  const projectData = await projectResponse.json();
+                  const currentDocs = projectData.docs || [];
+                  
+                  // Update the specific document
+                  const updatedDocs = currentDocs.map((doc: any) => 
+                    doc.id === updatedDocument.id ? updatedDocument : doc
+                  );
 
-                // Save updated docs back to project using FastAPI
-                const response = await fetch(`/api/projects/${project?.id}`, {
-                  method: 'PUT',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ docs: updatedDocs })
-                });
+                  // Save updated docs back to project using FastAPI
+                  const response = await fetch(`/api/projects/${project?.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ docs: updatedDocs })
+                  });
 
-                if (!response.ok) throw new Error('Failed to save document');
-                
-                // Update local state
-                setSelectedDocument(updatedDocument);
-                setDocuments(prev => prev.map(doc => 
-                  doc.id === updatedDocument.id ? updatedDocument : doc
-                ));
-                
-                showToast('Document saved successfully', 'success');
-              } catch (error) {
-                console.error('Failed to save document:', error);
-                showToast('Failed to save document', 'error');
-              } finally {
-                setIsSaving(false);
-              }
-            }}
-            className="mb-8"
-          />
+                  if (!response.ok) throw new Error('Failed to save document');
+                  
+                  // Update local state
+                  setSelectedDocument(updatedDocument);
+                  setDocuments(prev => prev.map(doc => 
+                    doc.id === updatedDocument.id ? updatedDocument : doc
+                  ));
+                  
+                  showToast('Document saved successfully', 'success');
+                } catch (error) {
+                  console.error('Failed to save document:', error);
+                  showToast('Failed to save document', 'error');
+                } finally {
+                  setIsSaving(false);
+                }
+              }}
+              className="mb-8"
+            />
+          )
         ) : (
           <div className="flex flex-col items-center justify-center h-64 text-gray-500">
             <Brain className="w-16 h-16 mb-4 opacity-50" />

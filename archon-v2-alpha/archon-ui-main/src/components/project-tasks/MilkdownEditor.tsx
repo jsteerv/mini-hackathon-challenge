@@ -45,6 +45,11 @@ export const MilkdownEditor: React.FC<MilkdownEditorProps> = ({
         return doc.content.markdown;
       }
       
+      // Check if this is a PRP document
+      if (doc.content.document_type === 'prp' || doc.document_type === 'prp') {
+        return convertPRPToMarkdown(doc.content);
+      }
+      
       // Otherwise, convert the content object to a readable markdown format
       let markdown = `# ${doc.title}\n\n`;
       
@@ -74,6 +79,252 @@ export const MilkdownEditor: React.FC<MilkdownEditorProps> = ({
     }
     
     return `# ${doc.title}\n\nStart writing...`;
+  };
+
+  // Convert PRP document structure to readable markdown
+  const convertPRPToMarkdown = (content: any): string => {
+    let markdown = `# ${content.title || doc.title}\n\n`;
+    
+    // Add metadata
+    if (content.version) markdown += `**Version:** ${content.version}\n`;
+    if (content.author) markdown += `**Author:** ${content.author}\n`;
+    if (content.date) markdown += `**Date:** ${content.date}\n\n`;
+    
+    // Context section
+    if (content.context) {
+      markdown += `## Context\n\n`;
+      if (content.context.scope) markdown += `### Scope\n${content.context.scope}\n\n`;
+      if (content.context.background) markdown += `### Background\n${content.context.background}\n\n`;
+      if (content.context.objectives) {
+        markdown += `### Objectives\n`;
+        content.context.objectives.forEach((obj: string) => {
+          markdown += `- ${obj}\n`;
+        });
+        markdown += '\n';
+      }
+    }
+    
+    // User Personas
+    if (content.user_personas) {
+      markdown += `## User Personas\n\n`;
+      Object.entries(content.user_personas).forEach(([key, persona]: [string, any]) => {
+        markdown += `### ${persona.name || key}\n`;
+        if (persona.role) markdown += `**Role:** ${persona.role}\n\n`;
+        
+        if (persona.goals) {
+          markdown += `**Goals:**\n`;
+          persona.goals.forEach((goal: string) => {
+            markdown += `- ${goal}\n`;
+          });
+          markdown += '\n';
+        }
+        
+        if (persona.pain_points) {
+          markdown += `**Pain Points:**\n`;
+          persona.pain_points.forEach((point: string) => {
+            markdown += `- ${point}\n`;
+          });
+          markdown += '\n';
+        }
+        
+        if (persona.journey) {
+          markdown += `**User Journey:**\n`;
+          Object.entries(persona.journey).forEach(([stage, description]) => {
+            markdown += `- **${stage.charAt(0).toUpperCase() + stage.slice(1)}:** ${description}\n`;
+          });
+          markdown += '\n';
+        }
+        
+        if (persona.workflow) {
+          markdown += `**Daily Workflow:**\n`;
+          Object.entries(persona.workflow).forEach(([time, task]) => {
+            markdown += `- **${time.charAt(0).toUpperCase() + time.slice(1)}:** ${task}\n`;
+          });
+          markdown += '\n';
+        }
+      });
+    }
+    
+    // User Flows
+    if (content.user_flows) {
+      markdown += `## User Flows\n\n`;
+      Object.entries(content.user_flows).forEach(([flowName, flow]: [string, any]) => {
+        const flowTitle = flowName.replace(/_/g, ' ').split(' ').map(word => 
+          word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' ');
+        markdown += `### ${flowTitle}\n\n`;
+        
+        const renderFlowObject = (obj: any, depth: number = 0) => {
+          const indent = '  '.repeat(depth);
+          Object.entries(obj).forEach(([key, value]) => {
+            if (typeof value === 'string') {
+              markdown += `${indent}- **${key.charAt(0).toUpperCase() + key.slice(1)}:** ${value}\n`;
+            } else if (typeof value === 'object' && value !== null) {
+              markdown += `${indent}- **${key.charAt(0).toUpperCase() + key.slice(1)}:**\n`;
+              renderFlowObject(value, depth + 1);
+            }
+          });
+        };
+        
+        renderFlowObject(flow);
+        markdown += '\n';
+      });
+    }
+    
+    // Success Metrics
+    if (content.success_metrics) {
+      markdown += `## Success Metrics\n\n`;
+      Object.entries(content.success_metrics).forEach(([category, metrics]: [string, any]) => {
+        const categoryTitle = category.replace(/_/g, ' ').split(' ').map(word => 
+          word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' ');
+        markdown += `### ${categoryTitle}\n`;
+        
+        if (Array.isArray(metrics)) {
+          metrics.forEach((metric: string) => {
+            markdown += `- ${metric}\n`;
+          });
+        } else if (typeof metrics === 'object') {
+          Object.entries(metrics).forEach(([key, value]) => {
+            markdown += `- **${key}:** ${value}\n`;
+          });
+        }
+        markdown += '\n';
+      });
+    }
+    
+    // UI Improvements
+    if (content.ui_improvements) {
+      markdown += `## UI Improvements\n\n`;
+      const renderUISection = (obj: any, depth: number = 0) => {
+        const indent = '  '.repeat(depth);
+        Object.entries(obj).forEach(([key, value]) => {
+          const title = key.replace(/_/g, ' ').split(' ').map(word => 
+            word.charAt(0).toUpperCase() + word.slice(1)
+          ).join(' ');
+          
+          if (typeof value === 'string') {
+            markdown += `${indent}- **${title}:** ${value}\n`;
+          } else if (Array.isArray(value)) {
+            markdown += `${indent}- **${title}:**\n`;
+            value.forEach((item: string) => {
+              markdown += `${indent}  - ${item}\n`;
+            });
+          } else if (typeof value === 'object' && value !== null) {
+            markdown += `${indent}### ${title}\n`;
+            renderUISection(value, depth + 1);
+          }
+        });
+      };
+      renderUISection(content.ui_improvements);
+    }
+    
+    // Implementation Plan
+    if (content.implementation_plan) {
+      markdown += `## Implementation Plan\n\n`;
+      Object.entries(content.implementation_plan).forEach(([phase, details]: [string, any]) => {
+        markdown += `### ${phase.toUpperCase()}\n`;
+        if (details.duration) markdown += `**Duration:** ${details.duration}\n\n`;
+        if (details.deliverables) {
+          markdown += `**Deliverables:**\n`;
+          details.deliverables.forEach((deliverable: string) => {
+            markdown += `- ${deliverable}\n`;
+          });
+          markdown += '\n';
+        }
+      });
+    }
+    
+    // Technical Implementation
+    if (content.technical_implementation) {
+      markdown += `## Technical Implementation\n\n`;
+      Object.entries(content.technical_implementation).forEach(([section, details]: [string, any]) => {
+        const sectionTitle = section.charAt(0).toUpperCase() + section.slice(1);
+        markdown += `### ${sectionTitle}\n`;
+        Object.entries(details).forEach(([key, value]) => {
+          markdown += `- **${key.replace(/_/g, ' ')}:** ${value}\n`;
+        });
+        markdown += '\n';
+      });
+    }
+    
+    // Information Architecture
+    if (content.information_architecture) {
+      markdown += `## Information Architecture\n\n`;
+      const renderIA = (obj: any, depth: number = 0) => {
+        const indent = '  '.repeat(depth);
+        Object.entries(obj).forEach(([key, value]) => {
+          const title = key.replace(/_/g, ' ').split(' ').map(word => 
+            word.charAt(0).toUpperCase() + word.slice(1)
+          ).join(' ');
+          
+          if (typeof value === 'string') {
+            markdown += `${indent}- **${title}:** ${value}\n`;
+          } else if (typeof value === 'object' && value !== null) {
+            markdown += `${indent}${depth === 0 ? '###' : '-'} ${title}\n`;
+            renderIA(value, depth + 1);
+          }
+        });
+      };
+      renderIA(content.information_architecture);
+    }
+    
+    // Validation Gates
+    if (content.validation_gates) {
+      markdown += `## Validation Gates\n\n`;
+      Object.entries(content.validation_gates).forEach(([category, items]: [string, any]) => {
+        const categoryTitle = category.charAt(0).toUpperCase() + category.slice(1);
+        markdown += `### ${categoryTitle}\n`;
+        if (Array.isArray(items)) {
+          items.forEach((item: string) => {
+            markdown += `- ${item}\n`;
+          });
+          markdown += '\n';
+        }
+      });
+    }
+    
+    // Current State Analysis
+    if (content.current_state_analysis) {
+      markdown += `## Current State Analysis\n\n`;
+      Object.entries(content.current_state_analysis).forEach(([section, items]: [string, any]) => {
+        const sectionTitle = section.charAt(0).toUpperCase() + section.slice(1);
+        markdown += `### ${sectionTitle}\n`;
+        if (Array.isArray(items)) {
+          items.forEach((item: string) => {
+            markdown += `- ${item}\n`;
+          });
+          markdown += '\n';
+        }
+      });
+    }
+    
+    // Component Architecture
+    if (content.component_architecture) {
+      markdown += `## Component Architecture\n\n`;
+      Object.entries(content.component_architecture).forEach(([section, details]: [string, any]) => {
+        const sectionTitle = section.replace(/_/g, ' ').split(' ').map(word => 
+          word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' ');
+        markdown += `### ${sectionTitle}\n`;
+        
+        if (typeof details === 'object' && details !== null) {
+          Object.entries(details).forEach(([key, value]) => {
+            if (typeof value === 'string') {
+              markdown += `- **${key}:** ${value}\n`;
+            } else if (typeof value === 'object' && value !== null) {
+              markdown += `- **${key}:**\n`;
+              Object.entries(value).forEach(([subKey, subValue]) => {
+                markdown += `  - **${subKey}:** ${subValue}\n`;
+              });
+            }
+          });
+          markdown += '\n';
+        }
+      });
+    }
+    
+    return markdown;
   };
 
   // Initialize editor

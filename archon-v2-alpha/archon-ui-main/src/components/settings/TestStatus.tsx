@@ -299,45 +299,36 @@ export const TestStatus = () => {
         wsCleanupRefs.current.set(execution.execution_id, cleanup);
         
       } else if (testType === 'ui') {
-        console.log('[DEBUG] Running UI tests via backend API');
-        // React tests: Use backend API with WebSocket streaming (same as Python tests)
-        const execution = await testService.runUITests();
-        console.log('[DEBUG] UI test execution response:', execution);
-        
-        // Update state with execution info
-        updateTestState(testType, (prev) => ({
-          ...prev,
-          execution,
-          logs: [...prev.logs, `> Execution ID: ${execution.execution_id}`, '> Connecting to real-time stream...']
-        }));
-
-        // Connect to WebSocket stream for real-time updates
-        const cleanup = testService.connectToTestStream(
-          execution.execution_id,
+        console.log('[DEBUG] Running UI tests locally in the same container');
+        // React tests: Run locally using vitest
+        const execution_id = await testService.runUITestsWithStreaming(
           (message) => handleStreamMessage(testType, message),
           (error) => {
-            console.error('WebSocket error:', error);
+            console.error('UI test error:', error);
             updateTestState(testType, (prev) => ({
               ...prev,
-              logs: [...prev.logs, '> WebSocket connection error'],
-              isRunning: false
+              logs: [...prev.logs, `> Error: ${error.message}`],
+              isRunning: false,
+              exitCode: 1
             }));
-            showToast('WebSocket connection error', 'error');
+            showToast('React test execution error', 'error');
           },
-          (event) => {
-            console.log('WebSocket closed:', event.code, event.reason);
-            // Only update state if it wasn't a normal closure
-            if (event.code !== 1000) {
-              updateTestState(testType, (prev) => ({
-                ...prev,
-                isRunning: false
-              }));
-            }
+          () => {
+            console.log('UI tests completed');
           }
         );
 
-        // Store cleanup function
-        wsCleanupRefs.current.set(execution.execution_id, cleanup);
+        // Update state with execution info
+        updateTestState(testType, (prev) => ({
+          ...prev,
+          execution: {
+            execution_id,
+            test_type: 'ui',
+            status: 'running',
+            start_time: new Date().toISOString()
+          },
+          logs: [...prev.logs, `> Execution ID: ${execution_id}`, '> Running tests locally...']
+        }));
       }
 
     } catch (error) {
