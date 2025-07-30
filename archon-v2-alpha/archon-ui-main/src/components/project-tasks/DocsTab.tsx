@@ -12,8 +12,7 @@ import { CrawlProgressData, crawlProgressService } from '../../services/crawlPro
 import { WebSocketState } from '../../services/socketIOService';
 import { MilkdownEditor } from './MilkdownEditor';
 import { VersionHistoryModal } from './VersionHistoryModal';
-import { PRPViewer } from './PRPViewer';
-import './PRPViewer.css';
+import { PRPViewer } from '../prp';
 
 
 
