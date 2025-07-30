@@ -34,82 +34,464 @@ interface Task {
   status: 'backlog' | 'in-progress' | 'review' | 'complete';
 }
 
-// Document Templates
+// Document Templates - Updated for proper MCP database storage
 const DOCUMENT_TEMPLATES = {
-  'prd': {
-    name: 'PRD Template',
-    icon: '📋',
-    content: `# Product Requirements Document
-
-## Project Overview
-
-Describe the project overview here...
-
-## Goals
-
-- Goal 1
-- Goal 2
-- Goal 3
-
-## Success Criteria
-
-- Criteria 1
-- Criteria 2
-
-## Requirements
-
-1. Requirement 1
-2. Requirement 2`
+  'prp_base': {
+    name: 'Feature PRP Template',
+    icon: '🚀',
+    document_type: 'prp',
+    content: {
+      document_type: 'prp',
+      title: 'New Feature Implementation',
+      version: '1.0',
+      author: 'User',
+      date: new Date().toISOString().split('T')[0],
+      status: 'draft',
+      
+      goal: 'Build a specific feature - replace with your goal',
+      
+      why: [
+        'Business value this feature provides',
+        'User problem this solves',
+        'How it integrates with existing functionality'
+      ],
+      
+      what: {
+        description: 'Detailed description of what users will see and experience',
+        success_criteria: [
+          'Measurable outcome 1 (e.g., response time < 200ms)',
+          'User behavior outcome 2 (e.g., 90% task completion rate)',
+          'Technical outcome 3 (e.g., zero data loss during operations)'
+        ],
+        user_stories: [
+          'As a [user type], I want to [action] so that [benefit]',
+          'As a [user type], I need to [requirement] in order to [goal]'
+        ]
+      },
+      
+      context: {
+        documentation: [
+          {
+            source: 'https://docs.example.com/api',
+            why: 'API endpoints and data models needed'
+          },
+          {
+            source: 'src/components/Example.tsx',
+            why: 'Existing pattern to follow for UI components'
+          }
+        ],
+        existing_code: [
+          {
+            file: 'src/services/baseService.ts',
+            purpose: 'Service layer pattern to extend'
+          }
+        ],
+        gotchas: [
+          'Critical requirement or constraint to remember',
+          'Common mistake to avoid during implementation'
+        ],
+        dependencies: [
+          'Package or service that must be available',
+          'Another feature that must be completed first'
+        ]
+      },
+      
+      implementation_blueprint: {
+        phase_1_foundation: {
+          description: 'Set up core infrastructure',
+          duration: '2-3 days',
+          tasks: [
+            {
+              title: 'Create TypeScript interfaces',
+              details: 'Define all data types and API contracts',
+              files: ['src/types/newFeature.ts']
+            },
+            {
+              title: 'Set up database schema',
+              details: 'Create tables and relationships if needed',
+              files: ['migrations/add_feature_tables.sql']
+            }
+          ]
+        },
+        phase_2_implementation: {
+          description: 'Build core functionality',
+          duration: '1 week',
+          tasks: [
+            {
+              title: 'Implement service layer',
+              details: 'Business logic and data access',
+              files: ['src/services/newFeatureService.ts']
+            },
+            {
+              title: 'Create API endpoints',
+              details: 'RESTful endpoints with proper validation',
+              files: ['src/api/newFeatureApi.ts']
+            },
+            {
+              title: 'Build UI components',
+              details: 'React components with TypeScript',
+              files: ['src/components/NewFeature.tsx']
+            }
+          ]
+        },
+        phase_3_integration: {
+          description: 'Connect everything and test',
+          duration: '2-3 days',
+          tasks: [
+            {
+              title: 'Integrate frontend with backend',
+              details: 'Connect UI to API endpoints',
+              files: ['src/hooks/useNewFeature.ts']
+            },
+            {
+              title: 'Add comprehensive tests',
+              details: 'Unit, integration, and E2E tests',
+              files: ['tests/newFeature.test.ts']
+            }
+          ]
+        }
+      },
+      
+      validation: {
+        level_1_syntax: [
+          'npm run lint -- --fix',
+          'npm run typecheck',
+          'Ensure no TypeScript errors'
+        ],
+        level_2_unit_tests: [
+          'npm run test -- newFeature',
+          'Verify all unit tests pass with >80% coverage'
+        ],
+        level_3_integration: [
+          'npm run test:integration',
+          'Test API endpoints with proper data flow'
+        ],
+        level_4_end_to_end: [
+          'Start development server and test user flows',
+          'Verify feature works as expected in browser',
+          'Test error scenarios and edge cases'
+        ]
+      }
+    }
   },
-  'technical_spec': {
-    name: 'Technical Spec',
-    icon: '⚙️',
-    content: `# Technical Specification
-
-## Architecture
-
-Describe the technical architecture...
-
-## Tech Stack
-
-- Frontend: React + TypeScript
-- Backend: Node.js + Express
-- Database: PostgreSQL
-
-## Implementation Plan
-
-1. Phase 1: Setup
-2. Phase 2: Core Features
-3. Phase 3: Testing`
+  'prp_task': {
+    name: 'Task/Bug Fix PRP',
+    icon: '✅',
+    document_type: 'prp',
+    content: {
+      document_type: 'prp',
+      title: 'Task or Bug Fix',
+      version: '1.0',
+      author: 'User',
+      date: new Date().toISOString().split('T')[0],
+      status: 'draft',
+      
+      goal: 'Fix specific bug or complete targeted task',
+      
+      why: [
+        'Impact on users or system if not fixed',
+        'How this fits into larger project goals',
+        'Priority level and urgency'
+      ],
+      
+      what: {
+        description: 'Specific problem to solve and expected outcome',
+        current_behavior: 'What happens now (the problem)',
+        expected_behavior: 'What should happen instead',
+        acceptance_criteria: [
+          'Specific testable condition 1',
+          'Specific testable condition 2',
+          'No regressions in existing functionality'
+        ]
+      },
+      
+      context: {
+        affected_files: [
+          {
+            path: 'src/component.tsx',
+            reason: 'Contains the bug or needs the change'
+          },
+          {
+            path: 'src/service.ts',
+            reason: 'Related logic that may need updates'
+          }
+        ],
+        root_cause: 'Analysis of why this issue exists',
+        related_issues: [
+          'Link to GitHub issue or ticket',
+          'Related bugs or enhancement requests'
+        ],
+        dependencies: [
+          'Other tasks that must be completed first',
+          'External services or APIs involved'
+        ]
+      },
+      
+      implementation_steps: [
+        {
+          step: 1,
+          action: 'Reproduce the issue',
+          details: 'Create test case that demonstrates the problem'
+        },
+        {
+          step: 2,
+          action: 'Identify root cause',
+          details: 'Debug and trace the issue to its source'
+        },
+        {
+          step: 3,
+          action: 'Implement fix',
+          details: 'Apply minimal change that resolves the issue'
+        },
+        {
+          step: 4,
+          action: 'Test solution',
+          details: 'Verify fix works and doesn\'t break other functionality'
+        },
+        {
+          step: 5,
+          action: 'Update documentation',
+          details: 'Update any relevant docs or comments'
+        }
+      ],
+      
+      validation: {
+        reproduction_test: [
+          'Steps to reproduce the original issue',
+          'Verify the issue no longer occurs'
+        ],
+        regression_tests: [
+          'Run existing test suite to ensure no regressions',
+          'Test related functionality manually'
+        ],
+        edge_cases: [
+          'Test boundary conditions',
+          'Test error scenarios'
+        ]
+      }
+    }
   },
+  'prp_planning': {
+    name: 'Architecture/Planning PRP',
+    icon: '📐',
+    document_type: 'prp',
+    content: {
+      document_type: 'prp',
+      title: 'System Architecture and Planning',
+      version: '1.0',
+      author: 'User',
+      date: new Date().toISOString().split('T')[0],
+      status: 'draft',
+      
+      goal: 'Design and plan system architecture for [specific system/feature]',
+      
+      why: [
+        'Strategic business objective driving this architecture',
+        'Technical debt or scalability issues to address',
+        'Future growth and maintainability requirements'
+      ],
+      
+      what: {
+        scope: 'System boundaries, affected components, and integration points',
+        deliverables: [
+          'Comprehensive architecture documentation',
+          'Component specifications and interfaces',
+          'Implementation roadmap and timeline',
+          'Migration/deployment strategy'
+        ],
+        constraints: [
+          'Budget and timeline limitations',
+          'Technical constraints and dependencies',
+          'Regulatory or compliance requirements'
+        ]
+      },
+      
+      current_state_analysis: {
+        strengths: [
+          'What works well in the current system',
+          'Stable components that should be preserved',
+          'Existing patterns worth maintaining'
+        ],
+        weaknesses: [
+          'Performance bottlenecks and limitations',
+          'Maintenance and scaling challenges',
+          'Security or reliability concerns'
+        ],
+        opportunities: [
+          'Modern technologies to leverage',
+          'Process improvements to implement',
+          'Business capabilities to enable'
+        ],
+        threats: [
+          'Risks during transition period',
+          'Dependencies on legacy systems',
+          'Resource and timeline constraints'
+        ]
+      },
+      
+      proposed_architecture: {
+        overview: 'High-level description of the new architecture',
+        components: {
+          frontend: {
+            technology: 'React 18 with TypeScript',
+            patterns: 'Component composition with ShadCN UI',
+            state_management: 'React hooks with context for global state'
+          },
+          backend: {
+            technology: 'FastAPI with async Python',
+            patterns: 'Service layer with repository pattern',
+            database: 'Supabase PostgreSQL with proper indexing'
+          },
+          realtime: {
+            technology: 'Socket.IO for live updates',
+            patterns: 'Event-driven communication with proper error handling'
+          },
+          infrastructure: {
+            deployment: 'Docker containers with orchestration',
+            monitoring: 'Comprehensive logging and metrics',
+            security: 'OAuth2 with proper encryption'
+          }
+        },
+        data_flow: [
+          'User interaction → Frontend validation → API call',
+          'Backend processing → Database operations → Response',
+          'Real-time events → Socket.IO → UI updates'
+        ],
+        integration_points: [
+          'External APIs and their usage patterns',
+          'Third-party services and data sources',
+          'Legacy system interfaces'
+        ]
+      },
+      
+      implementation_phases: {
+        phase_1_foundation: {
+          duration: '2-3 weeks',
+          objective: 'Core infrastructure and basic functionality',
+          deliverables: [
+            'Database schema and basic API endpoints',
+            'Authentication and authorization system',
+            'Core UI components and routing'
+          ],
+          success_criteria: [
+            'Basic user flows working end-to-end',
+            'Core API responses under 200ms',
+            'Authentication working with test users'
+          ]
+        },
+        phase_2_features: {
+          duration: '3-4 weeks',
+          objective: 'Primary feature implementation',
+          deliverables: [
+            'Complete feature set with UI',
+            'Real-time updates and notifications',
+            'Data validation and error handling'
+          ],
+          success_criteria: [
+            'All major user stories implemented',
+            'Real-time features working reliably',
+            'Comprehensive error handling'
+          ]
+        },
+        phase_3_optimization: {
+          duration: '1-2 weeks',
+          objective: 'Testing, optimization, and deployment',
+          deliverables: [
+            'Comprehensive test suite',
+            'Performance optimization',
+            'Production deployment'
+          ],
+          success_criteria: [
+            'Test coverage >80%',
+            'Performance targets met',
+            'Successful production deployment'
+          ]
+        }
+      },
+      
+      success_metrics: {
+        performance: [
+          'API response time <200ms for 95% of requests',
+          'UI load time <2 seconds',
+          'Support 1000+ concurrent users'
+        ],
+        quality: [
+          'Test coverage >80%',
+          'Zero critical security vulnerabilities',
+          'Mean time to recovery <15 minutes'
+        ],
+        business: [
+          'User task completion rate >90%',
+          'Feature adoption >60% within first month',
+          'User satisfaction score >4.5/5'
+        ]
+      },
+      
+      risks_and_mitigation: {
+        technical_risks: [
+          {
+            risk: 'Integration complexity with legacy systems',
+            mitigation: 'Phased approach with fallback options'
+          },
+          {
+            risk: 'Performance issues at scale',
+            mitigation: 'Load testing and optimization in early phases'
+          }
+        ],
+        business_risks: [
+          {
+            risk: 'Timeline delays due to scope creep',
+            mitigation: 'Clear requirements and change control process'
+          }
+        ]
+      }
+    }
+  },
+  
+  // Simple markdown templates for non-PRP documents
+  'markdown_doc': {
+    name: 'Markdown Document',
+    icon: '📝',
+    document_type: 'markdown',
+    content: {
+      markdown: `# Document Title
+
+## Overview
+
+Provide a brief overview of this document...
+
+## Content
+
+Add your content here...
+
+## Next Steps
+
+- [ ] Action item 1
+- [ ] Action item 2`
+    }
+  },
+  
   'meeting_notes': {
     name: 'Meeting Notes',
-    icon: '📝',
-    content: `# Meeting Notes
-
-Date: ${new Date().toLocaleDateString()}
-
-## Attendees
-
-- Person 1
-- Person 2
-
-## Agenda
-
-1. Topic 1
-2. Topic 2
-
-## Action Items
-
-- [ ] Task 1
-- [ ] Task 2`
-  },
-  'blank': {
-    name: 'Blank Document',
-    icon: '📄',
-    content: `# Untitled
-
-Start writing...`
+    icon: '📋',
+    document_type: 'meeting_notes',
+    content: {
+      meeting_date: new Date().toISOString().split('T')[0],
+      attendees: ['Person 1', 'Person 2'],
+      agenda: [
+        'Agenda item 1',
+        'Agenda item 2'
+      ],
+      notes: 'Meeting discussion notes...',
+      action_items: [
+        {
+          item: 'Action item 1',
+          owner: 'Person Name',
+          due_date: 'YYYY-MM-DD'
+        }
+      ],
+      next_meeting: 'YYYY-MM-DD'
+    }
   }
 };
 
@@ -175,35 +557,31 @@ export const DocsTab = ({
   const [progressItems, setProgressItems] = useState<CrawlProgressData[]>([]);
   const { showToast } = useToast();
 
-  // Load project documents from database
+  // Load project documents from the project data
   const loadProjectDocuments = async () => {
-    if (!project?.id) return;
+    if (!project?.id || !project.docs) return;
     
     try {
       setLoading(true);
-      const response = await fetch(`/api/projects/${project.id}`);
-      if (!response.ok) throw new Error('Failed to load project documents');
       
-      const data = await response.json();
-      const docs = data.docs || [];
-      
-      // Transform docs to ProjectDoc format with unique IDs
-      const projectDocuments: ProjectDoc[] = docs.map((doc: any, index: number) => ({
-        id: doc.id || `doc-${Date.now()}-${index}`, // Ensure unique IDs
+      // Use the docs directly from the project data
+      const projectDocuments: ProjectDoc[] = project.docs.map((doc: any) => ({
+        id: doc.id,
         title: doc.title || 'Untitled Document',
-        created_at: doc.created_at || new Date().toISOString(),
-        updated_at: doc.updated_at || new Date().toISOString(),
-        // Preserve original data
+        created_at: doc.created_at,
+        updated_at: doc.updated_at,
         content: doc.content,
-        document_type: doc.document_type
+        document_type: doc.document_type || 'document'
       }));
       
       setDocuments(projectDocuments);
       
-      // Auto-select first document if available
-      if (projectDocuments.length > 0) {
+      // Auto-select first document if available and no document is currently selected
+      if (projectDocuments.length > 0 && !selectedDocument) {
         setSelectedDocument(projectDocuments[0]);
       }
+      
+      console.log(`Loaded ${projectDocuments.length} documents from project data`);
     } catch (error) {
       console.error('Failed to load documents:', error);
       showToast('Failed to load documents', 'error');
@@ -219,44 +597,32 @@ export const DocsTab = ({
     const template = DOCUMENT_TEMPLATES[templateKey as keyof typeof DOCUMENT_TEMPLATES];
     if (!template) return;
 
-    const newDoc: ProjectDoc = {
-      id: `doc-${Date.now()}`,
-      title: template.name,
-      content: {
-        markdown: template.content
-      },
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-
     try {
       setIsSaving(true);
       
-      // Get current project data
-      const projectResponse = await fetch(`/api/projects/${project.id}`);
-      if (!projectResponse.ok) throw new Error('Failed to load project');
+      // Create a new document with a unique ID
+      const newDocument: ProjectDoc = {
+        id: `doc-${Date.now()}`,
+        title: template.name,
+        content: template.content,
+        document_type: template.document_type,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
       
-      const projectData = await projectResponse.json();
-      const currentDocs = projectData.docs || [];
+      // Add to documents list
+      setDocuments(prev => [...prev, newDocument]);
+      setSelectedDocument(newDocument);
       
-      // Add new document
-      const updatedDocs = [...currentDocs, newDoc];
-
-      // Save updated docs back to project
-      const response = await fetch(`/api/projects/${project.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ docs: updatedDocs })
-      });
-
-      if (!response.ok) throw new Error('Failed to create document');
-      
+      console.log('Document created successfully:', newDocument);
       showToast('Document created successfully', 'success');
       setShowTemplateModal(false);
-      loadProjectDocuments();
     } catch (error) {
       console.error('Failed to create document:', error);
-      showToast('Failed to create document', 'error');
+      showToast(
+        error instanceof Error ? error.message : 'Failed to create document', 
+        'error'
+      );
     } finally {
       setIsSaving(false);
     }
@@ -269,55 +635,26 @@ export const DocsTab = ({
     try {
       setIsSaving(true);
       
-      // Get current project data
-      const projectResponse = await fetch(`/api/projects/${project.id}`);
-      if (!projectResponse.ok) throw new Error('Failed to load project');
+      // Update the document in local state
+      const updatedDocument = { 
+        ...selectedDocument, 
+        updated_at: new Date().toISOString() 
+      };
       
-      const projectData = await projectResponse.json();
-      const currentDocs = projectData.docs || [];
+      setDocuments(prev => prev.map(doc => 
+        doc.id === selectedDocument.id ? updatedDocument : doc
+      ));
+      setSelectedDocument(updatedDocument);
       
-      // Update the specific document
-      const updatedDocs = currentDocs.map((doc: any) => 
-        doc.id === selectedDocument.id ? {
-          ...selectedDocument,
-          updated_at: new Date().toISOString()
-        } : doc
-      );
-
-      // Save updated docs back to project
-      const response = await fetch(`/api/projects/${project.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ docs: updatedDocs })
-      });
-
-      if (!response.ok) throw new Error('Failed to save document');
-      
-      // Create a version entry specifically for this document change
-      try {
-        await fetch(`/api/projects/${project.id}/versions`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            field_name: 'docs',
-            content: updatedDocs,
-            change_summary: `Updated document: ${selectedDocument.title}`,
-            change_type: 'update',
-            document_id: selectedDocument.id,
-            created_by: 'User'
-          })
-        });
-      } catch (versionError) {
-        console.error('Failed to create version:', versionError);
-        // Don't fail the save if versioning fails
-      }
-      
+      console.log('Document saved successfully:', updatedDocument);
       showToast('Document saved successfully', 'success');
       setIsEditing(false);
-      loadProjectDocuments();
     } catch (error) {
       console.error('Failed to save document:', error);
-      showToast('Failed to save document', 'error');
+      showToast(
+        error instanceof Error ? error.message : 'Failed to save document', 
+        'error'
+      );
     } finally {
       setIsSaving(false);
     }
@@ -554,9 +891,8 @@ export const DocsTab = ({
               
               {selectedDocument && (
                 <div className="flex items-center gap-2">
-                  {/* View mode toggle for PRP documents */}
-                  {(selectedDocument.content?.document_type === 'prp' || selectedDocument.document_type === 'prp') && (
-                    <div className="flex items-center gap-1 bg-white/50 dark:bg-black/30 rounded-lg p-1 border border-gray-300 dark:border-gray-700">
+                  {/* View mode toggle for all documents */}
+                  <div className="flex items-center gap-1 bg-white/50 dark:bg-black/30 rounded-lg p-1 border border-gray-300 dark:border-gray-700">
                       <button
                         onClick={() => setViewMode('beautiful')}
                         className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
@@ -580,7 +916,6 @@ export const DocsTab = ({
                         Markdown
                       </button>
                     </div>
-                  )}
                   
                   {isEditing && (
                     <Button 
@@ -624,11 +959,11 @@ export const DocsTab = ({
             <div className="text-gray-500">Loading documents...</div>
           </div>
         ) : selectedDocument ? (
-          // Check if this is a PRP document and in beautiful view mode
-          (selectedDocument.content?.document_type === 'prp' || selectedDocument.document_type === 'prp') && viewMode === 'beautiful' ? (
+          // Show PRPViewer in beautiful mode for all documents
+          viewMode === 'beautiful' ? (
             <div className="mb-8">
               <PRPViewer 
-                content={selectedDocument.content} 
+                content={selectedDocument.content || {}} 
                 isDarkMode={isDarkMode}
               />
             </div>
@@ -640,37 +975,26 @@ export const DocsTab = ({
                 try {
                   setIsSaving(true);
                   
-                  // Get current project data to update docs array
-                  const projectResponse = await fetch(`/api/projects/${project?.id}`);
-                  if (!projectResponse.ok) throw new Error('Failed to load project');
-                  
-                  const projectData = await projectResponse.json();
-                  const currentDocs = projectData.docs || [];
-                  
-                  // Update the specific document
-                  const updatedDocs = currentDocs.map((doc: any) => 
-                    doc.id === updatedDocument.id ? updatedDocument : doc
-                  );
-
-                  // Save updated docs back to project using FastAPI
-                  const response = await fetch(`/api/projects/${project?.id}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ docs: updatedDocs })
-                  });
-
-                  if (!response.ok) throw new Error('Failed to save document');
+                  // Update document with timestamp
+                  const docWithTimestamp = {
+                    ...updatedDocument,
+                    updated_at: new Date().toISOString()
+                  };
                   
                   // Update local state
-                  setSelectedDocument(updatedDocument);
+                  setSelectedDocument(docWithTimestamp);
                   setDocuments(prev => prev.map(doc => 
-                    doc.id === updatedDocument.id ? updatedDocument : doc
+                    doc.id === updatedDocument.id ? docWithTimestamp : doc
                   ));
                   
+                  console.log('Document saved via MilkdownEditor');
                   showToast('Document saved successfully', 'success');
                 } catch (error) {
                   console.error('Failed to save document:', error);
-                  showToast('Failed to save document', 'error');
+                  showToast(
+                    error instanceof Error ? error.message : 'Failed to save document',
+                    'error'
+                  );
                 } finally {
                   setIsSaving(false);
                 }
@@ -783,6 +1107,17 @@ const TemplateModal: React.FC<{
 }> = ({ onClose, onSelectTemplate, isCreating }) => {
   const templates = Object.entries(DOCUMENT_TEMPLATES);
 
+  const getTemplateDescription = (key: string, template: any) => {
+    const descriptions: Record<string, string> = {
+      'prp_base': 'Comprehensive template for implementing new features with full context, validation loops, and structured implementation blueprint.',
+      'prp_task': 'Focused template for specific tasks or bug fixes with clear steps and validation criteria.',
+      'prp_planning': 'Strategic template for architecture planning and system design with risk analysis and success metrics.',
+      'markdown_doc': 'Simple markdown document for general documentation and notes.',
+      'meeting_notes': 'Structured template for meeting notes with attendees, agenda, and action items.'
+    };
+    return descriptions[key] || 'Document template';
+  };
+
   return (
     <div className="fixed inset-0 bg-gray-500/50 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
       <div className="relative p-6 rounded-md backdrop-blur-md w-full max-w-2xl
@@ -803,21 +1138,30 @@ const TemplateModal: React.FC<{
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-3">
             {templates.map(([key, template]) => (
               <button
                 key={key}
                 onClick={() => onSelectTemplate(key)}
                 disabled={isCreating}
-                className="p-4 text-left border border-gray-200 dark:border-gray-700 rounded-lg hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-4 text-left border border-gray-200 dark:border-gray-700 rounded-lg hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed group"
               >
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="text-2xl">{template.icon}</span>
-                  <h4 className="font-semibold text-gray-900 dark:text-white">{template.name}</h4>
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl flex-shrink-0 group-hover:scale-110 transition-transform">{template.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-semibold text-gray-900 dark:text-white mb-1">{template.name}</h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                      {getTemplateDescription(key, template)}
+                    </p>
+                    {template.document_type === 'prp' && (
+                      <div className="mt-2">
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200">
+                          PRP Template
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Markdown template
-                </p>
               </button>
             ))}
           </div>

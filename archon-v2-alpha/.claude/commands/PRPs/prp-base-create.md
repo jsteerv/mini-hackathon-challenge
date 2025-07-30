@@ -11,9 +11,10 @@ The AI agent only gets the context you are appending to the PRP and its own trai
 > During the research process, leverage specialized sub-agents for deeper, more focused research. The better the research, the higher the chance of one-pass implementation success.
 
 1. **Domain Analysis (When Applicable)**
-   - For backend features: Use `silo-architect-django` agent to understand Django patterns and API structure
-   - For frontend features: Use `nextjs-15-expert` agent to analyze React/Next.js patterns and components
-   - For full-stack features: Use both domain experts in parallel
+   - For backend features: Use `archon-server-expert` agent to understand FastAPI patterns and Supabase integration
+   - For frontend features: Use `archon-ui-expert` agent to analyze React patterns and ShadCN components
+   - For real-time features: Use `archon-socketio-expert` agent for Socket.IO architecture
+   - For full-stack features: Use multiple domain experts in parallel
    - Domain experts will identify WHERE to look and WHAT patterns to follow
 
 2. **Comprehensive Context Research**
@@ -31,9 +32,16 @@ The AI agent only gets the context you are appending to the PRP and its own trai
    - Coordinate findings from all agents
    - Ask for user clarification if needed
 
+## Archon Integration Check
+
+Before creating the PRP, check if working within an Archon project:
+- Use `mcp__archon__manage_project` to verify active project
+- If in Archon project, PRP will be added as document
+- Tasks will be created automatically from PRP blueprint
+
 ## PRP Generation
 
-Use `prp-creator` agent with all gathered context to generate the PRP following PRPs/templates/prp_base.md:
+Use `prp-creator` agent with all gathered context to generate the PRP following the standardized JSON PRP format compatible with PRPViewer:
 
 ### Critical Context at minimum to Include and pass to the AI agent as part of the PRP
 
@@ -72,6 +80,20 @@ Include tests, mcp servers, and any other relevant validation gates. Get creativ
 
 Save as: `PRPs/{feature-name}.md`
 
+### If in Archon Project
+
+The `prp-creator` agent will automatically:
+1. Add PRP as document to Archon project
+2. Create tasks from implementation blueprint
+3. Assign tasks to appropriate agents with priorities:
+   - Data models (10) → prp-executor
+   - Service layer (8) → prp-executor  
+   - API endpoints (6) → archon-server-expert
+   - Socket events (6) → archon-socketio-expert
+   - UI components (4) → archon-ui-expert
+   - Tests (2) → prp-executor
+   - Validation (1) → prp-validator
+
 ## Quality Checklist
 
 - [ ] All necessary context included
@@ -79,7 +101,9 @@ Save as: `PRPs/{feature-name}.md`
 - [ ] References existing patterns
 - [ ] Clear implementation path
 - [ ] Error handling documented
+- [ ] If Archon: Tasks created with proper assignments
+- [ ] If Archon: PRP added as project document
 
 Score the PRP on a scale of 1-10 (confidence level to succeed in one-pass implementation using claude codes)
 
-Remember: The goal is one-pass implementation success through comprehensive context.
+Remember: The goal is one-pass implementation success through comprehensive context, with automatic Archon integration for seamless execution.
