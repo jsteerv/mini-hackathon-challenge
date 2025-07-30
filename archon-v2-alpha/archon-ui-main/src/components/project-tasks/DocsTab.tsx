@@ -13,6 +13,7 @@ import { WebSocketState } from '../../services/socketIOService';
 import { MilkdownEditor } from './MilkdownEditor';
 import { VersionHistoryModal } from './VersionHistoryModal';
 import { PRPViewer } from '../prp';
+import { DocumentCard, NewDocumentCard } from './DocumentCard';
 
 
 
@@ -870,25 +871,8 @@ export const DocsTab = ({
               <p className="text-gray-400">{project?.title || 'No project selected'}</p>
             </div>
             
-            {/* Document selector and actions */}
+            {/* View mode and action buttons */}
             <div className="flex items-center gap-4">
-              {documents.length > 0 && (
-                <select 
-                  value={selectedDocument?.id || ''} 
-                  onChange={(e) => {
-                    const doc = documents.find(d => d.id === e.target.value);
-                    if (doc) {
-                      setSelectedDocument(doc);
-                    }
-                  }}
-                  className="bg-white/50 dark:bg-black/70 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white rounded-md px-3 py-2 focus:outline-none focus:border-blue-400"
-                >
-                  {documents.map(doc => (
-                    <option key={doc.id} value={doc.id}>{doc.title}</option>
-                  ))}
-                </select>
-              )}
-              
               {selectedDocument && (
                 <div className="flex items-center gap-2">
                   {/* View mode toggle for all documents */}
@@ -932,15 +916,6 @@ export const DocsTab = ({
                 </div>
               )}
 
-              <Button 
-                onClick={() => setShowTemplateModal(true)}
-                variant="primary" 
-                accentColor="blue"
-                className="flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                New Doc
-              </Button>
               <Button
                 onClick={() => setShowVersionHistory(true)}
                 variant="outline"
@@ -952,6 +927,36 @@ export const DocsTab = ({
             </div>
           </div>
         </header>
+
+        {/* Document Cards Container */}
+        <div className="relative mb-6">
+          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700">
+            {documents.map(doc => (
+              <DocumentCard
+                key={doc.id}
+                document={doc}
+                isActive={selectedDocument?.id === doc.id}
+                onSelect={setSelectedDocument}
+                onDelete={async (docId) => {
+                  try {
+                    // Remove from local state
+                    setDocuments(prev => prev.filter(d => d.id !== docId));
+                    if (selectedDocument?.id === docId) {
+                      setSelectedDocument(documents.find(d => d.id !== docId) || null);
+                    }
+                    showToast('Document deleted', 'success');
+                  } catch (error) {
+                    showToast('Failed to delete document', 'error');
+                  }
+                }}
+                isDarkMode={isDarkMode}
+              />
+            ))}
+            
+            {/* Add New Document Card */}
+            <NewDocumentCard onClick={() => setShowTemplateModal(true)} />
+          </div>
+        </div>
 
         {/* Document Content */}
         {loading ? (

@@ -19,6 +19,32 @@ interface CollapsibleSectionProps {
   accentColor?: string;
 }
 
+/**
+ * Process content to handle [Image #N] placeholders
+ */
+const processContent = (content: any): any => {
+  if (typeof content === 'string') {
+    // Replace [Image #N] with proper markdown image syntax
+    return content.replace(/\[Image #(\d+)\]/g, (match, num) => {
+      return `![Image ${num}](placeholder-image-${num})`;
+    });
+  }
+  
+  if (Array.isArray(content)) {
+    return content.map(item => processContent(item));
+  }
+  
+  if (typeof content === 'object' && content !== null) {
+    const processed: any = {};
+    for (const [key, value] of Object.entries(content)) {
+      processed[key] = processContent(value);
+    }
+    return processed;
+  }
+  
+  return content;
+};
+
 const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({ 
   title, 
   icon, 
@@ -79,9 +105,12 @@ export const PRPViewer: React.FC<PRPViewerProps> = ({
     return <div className="text-gray-500">No PRP content available</div>;
   }
 
+  // Process content to handle [Image #N] placeholders
+  const processedContent = processContent(content);
+
   // Extract sections (skip metadata fields)
   const metadataFields = ['title', 'version', 'author', 'date', 'status', 'document_type'];
-  const sections = Object.entries(content).filter(([key]) => !metadataFields.includes(key));
+  const sections = Object.entries(processedContent).filter(([key]) => !metadataFields.includes(key));
   
   // Debug: Log sections being rendered
   console.log('PRP Sections found:', sections.map(([key]) => key));
@@ -118,7 +147,7 @@ export const PRPViewer: React.FC<PRPViewerProps> = ({
   return (
     <div className={`prp-viewer ${isDarkMode ? 'dark' : ''}`}>
       {/* Metadata Header */}
-      <MetadataSection content={content} isDarkMode={isDarkMode} />
+      <MetadataSection content={processedContent} isDarkMode={isDarkMode} />
 
       {/* Dynamic Sections */}
       {sortedSections.map(([sectionKey, sectionData], index) => {
