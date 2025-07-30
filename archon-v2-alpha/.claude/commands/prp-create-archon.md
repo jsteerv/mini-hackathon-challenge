@@ -2,7 +2,7 @@
 
 ## Feature: $ARGUMENTS
 
-Generate a comprehensive PRP for Archon features using parallel specialized agents to analyze UI, server, and Socket.IO impacts. This command orchestrates multiple domain experts to create thorough, service-specific PRPs that ensure successful implementation.
+Create a comprehensive Archon project with PRP by using parallel specialized agents to analyze UI, server, and Socket.IO impacts. This command orchestrates multiple domain experts to gather requirements, then passes their analysis to the project orchestrator for unified project creation.
 
 ## Parallel Analysis Phase
 
@@ -10,7 +10,7 @@ Generate a comprehensive PRP for Archon features using parallel specialized agen
 
 ### Agent Coordination
 
-Launch these specialized Archon agents concurrently:
+Launch these specialized Archon agents concurrently to gather requirements:
 
 #### Agent 1: UI Analysis
 ```
@@ -75,177 +75,87 @@ Focus:
 Return: Comprehensive context including documentation references, code examples, and implementation patterns.
 ```
 
-## Synthesis & PRP Generation
+## Project Creation with Orchestrator
 
 After all agents complete their analysis:
 
-### 1. Integration Analysis
-- Identify touchpoints between services
-- Define API contracts between UI and server
-- Map Socket.IO events across components
-- Plan database migration requirements
+### 1. Synthesize Analysis Results
+Compile the results from all analysis agents into a unified understanding:
+- UI requirements and component architecture
+- Server API design and database needs  
+- Socket.IO real-time event architecture
+- Implementation context and patterns
 
-### 2. Service-Specific PRPs
-Create separate PRPs if the feature requires significant changes across services:
-
-#### UI PRP Structure
-```markdown
-## Goal
-[UI-specific implementation goals from archon-ui-expert]
-
-## Component Architecture
-[Component hierarchy and reusability plan]
-
-## State Management
-[Local state, context, or external state needs]
-
-## Socket Integration
-[Real-time event handling on client side]
-
-## ShadCN Components
-[Which ShadCN components to integrate]
-
-## Testing Strategy
-[Component tests, integration tests]
-```
-
-#### Server PRP Structure
-```markdown
-## Goal
-[Server-specific implementation goals from archon-server-expert]
-
-## API Design
-[Endpoints, request/response schemas]
-
-## Service Architecture
-[Service layer organization]
-
-## Database Operations
-[Supabase queries, migrations]
-
-## Background Tasks
-[Async operations, queuing needs]
-
-## Testing Strategy
-[Unit tests, API tests]
-```
-
-#### Socket.IO PRP Structure
-```markdown
-## Goal
-[Real-time communication goals from archon-socketio-expert]
-
-## Event Architecture
-[Event names, payloads, flow]
-
-## Synchronization Strategy
-[State consistency approach]
-
-## Performance Optimization
-[Batching, compression, throttling]
-
-## Error Handling
-[Reconnection, fallbacks]
-```
-
-### 3. Unified PRP (for smaller features)
-For features that don't require separate PRPs:
-
-```markdown
-## Goal
-[Overall feature goal synthesized from all agents]
-
-## Why
-- [Business value]
-- [User impact]
-- [Technical benefits]
-
-## What
-[Feature description with UI, API, and real-time aspects]
-
-## All Needed Context
-### Documentation & References
-[Combined from all agent research]
-
-### UI Implementation
-[From archon-ui-expert analysis]
-
-### Server Implementation
-[From archon-server-expert analysis]
-
-### Socket.IO Implementation
-[From archon-socketio-expert analysis]
-
-## Implementation Blueprint
-### Task Order
-1. Database migrations (if needed)
-2. Server API implementation
-3. Socket.IO event handlers
-4. UI components and integration
-5. End-to-end testing
-
-### Integration Points
-[How services connect and communicate]
-
-## Validation Loop
-### Level 1: Service-Specific
-- UI: `npm run lint && npm run test`
-- Server: `uv run ruff check . && uv run pytest`
-
-### Level 2: Integration
-- API contract testing
-- Socket.IO event testing
-- End-to-end flows
-
-### Level 3: Performance
-- Load testing
-- Real-time performance
-- UI responsiveness
-```
-
-## Validation Phase
-
-After PRP generation, run validation:
+### 2. Hand Off to Project Orchestrator
 
 ```
-Agent: prp-validator
-Task: Validate generated Archon PRP(s)
-Check:
-- Completeness of all service implementations
-- Integration point coverage
-- Testing strategy adequacy
-- Risk identification
-- Success probability assessment
+Agent: archon-project-orchestrator
+Task: Create Archon project for "$ARGUMENTS"
+Input: 
+  - UI Analysis: [Results from archon-ui-expert]
+  - Server Analysis: [Results from archon-server-expert]
+  - Socket.IO Analysis: [Results from archon-socketio-expert]
+  - Context Research: [Results from prp-context-researcher]
+  
+Instructions:
+1. Create new Archon project with appropriate title and description
+2. Generate comprehensive PRP document from the analysis results
+3. Add PRP as project document with proper metadata
+4. Create prioritized task breakdown with correct task_order (1 = highest priority)
+5. Assign tasks to appropriate specialized agents
+6. Ensure no duplicate work - use the analysis provided, don't regenerate
 
-Return: Validation report with scores and recommendations
+Return: Project creation summary with project ID, PRP document ID, and task list
 ```
 
-## Quality Metrics
+### 3. Expected Orchestrator Actions
 
-Score the PRP(s) on:
-1. **Service Coverage**: All affected services addressed (UI, Server, Socket)
-2. **Integration Clarity**: Clear contracts between services
-3. **Implementation Detail**: Specific enough for one-pass success
-4. **Risk Mitigation**: Identified and addressed potential issues
+The orchestrator will:
+- Create the Archon project structure
+- Synthesize analysis into a unified PRP document
+- Store PRP in project docs with version control
+- Generate tasks with proper priorities (1, 2, 3, 4, 5, 6)
+- Assign agents based on task expertise requirements
+- Provide clear next steps for implementation
 
-Target: 9/10 minimum score across all metrics
+## Quality Assurance
 
-## Output
+The orchestrator ensures:
+1. **No Duplicate Work**: Analysis results are used, not regenerated
+2. **Correct Task Priority**: Tasks ordered 1-N (1 = highest priority)
+3. **Complete Coverage**: All services addressed (UI, Server, Socket.IO)
+4. **Clear Agent Assignment**: Right agent for each task
+5. **Traceability**: PRP linked to project and tasks
 
-Save PRPs to appropriate locations:
-- Single PRP: `PRPs/archon-{feature-name}.md`
-- Multiple PRPs: 
-  - `PRPs/archon-{feature-name}-ui.md`
-  - `PRPs/archon-{feature-name}-server.md`
-  - `PRPs/archon-{feature-name}-socketio.md`
+## Workflow Summary
+
+```yaml
+Step 1: Parallel Analysis
+  - archon-ui-expert → UI requirements
+  - archon-server-expert → Server design
+  - archon-socketio-expert → Real-time architecture
+  - prp-context-researcher → Implementation context
+
+Step 2: Project Creation
+  - archon-project-orchestrator receives all analysis
+  - Creates project with synthesized PRP
+  - Generates tasks with correct priorities
+  - No duplicate PRP generation
+
+Step 3: Implementation Ready
+  - Project created in Archon
+  - PRP document stored and versioned
+  - Tasks assigned to appropriate agents
+  - Clear execution order established
+```
 
 ## Success Factors
 
-This approach ensures:
-- **Complete Analysis**: Every service impact considered
-- **Parallel Efficiency**: 4x faster than sequential analysis
-- **Domain Expertise**: Specialized agents for each area
-- **Integration Focus**: Services work together seamlessly
-- **High Success Rate**: Thorough planning prevents rework
+This improved workflow ensures:
+- **No Duplication**: Each agent does their specific job once
+- **Parallel Efficiency**: 4x faster analysis phase
+- **Correct Priorities**: Tasks execute in logical order
+- **Clear Handoffs**: Analysis → Orchestration → Implementation
+- **Single Source of Truth**: One project, one PRP, one task list
 
-Remember: Archon's microservices architecture requires careful coordination. This multi-agent approach ensures all pieces work together perfectly.
+Remember: The orchestrator ORCHESTRATES - it doesn't duplicate the analysis work already done.

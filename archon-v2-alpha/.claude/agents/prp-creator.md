@@ -322,7 +322,7 @@ Remember: "A well-crafted PRP is half the implementation." Every detail matters,
            "title": "Create data models",
            "description": "Implement Pydantic models with validation",
            "assignee": "prp-executor",
-           "task_order": 10,  # Higher priority
+           "task_order": 1,  # FIXED: Lower = Higher priority
            "feature": feature_name,
            "sources": [{"type": "prp", "doc_id": prp_doc_id}]
        },
@@ -330,28 +330,28 @@ Remember: "A well-crafted PRP is half the implementation." Every detail matters,
            "title": "Implement service layer",
            "description": "Create business logic with error handling",
            "assignee": "prp-executor",
-           "task_order": 8,
+           "task_order": 2,  # FIXED: Executes second
            "feature": feature_name
        },
        {
            "title": "Add API endpoints",
            "description": "RESTful endpoints with authentication",
            "assignee": "archon-server-expert",
-           "task_order": 6,
+           "task_order": 3,  # FIXED: Third priority
            "feature": feature_name
        },
        {
            "title": "Write comprehensive tests",
            "description": "Unit and integration tests with 80% coverage",
            "assignee": "prp-executor",
-           "task_order": 4,
+           "task_order": 5,  # FIXED: After implementation
            "feature": feature_name
        },
        {
            "title": "Validate implementation",
            "description": "Run all validation loops",
            "assignee": "prp-validator",
-           "task_order": 2,
+           "task_order": 6,  # FIXED: Final step
            "feature": feature_name
        }
    ]
@@ -362,12 +362,13 @@ Remember: "A well-crafted PRP is half the implementation." Every detail matters,
 
 4. **Task Priority Guidelines**
    ```yaml
-   Priority Levels (task_order):
-   10: Critical foundation (models, schemas)
-   8: Core logic (services, algorithms)
-   6: Integration layer (APIs, events)
-   4: Quality assurance (tests, docs)
-   2: Final validation
+   Priority Levels (task_order - LOWER = HIGHER priority):
+   1: Critical foundation (models, schemas)
+   2: Core logic (services, algorithms)
+   3: Integration layer (APIs, events)
+   4: UI components (if applicable)
+   5: Quality assurance (tests, docs)
+   6: Final validation
    ```
 
 5. **Agent Assignment Logic**
@@ -394,7 +395,7 @@ PRP Creation Summary:
     
   Tasks Created:
     - {task_count} tasks generated
-    - Priorities assigned (2-10)
+    - Priorities assigned (1-6, lower = higher priority)
     - Agents assigned:
       - prp-executor: {count}
       - archon-server-expert: {count}
