@@ -116,19 +116,27 @@ class TestService {
   }
 
   /**
-   * Execute React UI tests locally in the frontend
+   * Execute React UI tests via backend API (runs in Docker container)
    */
   async runUITests(): Promise<TestExecution> {
-    // Generate a local execution ID
-    const execution_id = crypto.randomUUID();
-    
-    // Return immediately with execution info - actual test running happens separately
-    return {
-      execution_id,
+    console.log('[DEBUG TestService] runUITests called');
+    const requestBody: TestExecutionRequest = {
       test_type: 'ui',
-      status: 'pending',
-      start_time: new Date().toISOString()
+      options: {}
     };
+    console.log('[DEBUG TestService] Request body:', requestBody);
+
+    try {
+      const response = await callAPI<TestExecution>('/api/tests/ui/run', {
+        method: 'POST',
+        body: JSON.stringify(requestBody)
+      });
+      console.log('[DEBUG TestService] UI test response:', response);
+      return response;
+    } catch (error) {
+      console.error('[DEBUG TestService] UI test API call failed:', error);
+      throw error;
+    }
   }
 
   /**

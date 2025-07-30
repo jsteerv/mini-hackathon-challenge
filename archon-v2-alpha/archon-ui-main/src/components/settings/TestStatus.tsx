@@ -243,8 +243,10 @@ export const TestStatus = () => {
   };
 
   const runTest = async (testType: TestType) => {
+    console.log(`[DEBUG] runTest called with testType: ${testType}`);
     try {
       // Reset test state
+      console.log(`[DEBUG] Resetting test state for ${testType}`);
       updateTestState(testType, (prev) => ({
         ...prev,
         logs: [`> Starting ${testType === 'mcp' ? 'Python' : 'React UI'} tests...`],
@@ -256,8 +258,10 @@ export const TestStatus = () => {
       }));
 
       if (testType === 'mcp') {
+        console.log('[DEBUG] Running MCP tests via backend API');
         // Python tests: Use backend API with WebSocket streaming
         const execution = await testService.runMCPTests();
+        console.log('[DEBUG] MCP test execution response:', execution);
         
         // Update state with execution info
         updateTestState(testType, (prev) => ({
@@ -295,39 +299,50 @@ export const TestStatus = () => {
         wsCleanupRefs.current.set(execution.execution_id, cleanup);
         
       } else if (testType === 'ui') {
-        // React tests: Run locally in frontend
-        const execution_id = await testService.runUITestsWithStreaming(
-          (message) => handleStreamMessage(testType, message),
-          (error) => {
-            console.error('UI test error:', error);
-            updateTestState(testType, (prev) => ({
-              ...prev,
-              logs: [...prev.logs, `> Error: ${error.message}`],
-              isRunning: false,
-              exitCode: 1
-            }));
-            showToast('React test execution error', 'error');
-          },
-          () => {
-            console.log('UI tests completed');
-          }
-        );
-
+        console.log('[DEBUG] Running UI tests via backend API');
+        // React tests: Use backend API with WebSocket streaming (same as Python tests)
+        const execution = await testService.runUITests();
+        console.log('[DEBUG] UI test execution response:', execution);
+        
         // Update state with execution info
         updateTestState(testType, (prev) => ({
           ...prev,
-          execution: {
-            execution_id,
-            test_type: 'ui',
-            status: 'running',
-            start_time: new Date().toISOString()
-          },
-          logs: [...prev.logs, `> Execution ID: ${execution_id}`, '> Running tests locally...']
+          execution,
+          logs: [...prev.logs, `> Execution ID: ${execution.execution_id}`, '> Connecting to real-time stream...']
         }));
+
+        // Connect to WebSocket stream for real-time updates
+        const cleanup = testService.connectToTestStream(
+          execution.execution_id,
+          (message) => handleStreamMessage(testType, message),
+          (error) => {
+            console.error('WebSocket error:', error);
+            updateTestState(testType, (prev) => ({
+              ...prev,
+              logs: [...prev.logs, '> WebSocket connection error'],
+              isRunning: false
+            }));
+            showToast('WebSocket connection error', 'error');
+          },
+          (event) => {
+            console.log('WebSocket closed:', event.code, event.reason);
+            // Only update state if it wasn't a normal closure
+            if (event.code !== 1000) {
+              updateTestState(testType, (prev) => ({
+                ...prev,
+                isRunning: false
+              }));
+            }
+          }
+        );
+
+        // Store cleanup function
+        wsCleanupRefs.current.set(execution.execution_id, cleanup);
       }
 
     } catch (error) {
-      console.error(`Failed to run ${testType} tests:`, error);
+      console.error(`[DEBUG] Failed to run ${testType} tests:`, error);
+      console.error('[DEBUG] Error stack:', error instanceof Error ? error.stack : 'No stack');
       updateTestState(testType, (prev) => ({
         ...prev,
         logs: [...prev.logs, `> Error: ${error instanceof Error ? error.message : 'Unknown error'}`],

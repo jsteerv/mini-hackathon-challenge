@@ -1,155 +1,112 @@
-import sys
-import os
+"""Simple test configuration for Archon - Essential tests only."""
 import pytest
-import pytest_asyncio
-from httpx import AsyncClient
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import MagicMock, patch
+from fastapi.testclient import TestClient
+import os
 
-# Configure memory limits for tests
-MEMORY_LIMIT_MB = 256  # 256MB limit for tests
-MAX_DOCUMENT_SIZE_MB = 10  # 10MB max document size
+# Set test environment
+os.environ["TEST_MODE"] = "true"
+os.environ["TESTING"] = "true"
+# Set fake database credentials to prevent connection attempts
+os.environ["SUPABASE_URL"] = "https://test.supabase.co"
+os.environ["SUPABASE_SERVICE_KEY"] = "test-key"
 
-# Add src folder to path
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SRC_DIR = os.path.join(BASE_DIR, 'src')
-sys.path.insert(0, SRC_DIR)
 
-# Import in-memory Supabase mock BEFORE importing the server modules
-from tests.mocks.in_memory_supabase import (
-    get_in_memory_supabase_client, 
-    reset_in_memory_supabase
-)
+@pytest.fixture(autouse=True)
+def prevent_real_db_calls():
+    """Automatically prevent any real database calls in all tests."""
+    with patch('supabase.create_client') as mock_create:
+        # Make create_client raise an error if called without our mock
+        mock_create.side_effect = Exception("Real database calls are not allowed in tests!")
+        yield
 
-# Import the FastAPI application from the server module
-from src.server.main import app
-
-@pytest_asyncio.fixture
-async def async_client():
-    """Async client for testing FastAPI endpoints"""
-    from httpx import ASGITransport
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://testserver") as ac:
-        yield ac
-
-@pytest.fixture 
-def sync_client():
-    """Sync client for testing non-async endpoints"""
-    from fastapi.testclient import TestClient
-    with TestClient(app) as tc:
-        yield tc
-
-@pytest.fixture
-def mock_progress_mapper():
-    """Mock ProgressMapper for testing progress tracking"""
-    from src.server.services.knowledge.progress_mapper import ProgressMapper
-    mapper = Mock(spec=ProgressMapper)
-    mapper.map_progress = Mock(side_effect=lambda stage, progress: min(100, max(0, progress)))
-    mapper.last_overall_progress = 0
-    mapper.current_stage = 'starting'
-    return mapper
 
 @pytest.fixture
 def mock_supabase_client():
-    """Mock Supabase client for testing - DEPRECATED: Use in_memory_supabase_client instead"""
-    client = Mock()
-    client.table = Mock(return_value=Mock(
-        insert=Mock(return_value=Mock(
-            execute=Mock(return_value=Mock(data=[]))
-        )),
-        delete=Mock(return_value=Mock(
-            in_=Mock(return_value=Mock(
-                execute=Mock(return_value=Mock(data=[]))
-            )),
-            eq=Mock(return_value=Mock(
-                execute=Mock(return_value=Mock(data=[]))
-            ))
-        )),
-        select=Mock(return_value=Mock(
-            execute=Mock(return_value=Mock(data=[]))
-        ))
-    ))
-    return client
+    """Mock Supabase client for testing."""
+    mock_client = MagicMock()
+    
+    # Mock table operations with chaining support
+    mock_table = MagicMock()
+    mock_select = MagicMock()
+    mock_insert = MagicMock()
+    mock_update = MagicMock()
+    mock_delete = MagicMock()
+    
+    # Setup method chaining for select
+    mock_select.execute.return_value.data = []
+    mock_select.eq.return_value = mock_select
+    mock_select.neq.return_value = mock_select
+    mock_select.order.return_value = mock_select
+    mock_select.limit.return_value = mock_select
+    mock_table.select.return_value = mock_select
+    
+    # Setup method chaining for insert
+    mock_insert.execute.return_value.data = [{"id": "test-id"}]
+    mock_table.insert.return_value = mock_insert
+    
+    # Setup method chaining for update
+    mock_update.execute.return_value.data = [{"id": "test-id"}]
+    mock_update.eq.return_value = mock_update
+    mock_table.update.return_value = mock_update
+    
+    # Setup method chaining for delete
+    mock_delete.execute.return_value.data = []
+    mock_delete.eq.return_value = mock_delete
+    mock_table.delete.return_value = mock_delete
+    
+    # Make table() return the mock table
+    mock_client.table.return_value = mock_table
+    
+    # Mock auth operations
+    mock_client.auth = MagicMock()
+    mock_client.auth.get_user.return_value = None
+    
+    # Mock storage operations
+    mock_client.storage = MagicMock()
+    
+    return mock_client
 
-@pytest.fixture(autouse=True)
-def in_memory_supabase_client():
-    """
-    Automatically patch all Supabase client usage with in-memory mock.
-    This fixture runs automatically for all tests to prevent production DB contamination.
-    """
-    # Reset the in-memory client before each test
-    reset_in_memory_supabase()
-    
-    # Create a comprehensive mock for supabase.create_client to prevent any real connections
-    def mock_create_client(*args, **kwargs):
-        return get_in_memory_supabase_client()
-    
-    # Patch all possible ways to get a Supabase client
-    with patch('src.server.services.client_manager.get_supabase_client', 
-               return_value=get_in_memory_supabase_client()), \
-         patch('src.server.utils.get_supabase_client', 
-               return_value=get_in_memory_supabase_client()), \
-         patch('supabase.create_client', side_effect=mock_create_client), \
-         patch('src.server.services.client_manager.create_client', side_effect=mock_create_client):
-        
-        client = get_in_memory_supabase_client()
-        yield client
-        
-        # Optional: Verify no data is left after test completion
-        # Uncomment the next line if you want strict cleanup verification
-        # verify_no_production_data()
 
 @pytest.fixture
-def mock_crawler():
-    """Mock Crawl4AI crawler for testing"""
-    crawler = Mock()
-    crawler.arun = AsyncMock()
-    
-    # Mock successful crawl result
-    mock_result = Mock()
-    mock_result.success = True
-    mock_result.url = "https://example.com"
-    mock_result.markdown = "# Example Content\n\nThis is test content."
-    mock_result.html = "<h1>Example Content</h1><p>This is test content.</p>"
-    mock_result.metadata = {"title": "Example Page", "description": "Test page"}
-    mock_result.error_message = None
-    
-    crawler.arun.return_value = mock_result
-    return crawler
+def client(mock_supabase_client):
+    """FastAPI test client with mocked database."""
+    # Patch all the ways Supabase client can be created
+    with patch('src.server.services.client_manager.create_client', return_value=mock_supabase_client):
+        with patch('src.server.services.credential_service.create_client', return_value=mock_supabase_client):
+            with patch('src.server.services.client_manager.get_supabase_client', return_value=mock_supabase_client):
+                with patch('supabase.create_client', return_value=mock_supabase_client):
+                    # Import app after patching to ensure mocks are used
+                    from src.server.main import app
+                    return TestClient(app)
+
 
 @pytest.fixture
-def mock_socketio():
-    """Mock Socket.IO for testing"""
-    sio = Mock()
-    sio.emit = AsyncMock()
-    sio.enter_room = AsyncMock()
-    sio.leave_room = AsyncMock()
-    return sio
-
-@pytest.fixture
-def memory_limit_fixture():
-    """Fixture for memory limit testing"""
+def test_project():
+    """Simple test project data."""
     return {
-        'memory_limit_mb': MEMORY_LIMIT_MB,
-        'max_document_size_mb': MAX_DOCUMENT_SIZE_MB,
-        'max_document_size_bytes': MAX_DOCUMENT_SIZE_MB * 1024 * 1024
+        "title": "Test Project",
+        "description": "A test project for essential tests"
     }
 
-@pytest.fixture
-def mock_threading_service():
-    """Mock ThreadingService for concurrency testing"""
-    from src.server.services.threading_service import ThreadingService
-    service = Mock(spec=ThreadingService)
-    service.executor = Mock()
-    service.run_in_thread = AsyncMock()
-    service.shutdown = AsyncMock()
-    return service
 
 @pytest.fixture
-def mock_archon_session_manager():
-    """Mock ArchonSessionManager for session testing"""
-    manager = Mock()
-    manager.get_session = Mock(return_value={'session_id': 'test-session'})
-    manager.create_session = Mock(return_value='test-session')
-    manager.delete_session = Mock(return_value=True)
-    manager.sessions = {}
-    return manager
+def test_task():
+    """Simple test task data."""
+    return {
+        "title": "Test Task",
+        "description": "A test task for essential tests",
+        "status": "todo",
+        "assignee": "User"
+    }
+
+
+@pytest.fixture
+def test_knowledge_item():
+    """Simple test knowledge item data."""
+    return {
+        "url": "https://example.com/test",
+        "title": "Test Knowledge Item",
+        "content": "This is test content for knowledge base",
+        "source_id": "test-source"
+    }

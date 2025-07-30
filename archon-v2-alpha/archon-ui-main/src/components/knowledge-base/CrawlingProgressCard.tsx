@@ -475,7 +475,7 @@ export const CrawlingProgressCard: React.FC<CrawlingProgressCardProps> = ({
   };
 
   return (
-    <Card accentColor={status.color} className="relative">
+    <Card accentColor={status.color} className="relative" data-testid="crawling-progress-card">
       {/* Status Header */}
       <div className="flex items-center gap-3 mb-4">
         <div className={`p-2 rounded-md ${
@@ -487,7 +487,7 @@ export const CrawlingProgressCard: React.FC<CrawlingProgressCardProps> = ({
           {status.icon}
         </div>
         <div className="flex-1 min-w-0 overflow-hidden">
-          <h3 className="font-medium text-gray-800 dark:text-white">
+          <h3 className="font-medium text-gray-800 dark:text-white" data-testid="crawling-progress-title">
             {status.text}
           </h3>
           {progressData.currentUrl && (
@@ -511,6 +511,7 @@ export const CrawlingProgressCard: React.FC<CrawlingProgressCardProps> = ({
                 handleStopCrawl();
               }}
               disabled={isStopping}
+              data-testid="crawling-progress-stop"
               className={`
                 relative rounded-full border-2 transition-all duration-300 p-2
                 border-red-400 hover:border-red-300
@@ -578,7 +579,7 @@ export const CrawlingProgressCard: React.FC<CrawlingProgressCardProps> = ({
               {Math.round(Math.max(0, Math.min(100, progressData.percentage || 0)))}%
             </span>
           </div>
-          <div className="w-full bg-gray-200 dark:bg-zinc-700 rounded-full h-2">
+          <div className="w-full bg-gray-200 dark:bg-zinc-700 rounded-full h-2" data-testid="crawling-progress-bar">
             <motion.div
               className="h-2 rounded-full bg-gradient-to-r from-blue-500 to-blue-600"
               initial={{ width: 0 }}
@@ -643,7 +644,7 @@ export const CrawlingProgressCard: React.FC<CrawlingProgressCardProps> = ({
             transition={{ duration: 0.3 }}
             className="overflow-hidden mb-4"
           >
-            <div className="space-y-3 p-3 bg-gray-50 dark:bg-zinc-900/50 rounded-md">
+            <div className="space-y-3 p-3 bg-gray-50 dark:bg-zinc-900/50 rounded-md" data-testid="crawling-progress-details">
               {/* Always show progress steps */}
               {progressSteps.map((step) => (
                 <div key={step.id}>

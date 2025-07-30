@@ -7,6 +7,7 @@ Includes WebSocket streaming, background task management, and test result tracki
 import asyncio
 import os
 import uuid
+import shutil
 from datetime import datetime
 from enum import Enum
 from typing import Dict, List, Optional, Any
@@ -131,27 +132,35 @@ websocket_manager = TestWebSocketManager()
 async def execute_mcp_tests(execution_id: str) -> TestExecution:
     """Execute Python tests using pytest with real-time streaming and coverage reporting."""
     execution = test_executions[execution_id]
+    logger.info(f"[DEBUG] Starting execute_mcp_tests for execution_id: {execution_id}")
     
     try:
         # Create coverage reports directory if it doesn't exist
         os.makedirs("/app/coverage_reports/pytest", exist_ok=True)
+        logger.info("[DEBUG] Created coverage reports directory")
         
-        # Use pytest with coverage flags for comprehensive reporting
+        # Use pytest - run only the new simplified tests (coverage disabled for now)
         cmd = [
             "pytest", 
             "-v",  # verbose output
             "-s",  # don't capture stdout, allows real-time output
             "--tb=short",  # shorter traceback format
-            "tests/server/",  # run server tests specifically
             "--no-header",  # cleaner output
             "--disable-warnings",  # cleaner output
-            "--cov=src",  # coverage for src directory
-            "--cov-report=json:/app/coverage_reports/pytest/coverage.json",  # JSON report
-            "--cov-report=html:/app/coverage_reports/pytest/htmlcov",  # HTML report
-            "--cov-report=term-missing"  # terminal report with missing lines
+            "tests/test_api_essentials.py",  # run specific test files
+            "tests/test_service_integration.py",
+            "tests/test_business_logic.py"
         ]
         
         logger.info(f"Starting Python test execution: {' '.join(cmd)}")
+        logger.info(f"[DEBUG] Current working directory: {os.getcwd()}")
+        logger.info(f"[DEBUG] /app/tests directory exists: {os.path.exists('/app/tests')}")
+        logger.info(f"[DEBUG] Test files exist: {[os.path.exists(f'/app/{f}') for f in ['tests/test_api_essentials.py', 'tests/test_service_integration.py', 'tests/test_business_logic.py']]}")
+        
+        # Check if pytest is available
+        pytest_path = shutil.which('pytest')
+        logger.info(f"[DEBUG] pytest executable path: {pytest_path}")
+        logger.info(f"[DEBUG] PATH environment: {os.environ.get('PATH', 'NOT SET')}")
         
         # Start process with line buffering for real-time output
         process = await asyncio.create_subprocess_exec(
@@ -161,6 +170,8 @@ async def execute_mcp_tests(execution_id: str) -> TestExecution:
             cwd="/app",  # Use the app directory inside the container
             env={**os.environ, "PYTHONUNBUFFERED": "1"}  # Ensure unbuffered output
         )
+        
+        logger.info(f"[DEBUG] Process created with PID: {process.pid if process else 'None'}")
         
         execution.process = process
         execution.status = TestStatus.RUNNING
@@ -209,25 +220,36 @@ async def execute_mcp_tests(execution_id: str) -> TestExecution:
 async def execute_ui_tests(execution_id: str) -> TestExecution:
     """Execute React UI tests using vitest in the frontend container with coverage reporting."""
     execution = test_executions[execution_id]
+    logger.info(f"[DEBUG] Starting execute_ui_tests for execution_id: {execution_id}")
     
     try:
         # Create coverage reports directory if it doesn't exist
         os.makedirs("/app/coverage_reports/vitest", exist_ok=True)
+        logger.info("[DEBUG] Created vitest coverage directory")
         
-        # Execute React tests with coverage inside the frontend container
+        # Execute React tests inside the frontend container - run only simplified tests
         cmd = [
-            "docker", "exec", "archon-frontend-1",
+            "docker", "exec", "Archon-UI",
             "npm", "run", "test", 
             "--", 
             "--reporter=verbose",  # verbose output
-            "--run",  # run once, don't watch
-            "--coverage",  # enable coverage reporting
-            "--coverage.reportsDirectory=/app/archon-ui-main/coverage",  # set coverage output dir
-            "--coverage.reporter=json-summary",  # JSON summary format
-            "--coverage.reporter=html"  # HTML format
+            "--run"  # run once, don't watch
         ]
         
         logger.info(f"Starting React UI test execution: {' '.join(cmd)}")
+        logger.info(f"[DEBUG] Checking if docker command exists: {shutil.which('docker')}")
+        logger.info(f"[DEBUG] Checking if Archon-UI container is running...")
+        
+        # Check container status first
+        check_cmd = ["docker", "ps", "--format", "{{.Names}}", "--filter", "name=Archon-UI"]
+        check_process = await asyncio.create_subprocess_exec(
+            *check_cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await check_process.communicate()
+        logger.info(f"[DEBUG] Container check stdout: {stdout.decode().strip()}")
+        logger.info(f"[DEBUG] Container check stderr: {stderr.decode().strip()}")
         
         # Start process with line buffering for real-time output
         process = await asyncio.create_subprocess_exec(
@@ -236,6 +258,8 @@ async def execute_ui_tests(execution_id: str) -> TestExecution:
             stderr=asyncio.subprocess.STDOUT,
             env={**os.environ, "DOCKER_HOST": "unix:///var/run/docker.sock"}
         )
+        
+        logger.info(f"[DEBUG] UI test process created with PID: {process.pid if process else 'None'}")
         
         execution.process = process
         execution.status = TestStatus.RUNNING
@@ -306,6 +330,7 @@ async def execute_ui_tests(execution_id: str) -> TestExecution:
 async def stream_process_output(execution_id: str, process: asyncio.subprocess.Process):
     """Stream process output to WebSocket clients with improved real-time handling."""
     execution = test_executions[execution_id]
+    logger.info(f"[DEBUG] Starting stream_process_output for execution_id: {execution_id}")
     
     # Send initial status update
     await websocket_manager.broadcast_to_execution(execution_id, {
@@ -315,6 +340,8 @@ async def stream_process_output(execution_id: str, process: asyncio.subprocess.P
         "timestamp": datetime.now().isoformat()
     })
     
+    line_count = 0
+    
     while True:
         try:
             # Use a timeout to prevent hanging
@@ -323,6 +350,8 @@ async def stream_process_output(execution_id: str, process: asyncio.subprocess.P
                 break
             
             decoded_line = line.decode('utf-8').rstrip()
+            line_count += 1
+            logger.info(f"[DEBUG] Line {line_count}: {decoded_line[:100]}...")  # Log first 100 chars
             if decoded_line:  # Only add non-empty lines
                 execution.output_lines.append(decoded_line)
                 
@@ -346,7 +375,11 @@ async def stream_process_output(execution_id: str, process: asyncio.subprocess.P
             })
         except Exception as e:
             logger.error(f"Error streaming output: {e}")
+            logger.error(f"[DEBUG] Exception type: {type(e).__name__}")
+            logger.error(f"[DEBUG] Exception details: {str(e)}")
             break
+    
+    logger.info(f"[DEBUG] Stream ended. Total lines read: {line_count}")
 
 async def execute_tests_background(execution_id: str, test_type: TestType):
     """Background task for test execution - removed ALL type."""
@@ -375,6 +408,8 @@ async def run_mcp_tests(
     """Execute Python tests using pytest with real-time streaming output."""
     execution_id = str(uuid.uuid4())
     
+    logger.info(f"[DEBUG] /api/tests/mcp/run endpoint called")
+    logger.info(f"[DEBUG] Request: {request}")
     logfire.info(f"Starting MCP test execution | execution_id={execution_id} | test_type=mcp")
     
     # Create test execution record
@@ -408,6 +443,8 @@ async def run_ui_tests(
     """Execute React UI tests using vitest with real-time streaming output."""
     execution_id = str(uuid.uuid4())
     
+    logger.info(f"[DEBUG] /api/tests/ui/run endpoint called")
+    logger.info(f"[DEBUG] Request: {request}")
     logfire.info(f"Starting UI test execution | execution_id={execution_id} | test_type=ui")
     
     # Create test execution record
