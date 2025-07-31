@@ -780,6 +780,27 @@ def register_project_tools(mcp: FastMCP):
                 if not title:
                     return json.dumps({"success": False, "error": "title is required for add action"})
                 
+                # CRITICAL VALIDATION: PRP documents must use structured JSON format
+                if document_type == "prp":
+                    if not isinstance(content, dict):
+                        return json.dumps({
+                            "success": False, 
+                            "error": "PRP documents (document_type='prp') require structured JSON content, not markdown strings. Content must be a dictionary with sections like 'goal', 'why', 'what', 'context', 'implementation_blueprint', 'validation'. See MCP documentation for required PRP structure."
+                        })
+                    
+                    # Validate required PRP structure fields
+                    required_fields = ["goal", "why", "what", "context", "implementation_blueprint", "validation"]
+                    missing_fields = [field for field in required_fields if field not in content]
+                    if missing_fields:
+                        return json.dumps({
+                            "success": False,
+                            "error": f"PRP content missing required fields: {missing_fields}. PRP documents must include: goal, why, what, context, implementation_blueprint, validation. See MCP documentation for complete PRP structure template."
+                        })
+                    
+                    # Ensure document_type is set in content for PRPViewer compatibility  
+                    if "document_type" not in content:
+                        content["document_type"] = "prp"
+                
                 # Call Server API to create document
                 async with httpx.AsyncClient(timeout=timeout) as client:
                     response = await client.post(
@@ -833,6 +854,39 @@ def register_project_tools(mcp: FastMCP):
             elif action == "update":
                 if not doc_id:
                     return json.dumps({"success": False, "error": "doc_id is required for update action"})
+                
+                # CRITICAL VALIDATION: PRP documents must use structured JSON format
+                if content is not None:
+                    # First get the existing document to check its type
+                    async with httpx.AsyncClient(timeout=timeout) as client:
+                        get_response = await client.get(urljoin(api_url, f"/api/projects/{project_id}/docs/{doc_id}"))
+                        if get_response.status_code == 200:
+                            existing_doc = get_response.json().get("document", {})
+                            existing_type = existing_doc.get("document_type", existing_doc.get("type"))
+                            
+                            if existing_type == "prp":
+                                if not isinstance(content, dict):
+                                    return json.dumps({
+                                        "success": False, 
+                                        "error": "PRP documents (document_type='prp') require structured JSON content, not markdown strings. "
+                                               "Content must be a dictionary with required fields: goal, why, what, context, implementation_blueprint, validation. "
+                                               "See project_module.py lines 570-756 for the complete PRP structure specification."
+                                    })
+                                
+                                # Validate required PRP fields
+                                required_fields = ["goal", "why", "what", "context", "implementation_blueprint", "validation"]
+                                missing_fields = [field for field in required_fields if field not in content]
+                                
+                                if missing_fields:
+                                    return json.dumps({
+                                        "success": False,
+                                        "error": f"PRP content missing required fields: {', '.join(missing_fields)}. "
+                                               f"Required fields: {', '.join(required_fields)}"
+                                    })
+                                
+                                # Ensure document_type is set for PRPViewer compatibility
+                                if "document_type" not in content:
+                                    content["document_type"] = "prp"
                 
                 # Build update fields
                 update_fields = {}

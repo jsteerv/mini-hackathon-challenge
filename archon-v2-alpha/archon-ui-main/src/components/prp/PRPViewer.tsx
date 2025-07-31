@@ -1,22 +1,16 @@
-import React, { useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import React from 'react';
 import { PRPContent } from './types/prp.types';
 import { MetadataSection } from './sections/MetadataSection';
 import { SectionRenderer } from './renderers/SectionRenderer';
+import { normalizePRPDocument } from './utils/normalizer';
+import { processContentForPRP, isMarkdownContent, isDocumentWithMetadata } from './utils/markdownParser';
+import { MarkdownDocumentRenderer } from './components/MarkdownDocumentRenderer';
 import './PRPViewer.css';
 
 interface PRPViewerProps {
   content: PRPContent;
   isDarkMode?: boolean;
   sectionOverrides?: Record<string, React.ComponentType<any>>;
-}
-
-interface CollapsibleSectionProps {
-  title: string;
-  icon?: React.ReactNode;
-  children: React.ReactNode;
-  defaultOpen?: boolean;
-  accentColor?: string;
 }
 
 /**
@@ -45,54 +39,6 @@ const processContent = (content: any): any => {
   return content;
 };
 
-const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({ 
-  title, 
-  icon, 
-  children, 
-  defaultOpen = true,
-  accentColor = 'blue'
-}) => {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
-  
-  const colorMap = {
-    blue: 'from-blue-400 to-blue-600',
-    purple: 'from-purple-400 to-purple-600',
-    green: 'from-green-400 to-green-600',
-    orange: 'from-orange-400 to-orange-600',
-    pink: 'from-pink-400 to-pink-600',
-    cyan: 'from-cyan-400 to-cyan-600',
-    indigo: 'from-indigo-400 to-indigo-600',
-    emerald: 'from-emerald-400 to-emerald-600',
-  };
-
-  return (
-    <div className="mb-6">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center gap-3 p-4 rounded-lg bg-white/5 dark:bg-black/20 border border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 transition-all duration-200 group"
-      >
-        {icon && (
-          <div className={`p-2 rounded-lg bg-gradient-to-br ${colorMap[accentColor as keyof typeof colorMap] || colorMap.blue} text-white shadow-lg group-hover:scale-110 transition-transform duration-200`}>
-            {icon}
-          </div>
-        )}
-        <h2 className="text-xl font-bold text-gray-800 dark:text-white flex-1 text-left">
-          {title}
-        </h2>
-        <div className={`transform transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>
-          <ChevronDown className="w-5 h-5 text-gray-500" />
-        </div>
-      </button>
-      
-      <div className={`overflow-hidden transition-all duration-300 ${isOpen ? 'max-h-[50000px] opacity-100' : 'max-h-0 opacity-0'}`}>
-        <div className="mt-4 pl-4">
-          {children}
-        </div>
-      </div>
-    </div>
-  );
-};
-
 /**
  * Flexible PRP Viewer that dynamically renders sections based on content structure
  */
@@ -101,47 +47,153 @@ export const PRPViewer: React.FC<PRPViewerProps> = ({
   isDarkMode = false,
   sectionOverrides = {}
 }) => {
-  if (!content || typeof content !== 'object') {
+  if (!content) {
     return <div className="text-gray-500">No PRP content available</div>;
   }
 
+  console.log('PRPViewer: Received content:', { 
+    type: typeof content, 
+    isString: typeof content === 'string',
+    isObject: typeof content === 'object',
+    hasMetadata: typeof content === 'object' && content !== null ? isDocumentWithMetadata(content) : false,
+    isMarkdown: typeof content === 'string' ? isMarkdownContent(content) : false,
+    keys: typeof content === 'object' && content !== null ? Object.keys(content) : [],
+    contentPreview: typeof content === 'string' ? content.substring(0, 200) + '...' : 'Not a string'
+  });
+
+  // Route to appropriate renderer based on content type
+  
+  // 1. Check if it's a document with metadata + markdown content
+  if (isDocumentWithMetadata(content)) {
+    console.log('PRPViewer: Detected document with metadata, using MarkdownDocumentRenderer');
+    return (
+      <MarkdownDocumentRenderer
+        content={content}
+        isDarkMode={isDarkMode}
+        sectionOverrides={sectionOverrides}
+      />
+    );
+  }
+  
+  // 2. Check if it's a pure markdown string
+  if (typeof content === 'string' && isMarkdownContent(content)) {
+    console.log('PRPViewer: Detected pure markdown content, using MarkdownDocumentRenderer');
+    return (
+      <MarkdownDocumentRenderer
+        content={content}
+        isDarkMode={isDarkMode}
+        sectionOverrides={sectionOverrides}
+      />
+    );
+  }
+
+  // 3. Check if it's an object that might contain markdown content in any field
+  if (typeof content === 'object' && content !== null) {
+    // Look for markdown content in any field
+    for (const [key, value] of Object.entries(content)) {
+      if (typeof value === 'string' && isMarkdownContent(value)) {
+        console.log(`PRPViewer: Found markdown content in field '${key}', using MarkdownDocumentRenderer`);
+        // Create a proper document structure
+        const documentContent = {
+          title: content.title || 'Document',
+          content: value,
+          ...content // Include all other fields as metadata
+        };
+        return (
+          <MarkdownDocumentRenderer
+            content={documentContent}
+            isDarkMode={isDarkMode}
+            sectionOverrides={sectionOverrides}
+          />
+        );
+      }
+    }
+  }
+
+  // 4. For any other content that might contain documents, try MarkdownDocumentRenderer first
+  console.log('PRPViewer: Checking if content should use MarkdownDocumentRenderer anyway');
+  
+  // If it's an object with any text content, try MarkdownDocumentRenderer
+  if (typeof content === 'object' && content !== null) {
+    const hasAnyTextContent = Object.values(content).some(value => 
+      typeof value === 'string' && value.length > 50
+    );
+    
+    if (hasAnyTextContent) {
+      console.log('PRPViewer: Object has substantial text content, trying MarkdownDocumentRenderer');
+      return (
+        <MarkdownDocumentRenderer
+          content={content}
+          isDarkMode={isDarkMode}
+          sectionOverrides={sectionOverrides}
+        />
+      );
+    }
+  }
+
+  // 5. Final fallback to original PRPViewer logic for purely structured JSON content
+  console.log('PRPViewer: Using standard JSON structure renderer as final fallback');
+  
+  // First, check if content is raw markdown and process it
+  let processedForPRP = content;
+  
+  // Handle the case where content is a raw markdown string (non-markdown strings)
+  if (typeof content === 'string') {
+    // For non-markdown strings, wrap in a simple structure
+    processedForPRP = {
+      title: 'Document Content',
+      content: content,
+      document_type: 'text'
+    };
+  } else if (typeof content === 'object' && content !== null) {
+    // For objects, process normally
+    processedForPRP = processContentForPRP(content);
+  }
+
+  // Ensure we have an object to work with
+  if (!processedForPRP || typeof processedForPRP !== 'object') {
+    return <div className="text-gray-500">Unable to process PRP content</div>;
+  }
+
+  // Normalize the content 
+  const normalizedContent = normalizePRPDocument(processedForPRP);
+  
   // Process content to handle [Image #N] placeholders
-  const processedContent = processContent(content);
+  const processedContent = processContent(normalizedContent);
 
   // Extract sections (skip metadata fields)
-  const metadataFields = ['title', 'version', 'author', 'date', 'status', 'document_type'];
+  const metadataFields = ['title', 'version', 'author', 'date', 'status', 'document_type', 'id', '_id', 'project_id', 'created_at', 'updated_at'];
   const sections = Object.entries(processedContent).filter(([key]) => !metadataFields.includes(key));
   
   // Debug: Log sections being rendered
   console.log('PRP Sections found:', sections.map(([key]) => key));
   
-  // Group sections by type for better organization
-  const sectionGroups = {
-    overview: ['context', 'overview', 'background', 'objectives', 'requirements'],
-    personas: ['user_personas', 'personas', 'users', 'stakeholders'],
-    flows: ['user_flows', 'flows', 'journeys', 'workflows'],
-    metrics: ['success_metrics', 'metrics', 'kpis', 'goals'],
-    ui: ['ui_improvements', 'visual_design', 'interaction_patterns', 'responsive_design'],
-    planning: ['implementation_plan', 'plan', 'phases', 'roadmap', 'timeline'],
-    technical: ['technical_implementation', 'architecture', 'tech_stack', 'component_architecture'],
-    validation: ['validation_gates', 'testing', 'quality', 'acceptance_criteria'],
-    information: ['information_architecture', 'current_state_analysis'],
+  // Priority-based sorting for common PRP sections
+  const getSectionPriority = (key: string): number => {
+    const normalizedKey = key.toLowerCase();
+    
+    // Define priority order (lower number = higher priority)
+    if (normalizedKey.includes('goal') || normalizedKey.includes('objective')) return 1;
+    if (normalizedKey.includes('why') || normalizedKey.includes('rationale')) return 2;
+    if (normalizedKey.includes('what') || normalizedKey === 'description') return 3;
+    if (normalizedKey.includes('context') || normalizedKey.includes('background')) return 4;
+    if (normalizedKey.includes('persona') || normalizedKey.includes('user') || normalizedKey.includes('stakeholder')) return 5;
+    if (normalizedKey.includes('flow') || normalizedKey.includes('journey') || normalizedKey.includes('workflow')) return 6;
+    if (normalizedKey.includes('requirement') && !normalizedKey.includes('technical')) return 7;
+    if (normalizedKey.includes('metric') || normalizedKey.includes('success') || normalizedKey.includes('kpi')) return 8;
+    if (normalizedKey.includes('timeline') || normalizedKey.includes('roadmap') || normalizedKey.includes('milestone')) return 9;
+    if (normalizedKey.includes('plan') || normalizedKey.includes('implementation')) return 10;
+    if (normalizedKey.includes('technical') || normalizedKey.includes('architecture') || normalizedKey.includes('tech')) return 11;
+    if (normalizedKey.includes('validation') || normalizedKey.includes('testing') || normalizedKey.includes('quality')) return 12;
+    if (normalizedKey.includes('risk') || normalizedKey.includes('mitigation')) return 13;
+    
+    // Default priority for unknown sections
+    return 50;
   };
   
-  // Sort sections by group
+  // Sort sections by priority
   const sortedSections = sections.sort(([a], [b]) => {
-    const getGroupIndex = (key: string) => {
-      const normalizedKey = key.toLowerCase();
-      for (let i = 0; i < Object.keys(sectionGroups).length; i++) {
-        const group = Object.keys(sectionGroups)[i];
-        if (sectionGroups[group as keyof typeof sectionGroups].some(g => normalizedKey.includes(g))) {
-          return i;
-        }
-      }
-      return 999; // Put ungrouped sections at the end
-    };
-    
-    return getGroupIndex(a) - getGroupIndex(b);
+    return getSectionPriority(a) - getSectionPriority(b);
   });
 
   return (
@@ -150,57 +202,17 @@ export const PRPViewer: React.FC<PRPViewerProps> = ({
       <MetadataSection content={processedContent} isDarkMode={isDarkMode} />
 
       {/* Dynamic Sections */}
-      {sortedSections.map(([sectionKey, sectionData], index) => {
-        // Check if this should be a collapsible section
-        const isComplexSection = 
-          typeof sectionData === 'object' && 
-          sectionData !== null && 
-          !Array.isArray(sectionData) &&
-          Object.keys(sectionData).length > 0;
-        
-        const section = (
+      {sortedSections.map(([sectionKey, sectionData], index) => (
+        <div key={sectionKey} className="mb-6">
           <SectionRenderer
-            key={sectionKey}
             sectionKey={sectionKey}
             data={sectionData}
             index={index}
             isDarkMode={isDarkMode}
             sectionOverrides={sectionOverrides}
           />
-        );
-        
-        // Wrap complex sections in collapsible containers
-        if (isComplexSection) {
-          const normalizedKey = sectionKey.toLowerCase();
-          let accentColor = 'blue';
-          
-          // Determine accent color based on section type
-          if (normalizedKey.includes('persona')) accentColor = 'purple';
-          else if (normalizedKey.includes('flow')) accentColor = 'pink';
-          else if (normalizedKey.includes('metric')) accentColor = 'green';
-          else if (normalizedKey.includes('ui') || normalizedKey.includes('design')) accentColor = 'indigo';
-          else if (normalizedKey.includes('plan')) accentColor = 'orange';
-          else if (normalizedKey.includes('technical')) accentColor = 'cyan';
-          else if (normalizedKey.includes('validation')) accentColor = 'emerald';
-          else if (normalizedKey.includes('information') || normalizedKey.includes('architecture')) accentColor = 'blue';
-          
-          return (
-            <CollapsibleSection
-              key={sectionKey}
-              title={sectionKey.replace(/_/g, ' ').split(' ').map(word => 
-                word.charAt(0).toUpperCase() + word.slice(1)
-              ).join(' ')}
-              accentColor={accentColor}
-              defaultOpen={index < 5} // Open first 5 sections by default
-            >
-              {section}
-            </CollapsibleSection>
-          );
-        }
-        
-        // Simple sections don't need collapsible wrapper
-        return <div key={sectionKey} className="mb-6">{section}</div>;
-      })}
+        </div>
+      ))}
       
       {sections.length === 0 && (
         <div className="text-center py-12 text-gray-500">

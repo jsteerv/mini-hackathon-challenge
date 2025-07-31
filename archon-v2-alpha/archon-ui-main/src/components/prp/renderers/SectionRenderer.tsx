@@ -17,6 +17,8 @@ import { ObjectSection } from '../sections/ObjectSection';
 import { KeyValueSection } from '../sections/KeyValueSection';
 import { FeatureSection } from '../sections/FeatureSection';
 import { GenericSection } from '../sections/GenericSection';
+import { RolloutPlanSection } from '../sections/RolloutPlanSection';
+import { TokenSystemSection } from '../sections/TokenSystemSection';
 
 interface SectionRendererProps {
   sectionKey: string;
@@ -85,8 +87,23 @@ export const SectionRenderer: React.FC<SectionRendererProps> = ({
     icon: getIcon(),
     accentColor: getColor(),
     isDarkMode,
-    defaultOpen: true,
+    defaultOpen: index < 5, // Open first 5 sections by default
+    isCollapsible: true, // Make all sections collapsible by default
   };
+  
+  // Check for specific section types by key name first
+  const normalizedKey = sectionKey.toLowerCase();
+  
+  // Special handling for rollout plans
+  if (normalizedKey.includes('rollout') || normalizedKey === 'rollout_plan') {
+    return <RolloutPlanSection {...commonProps} />;
+  }
+  
+  // Special handling for token systems
+  if (normalizedKey.includes('token') || normalizedKey === 'token_system' || 
+      normalizedKey === 'design_tokens' || normalizedKey === 'design_system') {
+    return <TokenSystemSection {...commonProps} />;
+  }
   
   // Render based on detected type
   switch (type) {

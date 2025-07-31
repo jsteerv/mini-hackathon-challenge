@@ -21,6 +21,9 @@ export interface SectionProps {
   accentColor?: string;
   defaultOpen?: boolean;
   isDarkMode?: boolean;
+  isCollapsible?: boolean;
+  onToggle?: () => void;
+  isOpen?: boolean;
 }
 
 // Alias for component compatibility

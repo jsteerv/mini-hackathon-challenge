@@ -1,6 +1,8 @@
 import React from 'react';
 import { Target, BookOpen, Sparkles, CheckCircle2 } from 'lucide-react';
 import { SectionProps } from '../types/prp.types';
+// Temporarily disabled to debug black screen issue
+// import { renderValue, renderValueInline } from '../utils/objectRenderer';
 
 /**
  * Renders context sections like scope, background, objectives

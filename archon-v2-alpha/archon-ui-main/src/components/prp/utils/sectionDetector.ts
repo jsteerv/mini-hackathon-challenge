@@ -4,17 +4,20 @@ import { SectionType, SectionDetectorResult } from '../types/prp.types';
  * Detects the type of a section based on its key and content structure
  */
 export function detectSectionType(key: string, value: any): SectionDetectorResult {
-  const normalizedKey = key.toLowerCase().replace(/_/g, '');
+  const normalizedKey = key.toLowerCase().replace(/_/g, '').replace(/\s+/g, '');
   
   // Check metadata fields
   if (['title', 'version', 'author', 'date', 'status', 'documenttype'].includes(normalizedKey)) {
     return { type: 'metadata', confidence: 1.0 };
   }
   
-  // Check context sections
+  // Check context sections (including common markdown headers)
   if (normalizedKey === 'context' || normalizedKey === 'overview' || 
       normalizedKey === 'executivesummary' || normalizedKey === 'problemstatement' ||
-      normalizedKey === 'visionstatement' || normalizedKey === 'proposedsolution') {
+      normalizedKey === 'visionstatement' || normalizedKey === 'proposedsolution' ||
+      normalizedKey === 'goal' || normalizedKey === 'objective' || normalizedKey === 'purpose' ||
+      normalizedKey === 'why' || normalizedKey === 'rationale' || normalizedKey === 'what' ||
+      normalizedKey === 'description' || normalizedKey === 'background') {
     return { type: 'context', confidence: 1.0 };
   }
   
@@ -31,24 +34,26 @@ export function detectSectionType(key: string, value: any): SectionDetectorResul
     return { type: 'flows', confidence: 0.9 };
   }
   
-  // Check metrics
+  // Check metrics (including common markdown headers)
   if (normalizedKey.includes('metric') || normalizedKey.includes('success') || 
-      normalizedKey.includes('kpi') || normalizedKey === 'estimatedimpact') {
+      normalizedKey.includes('kpi') || normalizedKey === 'estimatedimpact' ||
+      normalizedKey === 'successmetrics' || normalizedKey === 'successcriteria') {
     return { type: 'metrics', confidence: 0.9 };
   }
   
-  // Check implementation plans
+  // Check implementation plans (including common markdown headers)
   if (normalizedKey.includes('plan') || normalizedKey.includes('phase') || 
       normalizedKey.includes('implementation') || normalizedKey.includes('roadmap') ||
       normalizedKey === 'timeline' || normalizedKey === 'rolloutplan' ||
-      normalizedKey === 'migrationstrategy') {
+      normalizedKey === 'migrationstrategy' || normalizedKey === 'implementationplan') {
     return { type: 'plan', confidence: 0.9 };
   }
   
-  // Check validation/testing
+  // Check validation/testing (including common markdown headers)
   if (normalizedKey.includes('validation') || normalizedKey.includes('test') || 
       normalizedKey.includes('gate') || normalizedKey === 'compliance' ||
-      normalizedKey.includes('quality') || normalizedKey === 'accessibilitystandards') {
+      normalizedKey.includes('quality') || normalizedKey === 'accessibilitystandards' ||
+      normalizedKey === 'acceptancecriteria' || normalizedKey === 'qualitygates') {
     return { type: 'list', confidence: 0.8 };
   }
   

@@ -1,3 +1,5 @@
+import { normalizeImagePlaceholders } from './normalizer';
+
 /**
  * Formats a key into a human-readable label
  */
@@ -25,7 +27,11 @@ export function formatValue(value: any): string {
   if (value === null || value === undefined) return '';
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
   if (typeof value === 'number') return value.toLocaleString();
-  if (typeof value === 'string') return value;
+  if (typeof value === 'string') {
+    // Temporarily disabled to debug black screen issue
+    // return normalizeImagePlaceholders(value);
+    return value;
+  }
   if (Array.isArray(value)) return `${value.length} items`;
   if (typeof value === 'object') return `${Object.keys(value).length} properties`;
   return String(value);

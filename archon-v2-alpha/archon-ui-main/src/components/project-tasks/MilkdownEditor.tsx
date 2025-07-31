@@ -82,224 +82,198 @@ export const MilkdownEditor: React.FC<MilkdownEditorProps> = ({
   };
 
   // Helper function to format values for markdown
-  const formatValue = (value: any, indent = ''): string => {
+  // Enhanced formatValue to handle complex nested structures
+  const formatValue = (value: any, indent = '', depth = 0): string => {
+    if (value === null || value === undefined) {
+      return '';
+    }
+    
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      return String(value);
+    }
+    
     if (Array.isArray(value)) {
-      return value.map(item => `${indent}- ${formatValue(item, indent + '  ')}`).join('\n') + '\n';
+      if (value.length === 0) return '';
+      
+      // Check if it's a simple array (strings/numbers)
+      const isSimple = value.every(item => 
+        typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean'
+      );
+      
+      if (isSimple) {
+        return value.map(item => `${indent}- ${item}`).join('\n') + '\n';
+      }
+      
+      // Complex array with objects
+      return value.map((item, index) => {
+        if (typeof item === 'object' && item !== null) {
+          const itemLines = formatValue(item, indent + '  ', depth + 1).split('\n');
+          const firstLine = itemLines[0];
+          const restLines = itemLines.slice(1).join('\n');
+          
+          if (itemLines.length === 1 || (itemLines.length === 2 && !itemLines[1])) {
+            // Single line item
+            return `${indent}- ${firstLine}`;
+          } else {
+            // Multi-line item
+            return `${indent}-\n${indent}  ${firstLine}${restLines ? '\n' + restLines : ''}`;
+          }
+        }
+        return `${indent}- ${formatValue(item, indent + '  ', depth + 1)}`;
+      }).join('\n') + '\n';
     }
     
     if (typeof value === 'object' && value !== null) {
+      const entries = Object.entries(value);
+      if (entries.length === 0) return '';
+      
+      // Check if it's a simple object (all values are primitives)
+      const isSimple = entries.every(([_, val]) => 
+        typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean'
+      );
+      
+      if (isSimple && entries.length <= 3 && depth > 0) {
+        // Inline simple objects
+        const pairs = entries.map(([k, v]) => `${formatKey(k)}: ${v}`);
+        return pairs.join(', ');
+      }
+      
       let result = '';
-      Object.entries(value).forEach(([key, val]) => {
-        const formattedKey = key.replace(/_/g, ' ')
-          .split(' ')
-          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-          .join(' ');
+      entries.forEach(([key, val], index) => {
+        const formattedKey = formatKey(key);
         
-        if (typeof val === 'string' || typeof val === 'number') {
-          result += `${indent}**${formattedKey}:** ${val}\n\n`;
-        } else {
-          result += `${indent}### ${formattedKey}\n\n${formatValue(val, indent)}`;
+        if (val === null || val === undefined) {
+          return; // Skip null/undefined
+        }
+        
+        if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') {
+          result += `${indent}**${formattedKey}:** ${val}\n`;
+        } else if (Array.isArray(val)) {
+          result += `${indent}**${formattedKey}:**\n${formatValue(val, indent, depth + 1)}`;
+        } else if (typeof val === 'object') {
+          // Use appropriate heading level based on depth
+          const headingLevel = Math.min(depth + 3, 6);
+          const heading = '#'.repeat(headingLevel);
+          result += `${indent}${heading} ${formattedKey}\n\n${formatValue(val, indent, depth + 1)}`;
+        }
+        
+        // Add spacing between top-level sections
+        if (depth === 0 && index < entries.length - 1) {
+          result += '\n';
         }
       });
+      
       return result;
     }
     
     return String(value);
   };
+  
+  // Helper to format keys nicely
+  const formatKey = (key: string): string => {
+    return key
+      .replace(/_/g, ' ')
+      .replace(/([a-z])([A-Z])/g, '$1 $2')
+      .split(' ')
+      .filter(word => word.length > 0)
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
 
-  // Convert PRP document structure to readable markdown
+  // Convert PRP document structure to readable markdown - fully dynamic
   const convertPRPToMarkdown = (content: any): string => {
-    let markdown = `# ${content.title || doc.title}\n\n`;
+    // Handle raw string content
+    if (typeof content === 'string') {
+      return content;
+    }
     
-    // Metadata section
-    if (content.version || content.author || content.date || content.status) {
+    // Handle null/undefined
+    if (!content || typeof content !== 'object') {
+      return `# ${doc.title}\n\nNo content available.`;
+    }
+    
+    // Start with title
+    let markdown = `# ${content.title || doc.title || 'Untitled Document'}\n\n`;
+    
+    // Group metadata fields
+    const metadataFields = ['version', 'author', 'date', 'status', 'document_type', 'created_at', 'updated_at'];
+    const metadata = metadataFields.filter(field => content[field]);
+    
+    if (metadata.length > 0) {
       markdown += `## Metadata\n\n`;
-      if (content.version) markdown += `- **Version:** ${content.version}\n`;
-      if (content.author) markdown += `- **Author:** ${content.author}\n`;
-      if (content.date) markdown += `- **Date:** ${content.date}\n`;
-      if (content.status) markdown += `- **Status:** ${content.status}\n`;
-      markdown += '\n';
-    }
-    
-    // Goal section
-    if (content.goal) {
-      markdown += `## Goal\n\n${content.goal}\n\n`;
-    }
-    
-    // Why section
-    if (content.why) {
-      markdown += `## Why\n\n`;
-      if (Array.isArray(content.why)) {
-        content.why.forEach(item => markdown += `- ${item}\n`);
-      } else {
-        markdown += `${content.why}\n`;
-      }
-      markdown += '\n';
-    }
-    
-    // What section
-    if (content.what) {
-      markdown += `## What\n\n`;
-      if (typeof content.what === 'string') {
-        markdown += `${content.what}\n\n`;
-      } else if (content.what.description) {
-        markdown += `${content.what.description}\n\n`;
-        
-        if (content.what.success_criteria) {
-          markdown += `### Success Criteria\n\n`;
-          content.what.success_criteria.forEach((criterion: string) => {
-            markdown += `- [ ] ${criterion}\n`;
-          });
-          markdown += '\n';
-        }
-      }
-    }
-    
-    // Context section
-    if (content.context) {
-      markdown += `## Context\n\n`;
-      markdown += formatValue(content.context);
-      markdown += '\n';
-    }
-    
-    // User Personas
-    if (content.user_personas) {
-      markdown += `## User Personas\n\n`;
-      markdown += formatValue(content.user_personas);
-      markdown += '\n';
-    }
-    
-    // User Flows
-    if (content.user_flows) {
-      markdown += `## User Flows\n\n`;
-      markdown += formatValue(content.user_flows);
-      markdown += '\n';
-    }
-    
-    // Success Metrics
-    if (content.success_metrics) {
-      markdown += `## Success Metrics\n\n`;
-      markdown += formatValue(content.success_metrics);
-      markdown += '\n';
-    }
-    
-    // UI Improvements
-    if (content.ui_improvements) {
-      markdown += `## UI Improvements\n\n`;
-      markdown += formatValue(content.ui_improvements);
-      markdown += '\n';
-    }
-    
-    // Implementation Plan
-    if (content.implementation_plan) {
-      markdown += `## Implementation Plan\n\n`;
-      markdown += formatValue(content.implementation_plan);
-      markdown += '\n';
-    }
-    
-    // Technical Implementation
-    if (content.technical_implementation) {
-      markdown += `## Technical Implementation\n\n`;
-      markdown += formatValue(content.technical_implementation);
-      markdown += '\n';
-    }
-    
-    // Information Architecture
-    if (content.information_architecture) {
-      markdown += `## Information Architecture\n\n`;
-      markdown += formatValue(content.information_architecture);
-      markdown += '\n';
-    }
-    
-    // Validation Gates
-    if (content.validation_gates) {
-      markdown += `## Validation Gates\n\n`;
-      markdown += formatValue(content.validation_gates);
-      markdown += '\n';
-    }
-    
-    // Current State Analysis
-    if (content.current_state_analysis) {
-      markdown += `## Current State Analysis\n\n`;
-      markdown += formatValue(content.current_state_analysis);
-      markdown += '\n';
-    }
-    
-    // Component Architecture
-    if (content.component_architecture) {
-      markdown += `## Component Architecture\n\n`;
-      markdown += formatValue(content.component_architecture);
-      markdown += '\n';
-    }
-    
-    // Visual Design & Responsive Design
-    if (content.visual_design) {
-      markdown += `## Visual Design\n\n`;
-      markdown += formatValue(content.visual_design);
-      markdown += '\n';
-    }
-    
-    if (content.responsive_design) {
-      markdown += `## Responsive Design\n\n`;
-      markdown += formatValue(content.responsive_design);
-      markdown += '\n';
-    }
-    
-    // Interaction Patterns
-    if (content.interaction_patterns) {
-      markdown += `## Interaction Patterns\n\n`;
-      markdown += formatValue(content.interaction_patterns);
-      markdown += '\n';
-    }
-    
-    // Component Architecture
-    if (content.component_architecture) {
-      markdown += `## Component Architecture\n\n`;
-      Object.entries(content.component_architecture).forEach(([section, details]: [string, any]) => {
-        const sectionTitle = section.replace(/_/g, ' ').split(' ').map(word => 
-          word.charAt(0).toUpperCase() + word.slice(1)
-        ).join(' ');
-        markdown += `### ${sectionTitle}\n`;
-        
-        if (typeof details === 'object' && details !== null) {
-          Object.entries(details).forEach(([key, value]) => {
-            if (typeof value === 'string') {
-              markdown += `- **${key}:** ${value}\n`;
-            } else if (typeof value === 'object' && value !== null) {
-              markdown += `- **${key}:**\n`;
-              Object.entries(value).forEach(([subKey, subValue]) => {
-                markdown += `  - **${subKey}:** ${subValue}\n`;
-              });
-            }
-          });
-          markdown += '\n';
-        }
+      metadata.forEach(field => {
+        const value = content[field];
+        const label = formatKey(field);
+        markdown += `- **${label}:** ${value}\n`;
       });
+      markdown += '\n';
     }
     
-    // Handle all other sections dynamically
-    const handledKeys = [
-      'title', 'version', 'author', 'date', 'status', 'goal', 'why', 'what', 
-      'document_type', 'context', 'user_personas', 'user_flows', 'success_metrics',
-      'ui_improvements', 'implementation_plan', 'technical_implementation',
-      'information_architecture', 'validation_gates', 'current_state_analysis',
-      'component_architecture', 'visual_design', 'responsive_design', 'interaction_patterns'
+    // Process all other fields dynamically
+    const skipFields = ['title', ...metadataFields, 'id', '_id', 'project_id'];
+    
+    // Sort fields by priority (known important fields first)
+    const priorityFields = [
+      'goal', 'goals', 'objective', 'objectives',
+      'why', 'rationale', 'background',
+      'what', 'description', 'overview',
+      'context', 'background_context',
+      'user_personas', 'personas', 'users', 'stakeholders',
+      'user_flows', 'flows', 'journeys', 'workflows',
+      'requirements', 'functional_requirements', 'non_functional_requirements',
+      'success_metrics', 'metrics', 'kpis', 'success_criteria',
+      'timeline', 'roadmap', 'milestones', 'phases',
+      'implementation_plan', 'implementation_roadmap', 'plan',
+      'technical_requirements', 'technical_implementation', 'architecture',
+      'validation_gates', 'testing_strategy', 'quality_gates',
+      'risks', 'risk_assessment', 'mitigation_strategies'
     ];
     
-    Object.entries(content).forEach(([key, value]) => {
-      if (!handledKeys.includes(key) && value) {
-        const sectionTitle = key.replace(/_/g, ' ')
-          .split(' ')
-          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-          .join(' ');
-        
-        markdown += `## ${sectionTitle}\n\n`;
-        markdown += formatValue(value);
-        markdown += '\n';
+    // Create ordered list of fields
+    const orderedFields = [];
+    const remainingFields = [];
+    
+    Object.keys(content).forEach(key => {
+      if (skipFields.includes(key)) return;
+      
+      const lowerKey = key.toLowerCase();
+      const priorityIndex = priorityFields.findIndex(pf => 
+        lowerKey === pf || lowerKey.includes(pf) || pf.includes(lowerKey)
+      );
+      
+      if (priorityIndex !== -1) {
+        orderedFields.push({ key, priority: priorityIndex });
+      } else {
+        remainingFields.push(key);
       }
     });
     
-    return markdown;
+    // Sort by priority
+    orderedFields.sort((a, b) => a.priority - b.priority);
+    
+    // Process fields in order
+    const allFields = [...orderedFields.map(f => f.key), ...remainingFields];
+    
+    allFields.forEach(key => {
+      const value = content[key];
+      if (value === null || value === undefined) return;
+      
+      const sectionTitle = formatKey(key);
+      markdown += `## ${sectionTitle}\n\n`;
+      
+      // Handle different value types
+      if (typeof value === 'string') {
+        markdown += `${value}\n\n`;
+      } else if (typeof value === 'number' || typeof value === 'boolean') {
+        markdown += `${value}\n\n`;
+      } else if (Array.isArray(value)) {
+        markdown += formatValue(value) + '\n';
+      } else if (typeof value === 'object') {
+        markdown += formatValue(value) + '\n';
+      }
+    });
+    
+    return markdown.trim();
   };
 
   // Initialize editor
