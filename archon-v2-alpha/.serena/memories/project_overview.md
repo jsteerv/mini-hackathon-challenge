@@ -24,3 +24,29 @@ True microservices with lightweight containers:
 - **Archon-Docs** (optional): Documentation service
 
 Services communicate via HTTP REST APIs on internal Docker network.
+
+## MCP Tool Usage
+
+**CRITICAL: Use MCP tools directly, not through bash commands.**
+
+### Correct MCP Tool Invocation:
+```python
+# Project management
+mcp__archon__manage_project(action="create", title="New Feature")
+mcp__archon__manage_project(action="list")
+
+# Task management
+mcp__archon__manage_task(action="create", project_id="uuid", title="Implement API")
+mcp__archon__manage_task(action="update", task_id="uuid", update_fields={"status": "doing"})
+
+# Knowledge base
+mcp__archon__perform_rag_query(query="authentication patterns", match_count=5)
+mcp__archon__search_code_examples(query="JWT implementation", match_count=3)
+```
+
+### Never Do This:
+```bash
+# ❌ WRONG - These launch new Claude instances
+claude /mcp__archon__manage_project
+bash -c "claude mcp__archon__manage_task"
+```

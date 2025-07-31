@@ -1,5 +1,5 @@
 import React from 'react';
-import { ParsedMarkdownDocument, parseMarkdownToDocument, isDocumentWithMetadata } from '../utils/markdownParser';
+import { ParsedMarkdownDocument, parseMarkdownToDocument, isDocumentWithMetadata, isMarkdownContent } from '../utils/markdownParser';
 import { MetadataSection } from '../sections/MetadataSection';
 import { MarkdownSectionRenderer } from './MarkdownSectionRenderer';
 
@@ -18,8 +18,9 @@ export const MarkdownDocumentRenderer: React.FC<MarkdownDocumentRendererProps> =
   isDarkMode = false,
   sectionOverrides = {}
 }) => {
-  let parsedDocument: ParsedMarkdownDocument;
-  let documentMetadata: any = {};
+  try {
+    let parsedDocument: ParsedMarkdownDocument;
+    let documentMetadata: any = {};
 
   console.log('MarkdownDocumentRenderer: Processing content:', {
     type: typeof content,
@@ -50,8 +51,14 @@ export const MarkdownDocumentRenderer: React.FC<MarkdownDocumentRendererProps> =
     
     // Find the markdown content in any field
     let markdownContent = '';
-    if (typeof content.content === 'string' && isMarkdownContent(content.content)) {
+    
+    // First check common markdown field names
+    if (typeof content.markdown === 'string') {
+      markdownContent = content.markdown;
+      console.log('MarkdownDocumentRenderer: Found markdown in "markdown" field');
+    } else if (typeof content.content === 'string' && isMarkdownContent(content.content)) {
       markdownContent = content.content;
+      console.log('MarkdownDocumentRenderer: Found markdown in "content" field');
     } else {
       // Look for markdown content in any field
       for (const [key, value] of Object.entries(content)) {
@@ -64,9 +71,18 @@ export const MarkdownDocumentRenderer: React.FC<MarkdownDocumentRendererProps> =
     }
     
     if (markdownContent) {
+      console.log('MarkdownDocumentRenderer: Parsing markdown content:', {
+        contentLength: markdownContent.length,
+        contentPreview: markdownContent.substring(0, 100) + '...'
+      });
       parsedDocument = parseMarkdownToDocument(markdownContent);
+      console.log('MarkdownDocumentRenderer: Parsed document:', {
+        sectionsCount: parsedDocument.sections.length,
+        sections: parsedDocument.sections.map(s => ({ title: s.title, type: s.type }))
+      });
     } else {
       // No markdown content found, create empty document
+      console.log('MarkdownDocumentRenderer: No markdown content found in document');
       parsedDocument = { sections: [], metadata: {}, hasMetadata: false };
     }
     
@@ -131,4 +147,29 @@ export const MarkdownDocumentRenderer: React.FC<MarkdownDocumentRendererProps> =
       )}
     </div>
   );
+  } catch (error) {
+    console.error('MarkdownDocumentRenderer: Error rendering content:', error);
+    
+    // Provide a meaningful error display instead of black screen
+    return (
+      <div className="p-6 bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-800 rounded-lg">
+        <h3 className="text-red-800 dark:text-red-200 font-semibold mb-2">Error Rendering Document</h3>
+        <p className="text-red-600 dark:text-red-300 text-sm mb-4">
+          There was an error rendering this document. The content may be in an unexpected format.
+        </p>
+        
+        {/* Show raw content for debugging */}
+        <details className="mt-4">
+          <summary className="cursor-pointer text-sm text-red-600 dark:text-red-400 hover:underline">
+            Show raw content
+          </summary>
+          <pre className="mt-2 p-4 bg-gray-100 dark:bg-gray-800 rounded text-xs overflow-auto max-h-96">
+            {typeof content === 'string' 
+              ? content 
+              : JSON.stringify(content, null, 2)}
+          </pre>
+        </details>
+      </div>
+    );
+  }
 };

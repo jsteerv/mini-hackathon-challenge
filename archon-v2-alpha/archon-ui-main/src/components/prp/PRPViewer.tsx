@@ -47,9 +47,10 @@ export const PRPViewer: React.FC<PRPViewerProps> = ({
   isDarkMode = false,
   sectionOverrides = {}
 }) => {
-  if (!content) {
-    return <div className="text-gray-500">No PRP content available</div>;
-  }
+  try {
+    if (!content) {
+      return <div className="text-gray-500">No PRP content available</div>;
+    }
 
   console.log('PRPViewer: Received content:', { 
     type: typeof content, 
@@ -89,6 +90,18 @@ export const PRPViewer: React.FC<PRPViewerProps> = ({
 
   // 3. Check if it's an object that might contain markdown content in any field
   if (typeof content === 'object' && content !== null) {
+    // Check for markdown field first (common in PRP documents)
+    if (typeof content.markdown === 'string') {
+      console.log('PRPViewer: Found markdown field, using MarkdownDocumentRenderer');
+      return (
+        <MarkdownDocumentRenderer
+          content={content}
+          isDarkMode={isDarkMode}
+          sectionOverrides={sectionOverrides}
+        />
+      );
+    }
+    
     // Look for markdown content in any field
     for (const [key, value] of Object.entries(content)) {
       if (typeof value === 'string' && isMarkdownContent(value)) {
@@ -221,4 +234,46 @@ export const PRPViewer: React.FC<PRPViewerProps> = ({
       )}
     </div>
   );
+  } catch (error) {
+    console.error('PRPViewer: Error rendering content:', error);
+    
+    // Provide a meaningful error display instead of black screen
+    return (
+      <div className="p-6 bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-800 rounded-lg">
+        <h3 className="text-red-800 dark:text-red-200 font-semibold mb-2">Error Rendering PRP</h3>
+        <p className="text-red-600 dark:text-red-300 text-sm mb-4">
+          There was an error rendering this PRP document. The content may be in an unexpected format.
+        </p>
+        
+        {/* Show error details for debugging */}
+        <details className="mt-4">
+          <summary className="cursor-pointer text-sm text-red-600 dark:text-red-400 hover:underline">
+            Show error details
+          </summary>
+          <div className="mt-2 space-y-2">
+            <pre className="p-4 bg-gray-100 dark:bg-gray-800 rounded text-xs overflow-auto">
+              {error instanceof Error ? error.message : String(error)}
+            </pre>
+            {error instanceof Error && error.stack && (
+              <pre className="p-4 bg-gray-100 dark:bg-gray-800 rounded text-xs overflow-auto max-h-48">
+                {error.stack}
+              </pre>
+            )}
+          </div>
+        </details>
+        
+        {/* Show raw content for debugging */}
+        <details className="mt-2">
+          <summary className="cursor-pointer text-sm text-red-600 dark:text-red-400 hover:underline">
+            Show raw content
+          </summary>
+          <pre className="mt-2 p-4 bg-gray-100 dark:bg-gray-800 rounded text-xs overflow-auto max-h-96">
+            {typeof content === 'string' 
+              ? content 
+              : JSON.stringify(content, null, 2)}
+          </pre>
+        </details>
+      </div>
+    );
+  }
 };
