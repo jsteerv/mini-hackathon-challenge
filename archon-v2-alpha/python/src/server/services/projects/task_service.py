@@ -41,7 +41,6 @@ class TaskService:
     """Service class for task operations"""
     
     VALID_STATUSES = ['todo', 'doing', 'review', 'done']
-    VALID_ASSIGNEES = ['User', 'Archon', 'AI IDE Agent']
     
     def __init__(self, supabase_client=None):
         """Initialize with optional supabase client"""
@@ -55,8 +54,8 @@ class TaskService:
     
     def validate_assignee(self, assignee: str) -> Tuple[bool, str]:
         """Validate task assignee"""
-        if assignee not in self.VALID_ASSIGNEES:
-            return False, f"Invalid assignee '{assignee}'. Must be one of: {', '.join(self.VALID_ASSIGNEES)}"
+        if not assignee or not isinstance(assignee, str) or len(assignee.strip()) == 0:
+            return False, "Assignee must be a non-empty string"
         return True, ""
     
     async def create_task(self, project_id: str, title: str, description: str = "", 

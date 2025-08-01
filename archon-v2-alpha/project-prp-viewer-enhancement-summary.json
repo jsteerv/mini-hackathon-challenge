@@ -1,0 +1,238 @@
+{
+  "project": {
+    "id": "3cdb2ac1-2648-4555-ab08-d95d15599cca",
+    "title": "PRP Viewer and DocsTab Comprehensive Enhancement",
+    "description": "Multi-faceted enhancement addressing markdown parsing, UI improvements, real-time synchronization, and performance optimization",
+    "status": "active",
+    "priority": "high",
+    "created_date": "2025-07-31",
+    "estimated_duration": "3-5 days",
+    "assigned_orchestrator": "archon-project-orchestrator"
+  },
+  "prp_document": {
+    "file_path": "/Users/sean/Software/workshops/archon-v2-alpha/PRPs/prp-viewer-comprehensive-enhancement.md",
+    "document_id": "prp-comp-enhancement-2025-07-31",
+    "created": "2025-07-31T18:40:00Z",
+    "analysis_synthesis": {
+      "ui_analysis": "MarkdownDocumentRenderer expects structured markdown but receives JSON with embedded markdown",
+      "server_analysis": "Documents already have UUIDs, need proper ID handling in UI",
+      "socketio_analysis": "Comprehensive real-time features needed for collaboration",
+      "context_research": "Existing patterns available, performance concerns identified"
+    }
+  },
+  "tasks": [
+    {
+      "task_id": "task-001-parsing-fix",
+      "title": "Fix MarkdownDocumentRenderer JSON parsing",
+      "description": "Enhance MarkdownDocumentRenderer to handle JSON with embedded markdown structures",
+      "priority": 1,
+      "status": "pending",
+      "assigned_agent": "archon-ui-expert",
+      "estimated_effort": "4-6 hours",
+      "files_affected": [
+        "archon-ui-main/src/components/prp/components/MarkdownDocumentRenderer.tsx"
+      ],
+      "success_criteria": [
+        "JSON structures with embedded markdown render correctly",
+        "Backward compatibility with pure markdown strings maintained",
+        "Performance impact < 10ms for typical documents"
+      ],
+      "validation_commands": [
+        "npm run type-check",
+        "npm run test -- MarkdownDocumentRenderer.test.tsx",
+        "npm run dev # Manual testing with JSON documents"
+      ],
+      "dependencies": []
+    },
+    {
+      "task_id": "task-002-id-display",
+      "title": "Add ID display and copy functionality to DocumentCard",
+      "description": "Implement persistent ID display and copy functionality with proper visual feedback",
+      "priority": 1,
+      "status": "pending", 
+      "assigned_agent": "archon-ui-expert",
+      "estimated_effort": "3-4 hours",
+      "files_affected": [
+        "archon-ui-main/src/components/project-tasks/DocumentCard.tsx",
+        "archon-ui-main/src/components/project-tasks/DocsTab.tsx"
+      ],
+      "success_criteria": [
+        "ID always visible for selected documents",
+        "Copy functionality works with toast confirmation",
+        "Visual feedback for copy action",
+        "Hover states for non-selected documents"
+      ],
+      "validation_commands": [
+        "npm run type-check",
+        "npm run test -- DocumentCard.test.tsx",
+        "npm run dev # Test copy functionality"
+      ],
+      "dependencies": []
+    },
+    {
+      "task_id": "task-003-collapsible-sections",
+      "title": "Create CollapsibleSectionRenderer with beautiful styling",
+      "description": "Implement enhanced CollapsibleSectionRenderer with section-specific styling and animations",
+      "priority": 2,
+      "status": "pending",
+      "assigned_agent": "archon-ui-expert", 
+      "estimated_effort": "6-8 hours",
+      "files_affected": [
+        "archon-ui-main/src/components/prp/components/CollapsibleSectionRenderer.tsx",
+        "archon-ui-main/src/components/prp/PRPViewer.tsx"
+      ],
+      "success_criteria": [
+        "Section-specific icons and colors implemented",
+        "Smooth animations for expand/collapse",
+        "Proper content formatting for different data types",
+        "Responsive design for mobile/tablet"
+      ],
+      "validation_commands": [
+        "npm run type-check",
+        "npm run test -- CollapsibleSectionRenderer.test.tsx",
+        "npm run dev # Test animations and responsiveness"
+      ],
+      "dependencies": ["task-001-parsing-fix"]
+    },
+    {
+      "task_id": "task-004-socketio-sync",
+      "title": "Implement Socket.IO real-time document synchronization",
+      "description": "Add comprehensive real-time synchronization for document operations with conflict resolution",
+      "priority": 2,
+      "status": "pending",
+      "assigned_agent": "archon-socketio-expert",
+      "estimated_effort": "8-10 hours",
+      "files_affected": [
+        "archon-ui-main/src/services/socketService.ts",
+        "archon-ui-main/src/components/project-tasks/DocsTab.tsx",
+        "python/src/server/services/socket_handlers.py"
+      ],
+      "success_criteria": [
+        "Document updates broadcast in real-time",
+        "Delete operations synchronized across clients",
+        "ID assignment events properly handled",
+        "Conflict resolution for simultaneous edits",
+        "Performance batching implemented"
+      ],
+      "validation_commands": [
+        "uv run pytest tests/test_socket_handlers.py -v",
+        "npm run test -- socketService.test.ts",
+        "# Manual testing with multiple browser tabs"
+      ],
+      "dependencies": ["task-002-id-display"]
+    },
+    {
+      "task_id": "task-005-performance-optimization",
+      "title": "Implement performance optimizations and lazy loading",
+      "description": "Add lazy loading, virtualization, and render optimizations for large document sets",
+      "priority": 3,
+      "status": "pending",
+      "assigned_agent": "archon-ui-expert",
+      "estimated_effort": "6-8 hours",
+      "files_affected": [
+        "archon-ui-main/src/components/project-tasks/DocsTab.tsx",
+        "archon-ui-main/src/hooks/useVirtualizedDocuments.ts",
+        "archon-ui-main/src/components/project-tasks/DocumentCardSkeleton.tsx"
+      ],
+      "success_criteria": [
+        "Lazy loading for large document sets (>50 documents)",
+        "Smooth scroll performance at 60fps",
+        "Memory usage optimized with proper cleanup",
+        "Intersection observer for efficient loading"
+      ],
+      "validation_commands": [
+        "npm run build",
+        "npm run analyze # Bundle size check",
+        "# React DevTools Profiler testing",
+        "# Lighthouse Performance score > 90"
+      ],
+      "dependencies": ["task-003-collapsible-sections", "task-004-socketio-sync"]
+    }
+  ],
+  "validation_gates": {
+    "level_1": {
+      "name": "Syntax & Type Checking",
+      "commands": [
+        "cd archon-ui-main && npm run type-check",
+        "cd archon-ui-main && npm run lint -- --fix",
+        "cd archon-ui-main && npm run format:check"
+      ]
+    },
+    "level_2": {
+      "name": "Unit Testing",
+      "commands": [
+        "cd archon-ui-main && npm run test -- MarkdownDocumentRenderer.test.tsx",
+        "cd archon-ui-main && npm run test -- DocumentCard.test.tsx",
+        "cd archon-ui-main && npm run test -- CollapsibleSectionRenderer.test.tsx",
+        "cd archon-ui-main && npm run test:coverage -- --collectCoverageFrom='src/components/prp/**/*.tsx'"
+      ]
+    },
+    "level_3": {
+      "name": "Integration Testing",
+      "manual_checklist": [
+        "Create documents with JSON structure (PRP format)",
+        "Verify MarkdownDocumentRenderer handles JSON correctly",
+        "Test DocumentCard ID display and copy functionality",
+        "Verify CollapsibleSectionRenderer styling and animations",
+        "Test Socket.IO real-time updates with multiple browser tabs",
+        "Verify performance with 50+ documents",
+        "Test lazy loading scroll behavior",
+        "Verify conflict resolution with simultaneous edits"
+      ]
+    },
+    "level_4": {
+      "name": "Performance Validation",
+      "commands": [
+        "cd archon-ui-main && npm run build",
+        "cd archon-ui-main && npm run analyze"
+      ],
+      "manual_checks": [
+        "React DevTools Profiler recording",
+        "Lighthouse Performance score > 90",
+        "Memory usage stability check"
+      ]
+    }
+  },
+  "success_metrics": {
+    "functional": [
+      "MarkdownDocumentRenderer handles JSON structures without errors",
+      "DocumentCard ID copy functionality works with <100ms response",
+      "CollapsibleSectionRenderer animations smooth at 60fps",
+      "Socket.IO updates propagate to all clients within <200ms"
+    ],
+    "performance": [
+      "Lazy loading reduces initial render time by >40%",
+      "Memory usage stable during extended use (no leaks)",
+      "Performance score maintained >90 in Lighthouse",
+      "Bundle size increase < 15KB"
+    ],
+    "user_experience": [
+      "Zero '[Image #N]' rendering issues",
+      "Intuitive ID copy workflow with clear feedback",
+      "Beautiful section styling enhances readability",
+      "Smooth real-time collaboration experience"
+    ]
+  },
+  "agent_assignments": {
+    "archon-ui-expert": [
+      "task-001-parsing-fix",
+      "task-002-id-display", 
+      "task-003-collapsible-sections",
+      "task-005-performance-optimization"
+    ],
+    "archon-socketio-expert": [
+      "task-004-socketio-sync"
+    ],
+    "archon-project-orchestrator": [
+      "Overall coordination and validation gate management",
+      "Cross-task dependency resolution",
+      "Final integration testing and sign-off"
+    ]
+  },
+  "current_status": {
+    "phase": "Planning Complete",
+    "next_action": "Begin task-001-parsing-fix (MarkdownDocumentRenderer enhancement)",
+    "blockers": "None - ready to proceed",
+    "estimated_completion": "2025-08-05"
+  }
+}
