@@ -322,13 +322,8 @@ EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
 
--- Assignee enumeration
--- Create task_assignee enum if it doesn't exist
-DO $$ BEGIN
-    CREATE TYPE task_assignee AS ENUM ('User','Archon','AI IDE Agent');
-EXCEPTION
-    WHEN duplicate_object THEN null;
-END $$;
+-- Assignee is now a text field to allow any agent name
+-- No longer using enum to support flexible agent assignments
 
 -- Projects table
 CREATE TABLE IF NOT EXISTS projects (
@@ -352,7 +347,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   title TEXT NOT NULL,
   description TEXT DEFAULT '',
   status task_status DEFAULT 'todo',
-  assignee task_assignee DEFAULT 'User',
+  assignee TEXT DEFAULT 'User' CHECK (assignee IS NOT NULL AND assignee != ''),
   task_order INTEGER DEFAULT 0,
   feature TEXT,
   sources JSONB DEFAULT '[]'::jsonb,
@@ -464,6 +459,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Add comments to document the soft delete fields
+COMMENT ON COLUMN tasks.assignee IS 'The agent or user assigned to this task. Can be any valid agent name or "User"';
 COMMENT ON COLUMN tasks.archived IS 'Soft delete flag - TRUE if task is archived/deleted';
 COMMENT ON COLUMN tasks.archived_at IS 'Timestamp when task was archived';
 COMMENT ON COLUMN tasks.archived_by IS 'User/system that archived the task';
