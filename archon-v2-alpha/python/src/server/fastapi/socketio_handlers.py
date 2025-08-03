@@ -492,3 +492,438 @@ async def crawl_stop(sid, data):
         }, room=progress_id)
         return {'success': False, 'error': str(e)}
 
+
+# Document Synchronization Socket.IO Event Handlers
+# Real-time document collaboration with conflict resolution
+
+from typing import List, Dict, Any, Optional
+from dataclasses import dataclass, asdict
+from datetime import datetime
+import json
+
+@dataclass
+class DocumentChange:
+    """Document change data structure."""
+    id: str
+    project_id: str
+    document_id: str
+    change_type: str  # 'content', 'title', 'metadata', 'delete'
+    data: Any
+    user_id: str
+    timestamp: float
+    version: int
+    patch: Optional[Any] = None
+
+@dataclass
+class DocumentState:
+    """Document state for synchronization."""
+    id: str
+    project_id: str
+    title: str
+    content: Any
+    metadata: Any
+    version: int
+    last_modified: float
+    last_modified_by: str
+    is_locked: bool = False
+    lock_expiry: Optional[float] = None
+
+# In-memory document state storage (in production, use Redis or database)
+document_states: Dict[str, DocumentState] = {}
+document_locks: Dict[str, Dict[str, Any]] = {}
+
+@sio.event
+async def join_document_room(sid, data):
+    """Join a document room for real-time collaboration."""
+    project_id = data.get('project_id')
+    document_id = data.get('document_id')
+    
+    if not project_id or not document_id:
+        await sio.emit('error', {'message': 'project_id and document_id required'}, to=sid)
+        return
+    
+    room_name = f"doc_{project_id}_{document_id}"
+    await sio.enter_room(sid, room_name)
+    
+    logger.info(f"📄 [DOCUMENT SYNC] Client {sid} joined document room: {room_name}")
+    
+    # Send current document state if exists
+    if document_id in document_states:
+        state = document_states[document_id]
+        await sio.emit('document_state', asdict(state), to=sid)
+    
+    await sio.emit('joined_document', {
+        'project_id': project_id,
+        'document_id': document_id,
+        'room': room_name
+    }, to=sid)
+
+@sio.event
+async def leave_document_room(sid, data):
+    """Leave a document room."""
+    project_id = data.get('project_id')
+    document_id = data.get('document_id')
+    
+    if project_id and document_id:
+        room_name = f"doc_{project_id}_{document_id}"
+        await sio.leave_room(sid, room_name)
+        logger.info(f"📄 [DOCUMENT SYNC] Client {sid} left document room: {room_name}")
+
+@sio.event
+async def request_document_states(sid, data):
+    """Request all document states for a project."""
+    project_id = data.get('project_id')
+    if not project_id:
+        await sio.emit('error', {'message': 'project_id required'}, to=sid)
+        return
+    
+    # Get all documents for the project
+    project_docs = [
+        asdict(state) for state in document_states.values()
+        if state.project_id == project_id
+    ]
+    
+    await sio.emit('document_states', project_docs, to=sid)
+    logger.info(f"📄 [DOCUMENT SYNC] Sent {len(project_docs)} document states to {sid}")
+
+@sio.event
+async def document_change(sid, data):
+    """Handle single document change."""
+    try:
+        change_data = data.get('change')
+        if not change_data:
+            await sio.emit('error', {'message': 'change data required'}, to=sid)
+            return
+        
+        change = DocumentChange(**change_data)
+        await process_document_change(sid, change)
+        
+    except Exception as e:
+        logger.error(f"📄 [DOCUMENT SYNC] Error processing document change: {e}")
+        await sio.emit('error', {'message': f'Failed to process change: {str(e)}'}, to=sid)
+
+@sio.event
+async def document_batch_update(sid, data):
+    """Handle batched document changes."""
+    try:
+        project_id = data.get('project_id')
+        document_id = data.get('document_id')
+        changes_data = data.get('changes', [])
+        
+        if not all([project_id, document_id, changes_data]):
+            await sio.emit('error', {'message': 'project_id, document_id, and changes required'}, to=sid)
+            return
+        
+        # Process each change in the batch
+        changes = [DocumentChange(**change_data) for change_data in changes_data]
+        conflicts = []
+        
+        for change in changes:
+            conflict = await process_document_change(sid, change, broadcast=False)
+            if conflict:
+                conflicts.append(conflict)
+        
+        # Broadcast the final state after all changes
+        if document_id in document_states:
+            room_name = f"doc_{project_id}_{document_id}"
+            state = document_states[document_id]
+            
+            await sio.emit('document_updated', {
+                'type': 'document_updated',
+                'document_id': document_id,
+                'project_id': project_id,
+                'user_id': changes[-1].user_id,
+                'timestamp': changes[-1].timestamp,
+                'data': asdict(state),
+                'version': state.version,
+                'batch_size': len(changes)
+            }, room=room_name, skip_sid=sid)
+        
+        # Handle conflicts if any
+        if conflicts:
+            await sio.emit('conflicts_detected', {
+                'conflicts': conflicts,
+                'document_id': document_id
+            }, to=sid)
+        
+        logger.info(f"📄 [DOCUMENT SYNC] Processed batch of {len(changes)} changes for {document_id}")
+        
+    except Exception as e:
+        logger.error(f"📄 [DOCUMENT SYNC] Error processing document batch: {e}")
+        await sio.emit('error', {'message': f'Failed to process batch: {str(e)}'}, to=sid)
+
+async def process_document_change(sid: str, change: DocumentChange, broadcast: bool = True) -> Optional[Dict]:
+    """Process a single document change with conflict detection."""
+    document_id = change.document_id
+    project_id = change.project_id
+    
+    # Get or create document state
+    if document_id not in document_states:
+        document_states[document_id] = DocumentState(
+            id=document_id,
+            project_id=project_id,
+            title='',
+            content={},
+            metadata={},
+            version=0,
+            last_modified=change.timestamp,
+            last_modified_by=change.user_id
+        )
+    
+    state = document_states[document_id]
+    
+    # Check for conflicts (version or timestamp-based)
+    conflict = None
+    if change.version <= state.version:
+        # Version conflict - resolve based on timestamp
+        if change.timestamp > state.last_modified:
+            # Remote change is newer, apply it
+            logger.warning(f"📄 [CONFLICT] Version conflict resolved by timestamp for {document_id}")
+        else:
+            # Local state is newer, reject the change
+            conflict = {
+                'type': 'version_conflict',
+                'document_id': document_id,
+                'local_version': state.version,
+                'remote_version': change.version,
+                'resolution': 'rejected'
+            }
+            return conflict
+    
+    # Check for simultaneous edits (within 1 second)
+    time_diff = abs(state.last_modified - change.timestamp)
+    if time_diff < 1000 and state.last_modified_by != change.user_id:
+        logger.warning(f"📄 [CONFLICT] Simultaneous edit detected for {document_id}")
+        conflict = {
+            'type': 'simultaneous_edit',
+            'document_id': document_id,
+            'time_diff': time_diff,
+            'resolution': 'last_write_wins'
+        }
+    
+    # Apply the change
+    if change.change_type == 'content':
+        if isinstance(change.data, dict) and isinstance(state.content, dict):
+            state.content.update(change.data)
+        else:
+            state.content = change.data
+    elif change.change_type == 'title':
+        state.title = change.data.get('title', state.title)
+    elif change.change_type == 'metadata':
+        if isinstance(change.data, dict) and isinstance(state.metadata, dict):
+            state.metadata.update(change.data)
+        else:
+            state.metadata = change.data
+    elif change.change_type == 'delete':
+        # Mark for deletion - in practice, you might want to soft delete
+        state.metadata['deleted'] = True
+        state.metadata['deleted_by'] = change.user_id
+        state.metadata['deleted_at'] = change.timestamp
+    
+    # Update state metadata
+    state.version = max(state.version, change.version)
+    state.last_modified = change.timestamp
+    state.last_modified_by = change.user_id
+    
+    # Broadcast change to other clients in the room if enabled
+    if broadcast:
+        room_name = f"doc_{project_id}_{document_id}"
+        
+        event_data = {
+            'type': 'document_updated',
+            'document_id': document_id,
+            'project_id': project_id,
+            'user_id': change.user_id,
+            'timestamp': change.timestamp,
+            'data': change.data,
+            'version': state.version,
+            'change_type': change.change_type
+        }
+        
+        await sio.emit('document_updated', event_data, room=room_name, skip_sid=sid)
+        logger.info(f"📄 [DOCUMENT SYNC] Broadcasted {change.change_type} change for {document_id}")
+    
+    return conflict
+
+@sio.event
+async def lock_document(sid, data):
+    """Lock a document for exclusive editing."""
+    document_id = data.get('document_id')
+    user_id = data.get('user_id')
+    lock_duration = data.get('duration', 300000)  # 5 minutes default
+    
+    if not document_id or not user_id:
+        await sio.emit('error', {'message': 'document_id and user_id required'}, to=sid)
+        return
+    
+    current_time = time.time() * 1000  # Convert to milliseconds
+    lock_expiry = current_time + lock_duration
+    
+    # Check if document is already locked
+    if document_id in document_locks:
+        existing_lock = document_locks[document_id]
+        if existing_lock['expiry'] > current_time and existing_lock['user_id'] != user_id:
+            await sio.emit('lock_failed', {
+                'document_id': document_id,
+                'reason': 'already_locked',
+                'locked_by': existing_lock['user_id'],
+                'expires_at': existing_lock['expiry']
+            }, to=sid)
+            return
+    
+    # Create lock
+    document_locks[document_id] = {
+        'user_id': user_id,
+        'expiry': lock_expiry,
+        'sid': sid
+    }
+    
+    # Update document state
+    if document_id in document_states:
+        state = document_states[document_id]
+        state.is_locked = True
+        state.lock_expiry = lock_expiry
+    
+    # Broadcast lock event
+    project_id = data.get('project_id', '')
+    room_name = f"doc_{project_id}_{document_id}"
+    
+    await sio.emit('document_locked', {
+        'type': 'document_locked',
+        'document_id': document_id,
+        'project_id': project_id,
+        'user_id': user_id,
+        'timestamp': current_time,
+        'data': {'expiry': lock_expiry}
+    }, room=room_name)
+    
+    logger.info(f"📄 [DOCUMENT SYNC] Document {document_id} locked by {user_id}")
+
+@sio.event
+async def unlock_document(sid, data):
+    """Unlock a document."""
+    document_id = data.get('document_id')
+    user_id = data.get('user_id')
+    
+    if not document_id or not user_id:
+        await sio.emit('error', {'message': 'document_id and user_id required'}, to=sid)
+        return
+    
+    # Check if user owns the lock
+    if document_id in document_locks:
+        existing_lock = document_locks[document_id]
+        if existing_lock['user_id'] != user_id:
+            await sio.emit('unlock_failed', {
+                'document_id': document_id,
+                'reason': 'not_lock_owner',
+                'locked_by': existing_lock['user_id']
+            }, to=sid)
+            return
+        
+        # Remove lock
+        del document_locks[document_id]
+    
+    # Update document state
+    if document_id in document_states:
+        state = document_states[document_id]
+        state.is_locked = False
+        state.lock_expiry = None
+    
+    # Broadcast unlock event
+    project_id = data.get('project_id', '')
+    room_name = f"doc_{project_id}_{document_id}"
+    
+    await sio.emit('document_unlocked', {
+        'type': 'document_unlocked',
+        'document_id': document_id,
+        'project_id': project_id,
+        'user_id': user_id,
+        'timestamp': time.time() * 1000,
+        'data': {}
+    }, room=room_name)
+    
+    logger.info(f"📄 [DOCUMENT SYNC] Document {document_id} unlocked by {user_id}")
+
+@sio.event
+async def delete_document(sid, data):
+    """Delete a document with synchronization."""
+    document_id = data.get('document_id')
+    project_id = data.get('project_id')
+    user_id = data.get('user_id')
+    
+    if not all([document_id, project_id, user_id]):
+        await sio.emit('error', {'message': 'document_id, project_id, and user_id required'}, to=sid)
+        return
+    
+    # Remove from local state
+    if document_id in document_states:
+        del document_states[document_id]
+    
+    if document_id in document_locks:
+        del document_locks[document_id]
+    
+    # Broadcast deletion
+    room_name = f"doc_{project_id}_{document_id}"
+    
+    await sio.emit('document_deleted', {
+        'type': 'document_deleted',
+        'document_id': document_id,
+        'project_id': project_id,
+        'user_id': user_id,
+        'timestamp': time.time() * 1000,
+        'data': {}
+    }, room=room_name)
+    
+    logger.info(f"📄 [DOCUMENT SYNC] Document {document_id} deleted by {user_id}")
+
+# Periodic cleanup of expired locks
+async def cleanup_expired_locks():
+    """Clean up expired document locks."""
+    current_time = time.time() * 1000
+    expired_locks = []
+    
+    for document_id, lock_info in document_locks.items():
+        if lock_info['expiry'] <= current_time:
+            expired_locks.append(document_id)
+    
+    for document_id in expired_locks:
+        logger.info(f"📄 [DOCUMENT SYNC] Cleaning up expired lock for {document_id}")
+        
+        # Update document state
+        if document_id in document_states:
+            state = document_states[document_id]
+            state.is_locked = False
+            state.lock_expiry = None
+        
+        # Remove lock
+        del document_locks[document_id]
+        
+        # Broadcast unlock event (find project_id from state)
+        if document_id in document_states:
+            project_id = document_states[document_id].project_id
+            room_name = f"doc_{project_id}_{document_id}"
+            
+            await sio.emit('document_unlocked', {
+                'type': 'document_unlocked',
+                'document_id': document_id,
+                'project_id': project_id,
+                'user_id': 'system',
+                'timestamp': current_time,
+                'data': {'reason': 'expired'}
+            }, room=room_name)
+
+# Start periodic cleanup task
+async def start_document_sync_cleanup():
+    """Start the document synchronization cleanup task."""
+    while True:
+        try:
+            await cleanup_expired_locks()
+        except Exception as e:
+            logger.error(f"📄 [DOCUMENT SYNC] Error in cleanup task: {e}")
+        
+        # Run cleanup every 60 seconds
+        await asyncio.sleep(60)
+
+# Initialize cleanup task on module load
+logger.info("📄 [DOCUMENT SYNC] Document synchronization handlers initialized")
+

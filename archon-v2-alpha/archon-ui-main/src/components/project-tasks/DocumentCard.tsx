@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Rocket, Code, Briefcase, Users, FileText, X, Plus } from 'lucide-react';
+import { Rocket, Code, Briefcase, Users, FileText, X, Plus, Clipboard } from 'lucide-react';
+import { useToast } from '../../contexts/ToastContext';
 
 export interface ProjectDoc {
   id: string;
@@ -26,6 +27,7 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
   isDarkMode
 }) => {
   const [showDelete, setShowDelete] = useState(false);
+  const { showToast } = useToast();
   
   const getDocumentIcon = (type?: string) => {
     switch (type) {
@@ -45,6 +47,20 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
       case 'meeting_notes': return 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/30';
       default: return 'bg-gray-500/10 text-gray-600 dark:text-gray-400 border-gray-500/30';
     }
+  };
+
+  const handleCopyId = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(document.id);
+    showToast('Document ID copied to clipboard', 'success');
+    
+    // Visual feedback
+    const button = e.currentTarget;
+    const originalHTML = button.innerHTML;
+    button.innerHTML = '<div class="flex items-center gap-1"><span class="w-3 h-3 text-green-500">✓</span><span class="text-green-500 text-xs">Copied</span></div>';
+    setTimeout(() => {
+      button.innerHTML = originalHTML;
+    }, 2000);
   };
   
   return (
@@ -73,9 +89,23 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
       </h4>
       
       {/* Metadata */}
-      <p className="text-xs text-gray-500 dark:text-gray-400">
+      <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
         {new Date(document.updated_at || document.created_at || Date.now()).toLocaleDateString()}
       </p>
+
+      {/* ID Display Section - Always visible for active, hover for others */}
+      <div className={`flex items-center justify-between mt-2 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity duration-200`}>
+        <span className="text-xs text-gray-400 dark:text-gray-500 truncate max-w-[120px]" title={document.id}>
+          {document.id.slice(0, 8)}...
+        </span>
+        <button 
+          onClick={handleCopyId}
+          className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+          title="Copy Document ID to clipboard"
+        >
+          <Clipboard className="w-3 h-3" />
+        </button>
+      </div>
       
       {/* Delete Button */}
       {showDelete && !isActive && (

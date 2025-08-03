@@ -5,6 +5,7 @@ import { HTML5Backend } from 'react-dnd-html5-backend';
 import { Toggle } from '../ui/Toggle';
 import { projectService } from '../../services/projectService';
 import { taskUpdateSocketIO } from '../../services/socketIOService';
+import { useOptimisticUpdates } from '../../hooks/useOptimisticUpdates';
 import type { CreateTaskRequest, UpdateTaskRequest, DatabaseTaskStatus } from '../../types/project';
 import { TaskTableView, Task } from './TaskTableView';
 import { TaskBoardView } from './TaskBoardView';
@@ -69,6 +70,9 @@ export const TasksTab = ({
   const [isWebSocketConnected, setIsWebSocketConnected] = useState(false);
   
   const [isSavingTask, setIsSavingTask] = useState<boolean>(false);
+  
+  // Optimistic updates tracking
+  const { addPendingUpdate, isPendingUpdate } = useOptimisticUpdates<Task>();
 
   // Initialize tasks
   useEffect(() => {
@@ -79,6 +83,110 @@ export const TasksTab = ({
   useEffect(() => {
     loadProjectFeatures();
   }, [projectId]);
+
+  // Memoized socket handlers
+  const handleTaskUpdated = useCallback((message: any) => {
+    const updatedTask = message.data || message;
+    const mappedTask = mapDatabaseTaskToUITask(updatedTask);
+    
+    // Skip if this is our own optimistic update
+    if (isPendingUpdate(updatedTask.id, mappedTask)) {
+      console.log('[Socket] Skipping own optimistic update for task:', updatedTask.id);
+      return;
+    }
+    
+    // Log if update happens while modal is open
+    if (isModalOpen) {
+      console.warn('[WebSocket] Task update received while modal is open!', {
+        updatedTaskId: updatedTask.id,
+        isEditingThisTask: editingTask?.id === updatedTask.id
+      });
+    }
+    
+    setTasks(prev => {
+      // Check if task actually changed
+      const existingTask = prev.find(task => task.id === updatedTask.id);
+      if (existingTask && JSON.stringify(existingTask) === JSON.stringify(mappedTask)) {
+        console.log('[Socket] No actual changes in task, skipping update');
+        return prev;
+      }
+      
+      const updated = prev.map(task => 
+        task.id === updatedTask.id ? mappedTask : task
+      );
+      
+      // Notify parent after state settles
+      setTimeout(() => onTasksChange(updated), 0);
+      return updated;
+    });
+  }, [isPendingUpdate, onTasksChange, isModalOpen, editingTask?.id]);
+
+  const handleTaskCreated = useCallback((message: any) => {
+    const newTask = message.data || message;
+    console.log('🆕 Real-time task created:', newTask);
+    const mappedTask = mapDatabaseTaskToUITask(newTask);
+    
+    setTasks(prev => {
+      // Check if task already exists to prevent duplicates
+      if (prev.some(task => task.id === newTask.id)) {
+        console.log('Task already exists, skipping create');
+        return prev;
+      }
+      const updated = [...prev, mappedTask];
+      // Use setTimeout to avoid setState during render
+      setTimeout(() => onTasksChange(updated), 0);
+      return updated;
+    });
+  }, [onTasksChange]);
+
+  const handleTasksChange = useCallback((message: any) => {
+    const updatedTasks = message.data || message;
+    setTasks(prev => {
+      const updated = [...prev];
+      
+      // Update each changed task
+      updatedTasks.forEach((updatedTask: any) => {
+        const mappedTask = mapDatabaseTaskToUITask(updatedTask);
+        const index = updated.findIndex(task => task.id === updatedTask.id);
+        if (index >= 0) {
+          updated[index] = mappedTask;
+        }
+      });
+      
+      // Use setTimeout to avoid setState during render
+      setTimeout(() => onTasksChange(updated), 0);
+      return updated;
+    });
+  }, [onTasksChange]);
+
+  const handleTaskDeleted = useCallback((message: any) => {
+    const deletedTask = message.data || message;
+    console.log('🗑️ Real-time task deleted:', deletedTask);
+    setTasks(prev => {
+      const updated = prev.filter(task => task.id !== deletedTask.id);
+      // Use setTimeout to avoid setState during render
+      setTimeout(() => onTasksChange(updated), 0);
+      return updated;
+    });
+  }, [onTasksChange]);
+
+  const handleTaskArchived = useCallback((message: any) => {
+    const archivedTask = message.data || message;
+    console.log('📦 Real-time task archived:', archivedTask);
+    setTasks(prev => {
+      const updated = prev.filter(task => task.id !== archivedTask.id);
+      // Use setTimeout to avoid setState during render
+      setTimeout(() => onTasksChange(updated), 0);
+      return updated;
+    });
+  }, [onTasksChange]);
+
+  const handleInitialTasks = useCallback((message: any) => {
+    const initialWebSocketTasks = message.data || message;
+    const uiTasks: Task[] = initialWebSocketTasks.map(mapDatabaseTaskToUITask);
+    setTasks(uiTasks);
+    onTasksChange(uiTasks);
+  }, [onTasksChange]);
 
   // WebSocket connection for real-time task updates
   useEffect(() => {
@@ -120,107 +228,13 @@ export const TasksTab = ({
           }
         });
       
-      // Add message handlers
-      taskUpdateSocketIO.addMessageHandler('initial_tasks', (message) => {
-        const initialWebSocketTasks = message.data || message;
-        const uiTasks: Task[] = initialWebSocketTasks.map(mapDatabaseTaskToUITask);
-        setTasks(uiTasks);
-        onTasksChange(uiTasks);
-      });
-      
-      taskUpdateSocketIO.addMessageHandler('task_created', (message) => {
-        const newTask = message.data || message;
-        console.log('🆕 Real-time task created:', newTask);
-        const mappedTask = mapDatabaseTaskToUITask(newTask);
-        setTasks(prev => {
-          // Check if task already exists to prevent duplicates
-          if (prev.some(task => task.id === newTask.id)) {
-            console.log('Task already exists, skipping create');
-            return prev;
-          }
-          const updated = [...prev, mappedTask];
-          // Use setTimeout to avoid setState during render
-          setTimeout(() => onTasksChange(updated), 0);
-          return updated;
-        });
-      });
-      
-      taskUpdateSocketIO.addMessageHandler('task_updated', (message) => {
-        const updatedTask = message.data || message;
-          console.log('📝 Real-time task updated:', updatedTask, {
-            isModalOpen,
-            editingTaskId: editingTask?.id,
-            timestamp: Date.now()
-          });
-          
-          // Log if update happens while modal is open
-          if (isModalOpen) {
-            console.warn('[WebSocket] Task update received while modal is open!', {
-              updatedTaskId: updatedTask.id,
-              isEditingThisTask: editingTask?.id === updatedTask.id
-            });
-          }
-          
-          const mappedTask = mapDatabaseTaskToUITask(updatedTask);
-          setTasks(prev => {
-            // Check if this is actually a change
-            const existingTask = prev.find(task => task.id === updatedTask.id);
-            if (existingTask && JSON.stringify(existingTask) === JSON.stringify(mappedTask)) {
-              console.log('No actual changes in task, skipping update');
-              return prev;
-          }
-          
-          const updated = prev.map(task => 
-            task.id === updatedTask.id ? mappedTask : task
-          );
-          // Use setTimeout to avoid setState during render
-          setTimeout(() => onTasksChange(updated), 0);
-          return updated;
-        });
-      });
-
-      // Handle bulk task updates from MCP DatabaseChangeDetector
-      taskUpdateSocketIO.addMessageHandler('tasks_change', (message) => {
-        const updatedTasks = message.data || message;
-          setTasks(prev => {
-            const updated = [...prev];
-            
-            // Update each changed task
-            updatedTasks.forEach(updatedTask => {
-              const mappedTask = mapDatabaseTaskToUITask(updatedTask);
-              const index = updated.findIndex(task => task.id === updatedTask.id);
-              if (index >= 0) {
-                updated[index] = mappedTask;
-              }
-            });
-            
-          // Use setTimeout to avoid setState during render
-          setTimeout(() => onTasksChange(updated), 0);
-          return updated;
-        });
-      });
-      
-      taskUpdateSocketIO.addMessageHandler('task_deleted', (message) => {
-        const deletedTask = message.data || message;
-          console.log('🗑️ Real-time task deleted:', deletedTask);
-          setTasks(prev => {
-            const updated = prev.filter(task => task.id !== deletedTask.id);
-            // Use setTimeout to avoid setState during render
-          setTimeout(() => onTasksChange(updated), 0);
-          return updated;
-        });
-      });
-      
-      taskUpdateSocketIO.addMessageHandler('task_archived', (message) => {
-        const archivedTask = message.data || message;
-          console.log('📦 Real-time task archived:', archivedTask);
-          setTasks(prev => {
-            const updated = prev.filter(task => task.id !== archivedTask.id);
-            // Use setTimeout to avoid setState during render
-          setTimeout(() => onTasksChange(updated), 0);
-          return updated;
-        });
-      });
+      // Add message handlers with memoized callbacks
+      taskUpdateSocketIO.addMessageHandler('initial_tasks', handleInitialTasks);
+      taskUpdateSocketIO.addMessageHandler('task_created', handleTaskCreated);
+      taskUpdateSocketIO.addMessageHandler('task_updated', handleTaskUpdated);
+      taskUpdateSocketIO.addMessageHandler('tasks_change', handleTasksChange);
+      taskUpdateSocketIO.addMessageHandler('task_deleted', handleTaskDeleted);
+      taskUpdateSocketIO.addMessageHandler('task_archived', handleTaskArchived);
       
       // Add error handler
       taskUpdateSocketIO.addErrorHandler((error) => {
@@ -256,7 +270,7 @@ export const TasksTab = ({
       taskUpdateSocketIO.disconnect();
       setIsWebSocketConnected(false);
     };
-  }, [projectId]); // Removed onTasksChange from dependency array
+  }, [projectId, handleInitialTasks, handleTaskCreated, handleTaskUpdated, handleTasksChange, handleTaskDeleted, handleTaskArchived]); // Added memoized handlers to dependency array
 
   const loadProjectFeatures = async () => {
     if (!projectId) return;
@@ -367,8 +381,42 @@ export const TasksTab = ({
     return maxOrder + 1;
   };
 
+  // Simple debounce function
+  const debounce = (func: Function, delay: number) => {
+    let timeoutId: NodeJS.Timeout;
+    return (...args: any[]) => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => func(...args), delay);
+    };
+  };
+
+  // Debounced persistence for single task updates (Trello-style approach)
+  const debouncedPersistSingleTask = useMemo(
+    () => debounce(async (task: Task) => {
+      try {
+        console.log('REORDER: Persisting position change for task:', task.title, 'new position:', task.task_order);
+        
+        // Update only the moved task (single API call instead of batch)
+        await projectService.updateTask(task.id, { task_order: task.task_order });
+        console.log('REORDER: Single task position persisted successfully');
+        
+      } catch (error) {
+        console.error('REORDER: Failed to persist task position:', error);
+        // Reload tasks from backend on error to restore correct state
+        try {
+          const updatedTasks = await projectService.getTasksByProject(projectId);
+          const uiTasks: Task[] = updatedTasks.map(mapDatabaseTaskToUITask);
+          updateTasks(uiTasks);
+        } catch (reloadError) {
+          console.error('REORDER: Failed to reload tasks:', reloadError);
+        }
+      }
+    }, 1000), // 1 second delay - longer since we're only updating one task
+    [projectId, updateTasks]
+  );
+
   // React DnD optimized task reordering - immediate visual feedback, async persistence  
-  const handleTaskReorder = (taskId: string, targetIndex: number, status: Task['status']) => {
+  const handleTaskReorder = useCallback((taskId: string, targetIndex: number, status: Task['status']) => {
     console.log('REORDER: Moving task', taskId, 'to index', targetIndex, 'in status', status);
     
     // Get all tasks in the target status, sorted by current order
@@ -391,68 +439,76 @@ export const TasksTab = ({
       return;
     }
     
+    // Skip if moving to same position
+    if (movingTaskIndex === targetIndex) {
+      console.log('REORDER: Task already in target position');
+      return;
+    }
+    
     const movingTask = statusTasks[movingTaskIndex];
     console.log('REORDER: Moving', movingTask.title, 'from', movingTaskIndex, 'to', targetIndex);
     
-    // Create new array with the task moved to the target position
-    const reorderedTasks = [...statusTasks];
+    // Calculate new position using Trello-style floating point approach
+    let newPosition: number;
     
-    // Remove the task from its current position
-    reorderedTasks.splice(movingTaskIndex, 1);
+    if (targetIndex === 0) {
+      // Moving to first position - use half of first item's position
+      const firstTask = statusTasks[0];
+      newPosition = firstTask.task_order / 2;
+    } else if (targetIndex === statusTasks.length - 1) {
+      // Moving to last position - use last item's position + 1024
+      const lastTask = statusTasks[statusTasks.length - 1];
+      newPosition = lastTask.task_order + 1024;
+    } else {
+      // Moving between two items - calculate average position
+      let prevTask, nextTask;
+      
+      if (targetIndex > movingTaskIndex) {
+        // Moving down - get positions around target
+        prevTask = statusTasks[targetIndex];
+        nextTask = statusTasks[targetIndex + 1];
+      } else {
+        // Moving up - get positions around target
+        prevTask = statusTasks[targetIndex - 1];
+        nextTask = statusTasks[targetIndex];
+      }
+      
+      if (prevTask && nextTask) {
+        newPosition = (prevTask.task_order + nextTask.task_order) / 2;
+      } else if (prevTask) {
+        newPosition = prevTask.task_order + 1024;
+      } else if (nextTask) {
+        newPosition = nextTask.task_order / 2;
+      } else {
+        newPosition = 1024; // Fallback
+      }
+    }
     
-    // Insert the task at the new position
-    reorderedTasks.splice(targetIndex, 0, movingTask);
+    console.log('REORDER: New position calculated:', newPosition);
     
-    // Renumber all tasks sequentially based on their new array positions
-    const renumberedTasks = reorderedTasks.map((task, index) => ({
-      ...task,
-      task_order: index + 1
-    }));
+    // Create updated task with new position
+    const updatedTask = {
+      ...movingTask,
+      task_order: newPosition
+    };
     
-    // Update UI immediately for smooth visual feedback
-    const allUpdatedTasks = [...otherTasks, ...renumberedTasks];
+    // Track this as an optimistic update for ONLY the moved task
+    addPendingUpdate({
+      id: updatedTask.id,
+      timestamp: Date.now(),
+      data: updatedTask,
+      operation: 'reorder'
+    });
+    
+    // Update UI immediately - only the moved task changes position
+    const allUpdatedTasks = otherTasks.concat(
+      statusTasks.map(task => task.id === taskId ? updatedTask : task)
+    );
     updateTasks(allUpdatedTasks);
     
-    // Persist to backend asynchronously (debounced)
-    debouncedPersistReorder(renumberedTasks);
-  };
-  
-  // Simple debounce function
-  const debounce = (func: Function, delay: number) => {
-    let timeoutId: NodeJS.Timeout;
-    return (...args: any[]) => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => func(...args), delay);
-    };
-  };
-
-  // Debounced persistence to avoid too many API calls during rapid dragging
-  const debouncedPersistReorder = useCallback(
-    debounce(async (tasksToUpdate: Task[]) => {
-      try {
-        console.log('REORDER: Persisting order changes for', tasksToUpdate.length, 'tasks');
-        
-        const updatePromises = tasksToUpdate.map(task => 
-          projectService.updateTask(task.id, { task_order: task.task_order })
-        );
-        
-        await Promise.all(updatePromises);
-        console.log('REORDER: Persistence completed');
-        
-      } catch (error) {
-        console.error('REORDER: Failed to persist order changes:', error);
-        // Reload tasks from backend on error to restore correct state
-        try {
-          const updatedTasks = await projectService.getTasksByProject(projectId);
-          const uiTasks: Task[] = updatedTasks.map(mapDatabaseTaskToUITask);
-          updateTasks(uiTasks);
-        } catch (reloadError) {
-          console.error('REORDER: Failed to reload tasks:', reloadError);
-        }
-      }
-    }, 500), // 500ms delay to batch rapid changes
-    [projectId]
-  );
+    // Persist to backend - ONLY the moved task (single API call)
+    debouncedPersistSingleTask(updatedTask);
+  }, [tasks, addPendingUpdate, updateTasks, debouncedPersistSingleTask]);
 
   // Task move function (for board view)
   const moveTask = async (taskId: string, newStatus: Task['status']) => {

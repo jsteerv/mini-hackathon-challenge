@@ -10,7 +10,7 @@ export interface DraggableTaskCardProps {
   onView: () => void;
   onComplete: () => void;
   onDelete: (task: Task) => void;
-  onTaskReorder: (taskId: string, newOrder: number, status: Task['status']) => void;
+  onTaskReorder: (taskId: string, targetIndex: number, status: Task['status']) => void;
   tasksInStatus: Task[];
   allTasks?: Task[];
   hoveredTaskId?: string | null;
