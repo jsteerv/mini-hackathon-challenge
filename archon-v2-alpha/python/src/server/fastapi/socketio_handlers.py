@@ -32,6 +32,40 @@ async def broadcast_task_update(project_id: str, event_type: str, task_data: dic
     await sio.emit(event_type, task_data, room=project_id)
     logger.info(f"Broadcasted {event_type} to project {project_id}")
 
+# Enhanced Task-Specific Socket.IO Event Handlers
+async def broadcast_task_created(project_id: str, task_data: dict):
+    """Broadcast task creation to project room."""
+    await sio.emit('task_created', task_data, room=project_id)
+    logger.info(f"📝 [TASK SOCKET] Broadcasted task_created to project {project_id}: {task_data.get('title', 'Unknown')}")
+
+async def broadcast_task_updated(project_id: str, task_data: dict):
+    """Broadcast task update to project room with conflict resolution."""
+    # Add timestamp for conflict resolution
+    task_data['server_timestamp'] = time.time() * 1000
+    await sio.emit('task_updated', task_data, room=project_id)
+    logger.info(f"📝 [TASK SOCKET] Broadcasted task_updated to project {project_id}: {task_data.get('id', 'Unknown')}")
+
+async def broadcast_task_deleted(project_id: str, task_data: dict):
+    """Broadcast task deletion to project room."""
+    await sio.emit('task_deleted', task_data, room=project_id)
+    logger.info(f"🗑️ [TASK SOCKET] Broadcasted task_deleted to project {project_id}: {task_data.get('id', 'Unknown')}")
+
+async def broadcast_task_archived(project_id: str, task_data: dict):
+    """Broadcast task archival to project room."""
+    await sio.emit('task_archived', task_data, room=project_id)
+    logger.info(f"📦 [TASK SOCKET] Broadcasted task_archived to project {project_id}: {task_data.get('id', 'Unknown')}")
+
+async def broadcast_tasks_reordered(project_id: str, reorder_data: dict):
+    """Broadcast task reordering to project room."""
+    await sio.emit('tasks_reordered', reorder_data, room=project_id)
+    logger.info(f"🔄 [TASK SOCKET] Broadcasted tasks_reordered to project {project_id}: {len(reorder_data.get('tasks', []))} tasks")
+
+async def broadcast_task_batch_update(project_id: str, batch_data: dict):
+    """Broadcast batch task updates to project room."""
+    batch_data['server_timestamp'] = time.time() * 1000
+    await sio.emit('tasks_batch_updated', batch_data, room=project_id)
+    logger.info(f"📦 [TASK SOCKET] Broadcasted tasks_batch_updated to project {project_id}: {len(batch_data.get('tasks', []))} tasks")
+
 async def broadcast_project_update():
     """Broadcast project list to subscribers."""
     try:

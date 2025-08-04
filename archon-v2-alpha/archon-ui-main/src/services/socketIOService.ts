@@ -124,24 +124,19 @@ export class WebSocketService {
   }
 
   private parseEndpoint(endpoint: string): { sessionId: string } {
-    // Extract session ID from endpoint - we'll use this for room identification
-    const sessionMatch = endpoint.match(/sessions\/([^/]+)/);
-    const sessionId = sessionMatch ? sessionMatch[1] : '';
-    
-    // Extract project ID for task updates
+    // Simplified endpoint parsing - focus on project IDs for task updates
     const projectMatch = endpoint.match(/projects\/([^/]+)/);
-    const projectId = projectMatch ? projectMatch[1] : '';
+    if (projectMatch) {
+      return { sessionId: projectMatch[1] };
+    }
     
-    // Extract progress ID for crawl progress
+    // Legacy support for other endpoint types
+    const sessionMatch = endpoint.match(/sessions\/([^/]+)/);
     const progressMatch = endpoint.match(/crawl-progress\/([^/]+)/);
-    const progressId = progressMatch ? progressMatch[1] : '';
-    
-    // Extract progress ID for project creation progress
     const projectProgressMatch = endpoint.match(/project-creation-progress\/([^/]+)/);
-    const projectProgressId = projectProgressMatch ? projectProgressMatch[1] : '';
     
-    // Return the most relevant ID for room joining
-    return { sessionId: sessionId || projectId || progressId || projectProgressId };
+    const sessionId = sessionMatch?.[1] || progressMatch?.[1] || projectProgressMatch?.[1] || '';
+    return { sessionId };
   }
 
   private async establishConnection(): Promise<void> {
