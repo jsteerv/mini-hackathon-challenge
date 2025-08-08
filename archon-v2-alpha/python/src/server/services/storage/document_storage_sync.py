@@ -5,7 +5,6 @@ Provides synchronous document storage operations for use in background threads.
 Maintains parallel processing for contextual embeddings while avoiding async/await.
 """
 import os
-import concurrent.futures
 from typing import List, Dict, Any, Optional
 from queue import Queue
 from urllib.parse import urlparse
@@ -22,7 +21,7 @@ def add_documents_to_supabase_sync(
     contents: List[str],
     metadatas: List[Dict[str, Any]],
     url_to_full_document: Dict[str, str],
-    batch_size: int = 10,
+    batch_size: int = None,  # Will load from settings
     progress_queue: Optional[Queue] = None,
     enable_parallel_batches: bool = True
 ) -> None:
@@ -57,21 +56,52 @@ def add_documents_to_supabase_sync(
                 update.update(batch_info)
             progress_queue.put(update)
     
+    # Load settings from database
+    try:
+        # Get settings synchronously
+        if batch_size is None:
+            batch_size = int(get_credential_sync("DOCUMENT_STORAGE_BATCH_SIZE", "50"))
+        delete_batch_size = int(get_credential_sync("DELETE_BATCH_SIZE", "50"))
+        enable_parallel = get_credential_sync("ENABLE_PARALLEL_BATCHES", "true").lower() == "true"
+    except Exception as e:
+        search_logger.warning(f"Failed to load storage settings: {e}, using defaults")
+        if batch_size is None:
+            batch_size = 50
+        delete_batch_size = 50
+        enable_parallel = True
+        
     # Get unique URLs to delete existing records
     unique_urls = list(set(urls))
     
-    # Delete existing records for these URLs
+    # Delete existing records for these URLs in batches
     try:
         if unique_urls:
-            client.table("crawled_pages").delete().in_("url", unique_urls).execute()
-            search_logger.info(f"Deleted existing records for {len(unique_urls)} URLs")
+            # Delete in configured batch sizes
+            for i in range(0, len(unique_urls), delete_batch_size):
+                batch_urls = unique_urls[i:i + delete_batch_size]
+                client.table("crawled_pages").delete().in_("url", batch_urls).execute()
+                # Brief pause between batches to prevent overwhelming the connection
+                if i + delete_batch_size < len(unique_urls):
+                    import time
+                    time.sleep(0.05)  # Reduced from 0.1s
+            search_logger.info(f"Deleted existing records for {len(unique_urls)} URLs in batches")
     except Exception as e:
-        search_logger.warning(f"Batch delete failed: {e}. Trying one-by-one deletion.")
-        for url in unique_urls:
+        search_logger.warning(f"Batch delete failed: {e}. Trying smaller batches as fallback.")
+        # Fallback: delete in smaller batches with rate limiting
+        failed_urls = []
+        fallback_batch_size = max(10, delete_batch_size // 5)
+        for i in range(0, len(unique_urls), fallback_batch_size):
+            batch_urls = unique_urls[i:i + 10]
             try:
-                client.table("crawled_pages").delete().eq("url", url).execute()
+                client.table("crawled_pages").delete().in_("url", batch_urls).execute()
+                import time
+                time.sleep(0.05)  # Rate limit to prevent overwhelming
             except Exception as inner_e:
-                search_logger.error(f"Error deleting record for URL {url}: {inner_e}")
+                search_logger.error(f"Error deleting batch of {len(batch_urls)} URLs: {inner_e}")
+                failed_urls.extend(batch_urls)
+        
+        if failed_urls:
+            search_logger.error(f"Failed to delete {len(failed_urls)} URLs")
     
     # Check if contextual embeddings are enabled
     try:

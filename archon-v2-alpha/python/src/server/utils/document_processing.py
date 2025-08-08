@@ -7,7 +7,6 @@ including PDF, Word documents, and plain text files.
 
 import io
 # Removed direct logging import - using unified config
-from typing import Union
 
 # Import document processing libraries with availability checks
 try:

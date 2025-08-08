@@ -20,6 +20,22 @@ export interface RagSettings {
   LLM_PROVIDER?: string;
   LLM_BASE_URL?: string;
   EMBEDDING_MODEL?: string;
+  // Crawling Performance Settings
+  CRAWL_BATCH_SIZE?: number;
+  CRAWL_MAX_CONCURRENT?: number;
+  CRAWL_WAIT_STRATEGY?: string;
+  CRAWL_PAGE_TIMEOUT?: number;
+  CRAWL_DELAY_BEFORE_HTML?: number;
+  // Storage Performance Settings
+  DOCUMENT_STORAGE_BATCH_SIZE?: number;
+  EMBEDDING_BATCH_SIZE?: number;
+  DELETE_BATCH_SIZE?: number;
+  ENABLE_PARALLEL_BATCHES?: boolean;
+  // Advanced Settings
+  MEMORY_THRESHOLD_PERCENT?: number;
+  DISPATCHER_CHECK_INTERVAL?: number;
+  CODE_EXTRACTION_BATCH_SIZE?: number;
+  CODE_SUMMARY_MAX_WORKERS?: number;
 }
 
 export interface CodeExtractionSettings {
@@ -37,15 +53,10 @@ export interface CodeExtractionSettings {
   ENABLE_CODE_SUMMARIES: boolean;
 }
 
-class CredentialsService {
-  private baseUrl = (import.meta as any).env?.VITE_API_URL || this.getApiBaseUrl();
+import { getApiUrl } from '../config/api';
 
-  private getApiBaseUrl() {
-    const protocol = window.location.protocol;
-    const host = window.location.hostname;
-    const port = '8080'; // Backend API port
-    return `${protocol}//${host}:${port}`;
-  }
+class CredentialsService {
+  private baseUrl = getApiUrl();
 
   async getAllCredentials(): Promise<Credential[]> {
     const response = await fetch(`${this.baseUrl}/api/credentials`);
@@ -116,17 +127,45 @@ class CredentialsService {
       MODEL_CHOICE: 'gpt-4.1-nano',
       LLM_PROVIDER: 'openai',
       LLM_BASE_URL: '',
-      EMBEDDING_MODEL: ''
+      EMBEDDING_MODEL: '',
+      // Crawling Performance Settings defaults
+      CRAWL_BATCH_SIZE: 50,
+      CRAWL_MAX_CONCURRENT: 10,
+      CRAWL_WAIT_STRATEGY: 'domcontentloaded',
+      CRAWL_PAGE_TIMEOUT: 60000,  // Increased from 30s to 60s for documentation sites
+      CRAWL_DELAY_BEFORE_HTML: 0.5,
+      // Storage Performance Settings defaults
+      DOCUMENT_STORAGE_BATCH_SIZE: 50,
+      EMBEDDING_BATCH_SIZE: 100,
+      DELETE_BATCH_SIZE: 100,
+      ENABLE_PARALLEL_BATCHES: true,
+      // Advanced Settings defaults
+      MEMORY_THRESHOLD_PERCENT: 80,
+      DISPATCHER_CHECK_INTERVAL: 30,
+      CODE_EXTRACTION_BATCH_SIZE: 50,
+      CODE_SUMMARY_MAX_WORKERS: 3
     };
 
     // Map credentials to settings
     [...ragCredentials, ...apiKeysCredentials].forEach(cred => {
       if (cred.key in settings) {
-        if (cred.key === 'MODEL_CHOICE' || cred.key === 'LLM_PROVIDER' || cred.key === 'LLM_BASE_URL' || cred.key === 'EMBEDDING_MODEL') {
+        // String fields
+        if (['MODEL_CHOICE', 'LLM_PROVIDER', 'LLM_BASE_URL', 'EMBEDDING_MODEL', 'CRAWL_WAIT_STRATEGY'].includes(cred.key)) {
           (settings as any)[cred.key] = cred.value || '';
-        } else if (cred.key === 'CONTEXTUAL_EMBEDDINGS_MAX_WORKERS') {
-          settings[cred.key] = parseInt(cred.value || '3', 10);
-        } else {
+        } 
+        // Number fields
+        else if (['CONTEXTUAL_EMBEDDINGS_MAX_WORKERS', 'CRAWL_BATCH_SIZE', 'CRAWL_MAX_CONCURRENT', 
+                  'CRAWL_PAGE_TIMEOUT', 'DOCUMENT_STORAGE_BATCH_SIZE', 'EMBEDDING_BATCH_SIZE', 
+                  'DELETE_BATCH_SIZE', 'MEMORY_THRESHOLD_PERCENT', 'DISPATCHER_CHECK_INTERVAL',
+                  'CODE_EXTRACTION_BATCH_SIZE', 'CODE_SUMMARY_MAX_WORKERS'].includes(cred.key)) {
+          (settings as any)[cred.key] = parseInt(cred.value || '0', 10) || (settings as any)[cred.key];
+        }
+        // Float fields
+        else if (cred.key === 'CRAWL_DELAY_BEFORE_HTML') {
+          settings[cred.key] = parseFloat(cred.value || '0.5') || 0.5;
+        }
+        // Boolean fields
+        else {
           (settings as any)[cred.key] = cred.value === 'true';
         }
       }
@@ -180,29 +219,20 @@ class CredentialsService {
   async updateRagSettings(settings: RagSettings): Promise<void> {
     const promises = [];
     
-    // Update RAG strategy settings
+    // Update all RAG strategy settings
     for (const [key, value] of Object.entries(settings)) {
-      if (key !== 'MODEL_CHOICE') {
-        promises.push(
-          this.updateCredential({
-            key,
-            value: value.toString(),
-            is_encrypted: false,
-            category: 'rag_strategy',
-          })
-        );
-      }
+      // Skip undefined values
+      if (value === undefined) continue;
+      
+      promises.push(
+        this.updateCredential({
+          key,
+          value: value.toString(),
+          is_encrypted: false,
+          category: 'rag_strategy',
+        })
+      );
     }
-    
-    // Update model choice
-    promises.push(
-      this.updateCredential({
-        key: 'MODEL_CHOICE',
-        value: settings.MODEL_CHOICE,
-        is_encrypted: false,
-        category: 'rag_strategy',
-      })
-    );
     
     await Promise.all(promises);
   }

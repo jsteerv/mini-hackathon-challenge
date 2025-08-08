@@ -8,7 +8,7 @@ Keeps the main projects_api.py file focused on REST endpoints.
 # Removed direct logging import - using unified config
 import asyncio
 import time
-from typing import Dict, Any
+from typing import Dict
 from ..socketio_app import get_socketio_instance
 from ..services.projects.project_service import ProjectService
 from ..services.projects.source_linking_service import SourceLinkingService
@@ -32,6 +32,40 @@ async def broadcast_task_update(project_id: str, event_type: str, task_data: dic
     await sio.emit(event_type, task_data, room=project_id)
     logger.info(f"Broadcasted {event_type} to project {project_id}")
 
+# Enhanced Task-Specific Socket.IO Event Handlers
+async def broadcast_task_created(project_id: str, task_data: dict):
+    """Broadcast task creation to project room."""
+    await sio.emit('task_created', task_data, room=project_id)
+    logger.info(f"📝 [TASK SOCKET] Broadcasted task_created to project {project_id}: {task_data.get('title', 'Unknown')}")
+
+async def broadcast_task_updated(project_id: str, task_data: dict):
+    """Broadcast task update to project room with conflict resolution."""
+    # Add timestamp for conflict resolution
+    task_data['server_timestamp'] = time.time() * 1000
+    await sio.emit('task_updated', task_data, room=project_id)
+    logger.info(f"📝 [TASK SOCKET] Broadcasted task_updated to project {project_id}: {task_data.get('id', 'Unknown')}")
+
+async def broadcast_task_deleted(project_id: str, task_data: dict):
+    """Broadcast task deletion to project room."""
+    await sio.emit('task_deleted', task_data, room=project_id)
+    logger.info(f"🗑️ [TASK SOCKET] Broadcasted task_deleted to project {project_id}: {task_data.get('id', 'Unknown')}")
+
+async def broadcast_task_archived(project_id: str, task_data: dict):
+    """Broadcast task archival to project room."""
+    await sio.emit('task_archived', task_data, room=project_id)
+    logger.info(f"📦 [TASK SOCKET] Broadcasted task_archived to project {project_id}: {task_data.get('id', 'Unknown')}")
+
+async def broadcast_tasks_reordered(project_id: str, reorder_data: dict):
+    """Broadcast task reordering to project room."""
+    await sio.emit('tasks_reordered', reorder_data, room=project_id)
+    logger.info(f"🔄 [TASK SOCKET] Broadcasted tasks_reordered to project {project_id}: {len(reorder_data.get('tasks', []))} tasks")
+
+async def broadcast_task_batch_update(project_id: str, batch_data: dict):
+    """Broadcast batch task updates to project room."""
+    batch_data['server_timestamp'] = time.time() * 1000
+    await sio.emit('tasks_batch_updated', batch_data, room=project_id)
+    logger.info(f"📦 [TASK SOCKET] Broadcasted tasks_batch_updated to project {project_id}: {len(batch_data.get('tasks', []))} tasks")
+
 async def broadcast_project_update():
     """Broadcast project list to subscribers."""
     try:
@@ -48,6 +82,7 @@ async def broadcast_project_update():
         
         await sio.emit('projects_update', {'projects': formatted_projects}, room='project_list')
         logger.info(f"Broadcasted project list update with {len(formatted_projects)} projects")
+        
     except Exception as e:
         logger.error(f"Failed to broadcast project update: {e}")
 
@@ -164,7 +199,7 @@ async def connect(sid, environ):
     logger.info(f'🔌 [SOCKETIO] Query params: {query_params}')
     logger.info(f'🔌 [SOCKETIO] User-Agent: {headers.get("HTTP_USER_AGENT", "unknown")}')
     
-    print(f'🔌 [SOCKETIO DEBUG] New connection:')
+    print('🔌 [SOCKETIO DEBUG] New connection:')
     print(f'  - SID: {sid}')
     print(f'  - Address: {client_address}')
     print(f'  - Query: {query_params}')
@@ -422,3 +457,507 @@ async def get_task_status(sid, data):
         status = await task_manager.get_task_status(task_id)
         return status
     return {'error': 'No task_id provided'}
+
+@sio.event
+async def crawl_stop(sid, data):
+    """Handle crawl stop request via Socket.IO."""
+    progress_id = data.get('progress_id')
+    if not progress_id:
+        await sio.emit('error', {'message': 'progress_id required'}, to=sid)
+        return {'success': False, 'error': 'progress_id required'}
+    
+    logger.info(f"🛑 [SOCKETIO] Received crawl_stop request | sid={sid} | progress_id={progress_id}")
+    
+    # Emit stopping status immediately
+    await sio.emit('crawl:stopping', {
+        'progressId': progress_id,
+        'message': 'Stopping crawl operation...',
+        'timestamp': time.time()
+    }, room=progress_id)
+    
+    logger.info(f"📤 [SOCKETIO] Emitted crawl:stopping event to room {progress_id}")
+    
+    try:
+        # Get the orchestration service
+        from ..services.knowledge.crawl_orchestration_service import get_active_orchestration, unregister_orchestration
+        orchestration = get_active_orchestration(progress_id)
+        
+        if orchestration:
+            # Cancel the orchestration
+            orchestration.cancel()
+            logger.info(f"✅ [SOCKETIO] Cancelled orchestration for {progress_id}")
+        else:
+            logger.warning(f"⚠️  [SOCKETIO] No active orchestration found for {progress_id}")
+        
+        # Cancel the asyncio task if it exists
+        from ..fastapi.knowledge_api import active_crawl_tasks
+        if progress_id in active_crawl_tasks:
+            task = active_crawl_tasks[progress_id]
+            if not task.done():
+                task.cancel()
+                try:
+                    await asyncio.wait_for(task, timeout=2.0)
+                except (asyncio.CancelledError, asyncio.TimeoutError):
+                    pass
+            del active_crawl_tasks[progress_id]
+            logger.info(f"✅ [SOCKETIO] Cancelled asyncio task for {progress_id}")
+        
+        # Remove from active orchestrations registry
+        unregister_orchestration(progress_id)
+        
+        # Broadcast cancellation to all clients in the room
+        await sio.emit('crawl:stopped', {
+            'progressId': progress_id,
+            'status': 'cancelled',
+            'message': 'Crawl operation cancelled',
+            'timestamp': time.time()
+        }, room=progress_id)
+        
+        logger.info(f"📤 [SOCKETIO] Emitted crawl:stopped event to room {progress_id}")
+        
+        return {'success': True, 'progressId': progress_id}
+        
+    except Exception as e:
+        logger.error(f"❌ [SOCKETIO] Failed to stop crawl | error={str(e)} | progress_id={progress_id}")
+        await sio.emit('crawl:error', {
+            'progressId': progress_id,
+            'error': str(e),
+            'message': 'Failed to stop crawl operation'
+        }, room=progress_id)
+        return {'success': False, 'error': str(e)}
+
+
+# Document Synchronization Socket.IO Event Handlers
+# Real-time document collaboration with conflict resolution
+
+from typing import List, Dict, Any, Optional
+from dataclasses import dataclass, asdict
+from datetime import datetime
+import json
+
+@dataclass
+class DocumentChange:
+    """Document change data structure."""
+    id: str
+    project_id: str
+    document_id: str
+    change_type: str  # 'content', 'title', 'metadata', 'delete'
+    data: Any
+    user_id: str
+    timestamp: float
+    version: int
+    patch: Optional[Any] = None
+
+@dataclass
+class DocumentState:
+    """Document state for synchronization."""
+    id: str
+    project_id: str
+    title: str
+    content: Any
+    metadata: Any
+    version: int
+    last_modified: float
+    last_modified_by: str
+    is_locked: bool = False
+    lock_expiry: Optional[float] = None
+
+# In-memory document state storage (in production, use Redis or database)
+document_states: Dict[str, DocumentState] = {}
+document_locks: Dict[str, Dict[str, Any]] = {}
+
+@sio.event
+async def join_document_room(sid, data):
+    """Join a document room for real-time collaboration."""
+    project_id = data.get('project_id')
+    document_id = data.get('document_id')
+    
+    if not project_id or not document_id:
+        await sio.emit('error', {'message': 'project_id and document_id required'}, to=sid)
+        return
+    
+    room_name = f"doc_{project_id}_{document_id}"
+    await sio.enter_room(sid, room_name)
+    
+    logger.info(f"📄 [DOCUMENT SYNC] Client {sid} joined document room: {room_name}")
+    
+    # Send current document state if exists
+    if document_id in document_states:
+        state = document_states[document_id]
+        await sio.emit('document_state', asdict(state), to=sid)
+    
+    await sio.emit('joined_document', {
+        'project_id': project_id,
+        'document_id': document_id,
+        'room': room_name
+    }, to=sid)
+
+@sio.event
+async def leave_document_room(sid, data):
+    """Leave a document room."""
+    project_id = data.get('project_id')
+    document_id = data.get('document_id')
+    
+    if project_id and document_id:
+        room_name = f"doc_{project_id}_{document_id}"
+        await sio.leave_room(sid, room_name)
+        logger.info(f"📄 [DOCUMENT SYNC] Client {sid} left document room: {room_name}")
+
+@sio.event
+async def request_document_states(sid, data):
+    """Request all document states for a project."""
+    project_id = data.get('project_id')
+    if not project_id:
+        await sio.emit('error', {'message': 'project_id required'}, to=sid)
+        return
+    
+    # Get all documents for the project
+    project_docs = [
+        asdict(state) for state in document_states.values()
+        if state.project_id == project_id
+    ]
+    
+    await sio.emit('document_states', project_docs, to=sid)
+    logger.info(f"📄 [DOCUMENT SYNC] Sent {len(project_docs)} document states to {sid}")
+
+@sio.event
+async def document_change(sid, data):
+    """Handle single document change."""
+    try:
+        change_data = data.get('change')
+        if not change_data:
+            await sio.emit('error', {'message': 'change data required'}, to=sid)
+            return
+        
+        change = DocumentChange(**change_data)
+        await process_document_change(sid, change)
+        
+    except Exception as e:
+        logger.error(f"📄 [DOCUMENT SYNC] Error processing document change: {e}")
+        await sio.emit('error', {'message': f'Failed to process change: {str(e)}'}, to=sid)
+
+@sio.event
+async def document_batch_update(sid, data):
+    """Handle batched document changes."""
+    try:
+        project_id = data.get('project_id')
+        document_id = data.get('document_id')
+        changes_data = data.get('changes', [])
+        
+        if not all([project_id, document_id, changes_data]):
+            await sio.emit('error', {'message': 'project_id, document_id, and changes required'}, to=sid)
+            return
+        
+        # Process each change in the batch
+        changes = [DocumentChange(**change_data) for change_data in changes_data]
+        conflicts = []
+        
+        for change in changes:
+            conflict = await process_document_change(sid, change, broadcast=False)
+            if conflict:
+                conflicts.append(conflict)
+        
+        # Broadcast the final state after all changes
+        if document_id in document_states:
+            room_name = f"doc_{project_id}_{document_id}"
+            state = document_states[document_id]
+            
+            await sio.emit('document_updated', {
+                'type': 'document_updated',
+                'document_id': document_id,
+                'project_id': project_id,
+                'user_id': changes[-1].user_id,
+                'timestamp': changes[-1].timestamp,
+                'data': asdict(state),
+                'version': state.version,
+                'batch_size': len(changes)
+            }, room=room_name, skip_sid=sid)
+        
+        # Handle conflicts if any
+        if conflicts:
+            await sio.emit('conflicts_detected', {
+                'conflicts': conflicts,
+                'document_id': document_id
+            }, to=sid)
+        
+        logger.info(f"📄 [DOCUMENT SYNC] Processed batch of {len(changes)} changes for {document_id}")
+        
+    except Exception as e:
+        logger.error(f"📄 [DOCUMENT SYNC] Error processing document batch: {e}")
+        await sio.emit('error', {'message': f'Failed to process batch: {str(e)}'}, to=sid)
+
+async def process_document_change(sid: str, change: DocumentChange, broadcast: bool = True) -> Optional[Dict]:
+    """Process a single document change with conflict detection."""
+    document_id = change.document_id
+    project_id = change.project_id
+    
+    # Get or create document state
+    if document_id not in document_states:
+        document_states[document_id] = DocumentState(
+            id=document_id,
+            project_id=project_id,
+            title='',
+            content={},
+            metadata={},
+            version=0,
+            last_modified=change.timestamp,
+            last_modified_by=change.user_id
+        )
+    
+    state = document_states[document_id]
+    
+    # Check for conflicts (version or timestamp-based)
+    conflict = None
+    if change.version <= state.version:
+        # Version conflict - resolve based on timestamp
+        if change.timestamp > state.last_modified:
+            # Remote change is newer, apply it
+            logger.warning(f"📄 [CONFLICT] Version conflict resolved by timestamp for {document_id}")
+        else:
+            # Local state is newer, reject the change
+            conflict = {
+                'type': 'version_conflict',
+                'document_id': document_id,
+                'local_version': state.version,
+                'remote_version': change.version,
+                'resolution': 'rejected'
+            }
+            return conflict
+    
+    # Check for simultaneous edits (within 1 second)
+    time_diff = abs(state.last_modified - change.timestamp)
+    if time_diff < 1000 and state.last_modified_by != change.user_id:
+        logger.warning(f"📄 [CONFLICT] Simultaneous edit detected for {document_id}")
+        conflict = {
+            'type': 'simultaneous_edit',
+            'document_id': document_id,
+            'time_diff': time_diff,
+            'resolution': 'last_write_wins'
+        }
+    
+    # Apply the change
+    if change.change_type == 'content':
+        if isinstance(change.data, dict) and isinstance(state.content, dict):
+            state.content.update(change.data)
+        else:
+            state.content = change.data
+    elif change.change_type == 'title':
+        state.title = change.data.get('title', state.title)
+    elif change.change_type == 'metadata':
+        if isinstance(change.data, dict) and isinstance(state.metadata, dict):
+            state.metadata.update(change.data)
+        else:
+            state.metadata = change.data
+    elif change.change_type == 'delete':
+        # Mark for deletion - in practice, you might want to soft delete
+        state.metadata['deleted'] = True
+        state.metadata['deleted_by'] = change.user_id
+        state.metadata['deleted_at'] = change.timestamp
+    
+    # Update state metadata
+    state.version = max(state.version, change.version)
+    state.last_modified = change.timestamp
+    state.last_modified_by = change.user_id
+    
+    # Broadcast change to other clients in the room if enabled
+    if broadcast:
+        room_name = f"doc_{project_id}_{document_id}"
+        
+        event_data = {
+            'type': 'document_updated',
+            'document_id': document_id,
+            'project_id': project_id,
+            'user_id': change.user_id,
+            'timestamp': change.timestamp,
+            'data': change.data,
+            'version': state.version,
+            'change_type': change.change_type
+        }
+        
+        await sio.emit('document_updated', event_data, room=room_name, skip_sid=sid)
+        logger.info(f"📄 [DOCUMENT SYNC] Broadcasted {change.change_type} change for {document_id}")
+    
+    return conflict
+
+@sio.event
+async def lock_document(sid, data):
+    """Lock a document for exclusive editing."""
+    document_id = data.get('document_id')
+    user_id = data.get('user_id')
+    lock_duration = data.get('duration', 300000)  # 5 minutes default
+    
+    if not document_id or not user_id:
+        await sio.emit('error', {'message': 'document_id and user_id required'}, to=sid)
+        return
+    
+    current_time = time.time() * 1000  # Convert to milliseconds
+    lock_expiry = current_time + lock_duration
+    
+    # Check if document is already locked
+    if document_id in document_locks:
+        existing_lock = document_locks[document_id]
+        if existing_lock['expiry'] > current_time and existing_lock['user_id'] != user_id:
+            await sio.emit('lock_failed', {
+                'document_id': document_id,
+                'reason': 'already_locked',
+                'locked_by': existing_lock['user_id'],
+                'expires_at': existing_lock['expiry']
+            }, to=sid)
+            return
+    
+    # Create lock
+    document_locks[document_id] = {
+        'user_id': user_id,
+        'expiry': lock_expiry,
+        'sid': sid
+    }
+    
+    # Update document state
+    if document_id in document_states:
+        state = document_states[document_id]
+        state.is_locked = True
+        state.lock_expiry = lock_expiry
+    
+    # Broadcast lock event
+    project_id = data.get('project_id', '')
+    room_name = f"doc_{project_id}_{document_id}"
+    
+    await sio.emit('document_locked', {
+        'type': 'document_locked',
+        'document_id': document_id,
+        'project_id': project_id,
+        'user_id': user_id,
+        'timestamp': current_time,
+        'data': {'expiry': lock_expiry}
+    }, room=room_name)
+    
+    logger.info(f"📄 [DOCUMENT SYNC] Document {document_id} locked by {user_id}")
+
+@sio.event
+async def unlock_document(sid, data):
+    """Unlock a document."""
+    document_id = data.get('document_id')
+    user_id = data.get('user_id')
+    
+    if not document_id or not user_id:
+        await sio.emit('error', {'message': 'document_id and user_id required'}, to=sid)
+        return
+    
+    # Check if user owns the lock
+    if document_id in document_locks:
+        existing_lock = document_locks[document_id]
+        if existing_lock['user_id'] != user_id:
+            await sio.emit('unlock_failed', {
+                'document_id': document_id,
+                'reason': 'not_lock_owner',
+                'locked_by': existing_lock['user_id']
+            }, to=sid)
+            return
+        
+        # Remove lock
+        del document_locks[document_id]
+    
+    # Update document state
+    if document_id in document_states:
+        state = document_states[document_id]
+        state.is_locked = False
+        state.lock_expiry = None
+    
+    # Broadcast unlock event
+    project_id = data.get('project_id', '')
+    room_name = f"doc_{project_id}_{document_id}"
+    
+    await sio.emit('document_unlocked', {
+        'type': 'document_unlocked',
+        'document_id': document_id,
+        'project_id': project_id,
+        'user_id': user_id,
+        'timestamp': time.time() * 1000,
+        'data': {}
+    }, room=room_name)
+    
+    logger.info(f"📄 [DOCUMENT SYNC] Document {document_id} unlocked by {user_id}")
+
+@sio.event
+async def delete_document(sid, data):
+    """Delete a document with synchronization."""
+    document_id = data.get('document_id')
+    project_id = data.get('project_id')
+    user_id = data.get('user_id')
+    
+    if not all([document_id, project_id, user_id]):
+        await sio.emit('error', {'message': 'document_id, project_id, and user_id required'}, to=sid)
+        return
+    
+    # Remove from local state
+    if document_id in document_states:
+        del document_states[document_id]
+    
+    if document_id in document_locks:
+        del document_locks[document_id]
+    
+    # Broadcast deletion
+    room_name = f"doc_{project_id}_{document_id}"
+    
+    await sio.emit('document_deleted', {
+        'type': 'document_deleted',
+        'document_id': document_id,
+        'project_id': project_id,
+        'user_id': user_id,
+        'timestamp': time.time() * 1000,
+        'data': {}
+    }, room=room_name)
+    
+    logger.info(f"📄 [DOCUMENT SYNC] Document {document_id} deleted by {user_id}")
+
+# Periodic cleanup of expired locks
+async def cleanup_expired_locks():
+    """Clean up expired document locks."""
+    current_time = time.time() * 1000
+    expired_locks = []
+    
+    for document_id, lock_info in document_locks.items():
+        if lock_info['expiry'] <= current_time:
+            expired_locks.append(document_id)
+    
+    for document_id in expired_locks:
+        logger.info(f"📄 [DOCUMENT SYNC] Cleaning up expired lock for {document_id}")
+        
+        # Update document state
+        if document_id in document_states:
+            state = document_states[document_id]
+            state.is_locked = False
+            state.lock_expiry = None
+        
+        # Remove lock
+        del document_locks[document_id]
+        
+        # Broadcast unlock event (find project_id from state)
+        if document_id in document_states:
+            project_id = document_states[document_id].project_id
+            room_name = f"doc_{project_id}_{document_id}"
+            
+            await sio.emit('document_unlocked', {
+                'type': 'document_unlocked',
+                'document_id': document_id,
+                'project_id': project_id,
+                'user_id': 'system',
+                'timestamp': current_time,
+                'data': {'reason': 'expired'}
+            }, room=room_name)
+
+# Start periodic cleanup task
+async def start_document_sync_cleanup():
+    """Start the document synchronization cleanup task."""
+    while True:
+        try:
+            await cleanup_expired_locks()
+        except Exception as e:
+            logger.error(f"📄 [DOCUMENT SYNC] Error in cleanup task: {e}")
+        
+        # Run cleanup every 60 seconds
+        await asyncio.sleep(60)
+
+# Initialize cleanup task on module load
+logger.info("📄 [DOCUMENT SYNC] Document synchronization handlers initialized")
+

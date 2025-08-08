@@ -145,7 +145,7 @@ class BackgroundTaskManager:
                     except Exception as callback_error:
                         # Log but don't crash - Socket.IO failures shouldn't kill background tasks
                         logger.error(f"Progress callback error for task {task_id}: {callback_error}")
-                        logger.error(f"Continuing task execution despite callback failure")
+                        logger.error("Continuing task execution despite callback failure")
                     
                     # Exit on completion
                     if update.get('status') in ['complete', 'error']:

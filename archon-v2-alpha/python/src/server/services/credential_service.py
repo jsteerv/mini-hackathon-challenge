@@ -8,11 +8,11 @@ Credentials include API keys, service credentials, and application configuration
 import os
 import re
 import base64
+import time
 # Removed direct logging import - using unified config
 from typing import Dict, Optional, Any, List
 from dataclasses import dataclass
 from supabase import create_client, Client
-import asyncio
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
@@ -38,6 +38,9 @@ class CredentialService:
         self._supabase: Optional[Client] = None
         self._cache: Dict[str, Any] = {}
         self._cache_initialized = False
+        self._rag_settings_cache: Optional[Dict[str, Any]] = None
+        self._rag_cache_timestamp: Optional[float] = None
+        self._rag_cache_ttl = 300  # 5 minutes TTL for RAG settings cache
         
     def _get_supabase_client(self) -> Client:
         """
@@ -218,6 +221,12 @@ class CredentialService:
                 on_conflict="key"  # Specify the unique column for conflict resolution
             ).execute()
             
+            # Invalidate RAG settings cache if this is a rag_strategy setting
+            if category == "rag_strategy":
+                self._rag_settings_cache = None
+                self._rag_cache_timestamp = None
+                logger.debug(f"Invalidated RAG settings cache due to update of {key}")
+            
             logger.info(f"Successfully {'encrypted and ' if is_encrypted else ''}stored credential: {key}")
             return True
             
@@ -236,6 +245,14 @@ class CredentialService:
             if key in self._cache:
                 del self._cache[key]
             
+            # Invalidate RAG settings cache if this was a rag_strategy setting
+            # We check the cache to see if the deleted key was in rag_strategy category
+            if (self._rag_settings_cache is not None and 
+                key in self._rag_settings_cache):
+                self._rag_settings_cache = None
+                self._rag_cache_timestamp = None
+                logger.debug(f"Invalidated RAG settings cache due to deletion of {key}")
+            
             logger.info(f"Successfully deleted credential: {key}")
             return True
             
@@ -247,6 +264,17 @@ class CredentialService:
         """Get all credentials for a specific category."""
         if not self._cache_initialized:
             await self.load_all_credentials()
+        
+        # Special caching for rag_strategy category to reduce database calls
+        if category == "rag_strategy":
+            current_time = time.time()
+            
+            # Check if we have valid cached data
+            if (self._rag_settings_cache is not None and 
+                self._rag_cache_timestamp is not None and 
+                current_time - self._rag_cache_timestamp < self._rag_cache_ttl):
+                logger.debug("Using cached RAG settings")
+                return self._rag_settings_cache
         
         try:
             supabase = self._get_supabase_client()
@@ -263,6 +291,12 @@ class CredentialService:
                     }
                 else:
                     credentials[key] = item["value"]
+            
+            # Cache rag_strategy results
+            if category == "rag_strategy":
+                self._rag_settings_cache = credentials
+                self._rag_cache_timestamp = time.time()
+                logger.debug(f"Cached RAG settings with {len(credentials)} items")
             
             return credentials
             
@@ -513,7 +547,7 @@ async def initialize_credentials() -> None:
                 env_key = key.upper()  # Convert to uppercase for env vars
                 os.environ[env_key] = str(value)
                 logger.info(f"Set environment variable: {env_key}")
-        except Exception as e:
+        except Exception:
             # This is expected for optional credentials
             logger.debug(f"Optional credential not set: {key}")
     

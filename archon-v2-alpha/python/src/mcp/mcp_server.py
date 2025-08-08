@@ -17,17 +17,15 @@ from mcp.server.fastmcp import FastMCP, Context
 from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
-from typing import Optional, Any
+from typing import Any
 from dotenv import load_dotenv
 from pathlib import Path
 import os
 import sys
-import asyncio
 import logging
 import traceback
 import time
 from datetime import datetime
-from typing import Any
 import threading
 import json
 
@@ -65,7 +63,7 @@ _initialization_complete = False
 _shared_context = None
 
 server_host = "0.0.0.0"  # Listen on all interfaces
-server_port = 8051       # Fixed port
+server_port = int(os.getenv("ARCHON_MCP_PORT", "8051"))  # Configurable port
 
 @dataclass
 class ArchonContext:
@@ -176,17 +174,17 @@ async def lifespan(server: FastMCP) -> AsyncIterator[ArchonContext]:
 # Initialize the main FastMCP server with fixed configuration
 try:    
     logger.info("🏗️ MCP SERVER INITIALIZATION:")
-    logger.info(f"   Server Name: archon-mcp-server")
-    logger.info(f"   Description: MCP server using HTTP calls")
+    logger.info("   Server Name: archon-mcp-server")
+    logger.info("   Description: MCP server using HTTP calls")
     
     mcp = FastMCP(
         "archon-mcp-server",
         description="MCP server for Archon - uses HTTP calls to other services",
         lifespan=lifespan,
         host=server_host,
-        port=8000
+        port=server_port
     )
-    logger.info(f"✓ FastMCP server instance created successfully")
+    logger.info("✓ FastMCP server instance created successfully")
     
 except Exception as e:
     logger.error(f"✗ Failed to create FastMCP server: {e}")
@@ -334,7 +332,7 @@ def main():
         setup_logfire(service_name="archon-mcp-server")
         
         logger.info("🚀 Starting Archon MCP Server")
-        logger.info(f"   Mode: Streamable HTTP")
+        logger.info("   Mode: Streamable HTTP")
         logger.info(f"   URL: http://{server_host}:{server_port}/mcp")
         
         mcp_logger.info("🔥 Logfire initialized for MCP server")

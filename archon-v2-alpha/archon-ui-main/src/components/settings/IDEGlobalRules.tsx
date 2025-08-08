@@ -393,7 +393,7 @@ archon:manage_task(
     let inCodeBlock = false;
     let codeBlockContent: string[] = [];
     let codeBlockLang = '';
-    let listStack: string[] = [];
+    const listStack: string[] = [];
 
     lines.forEach((line, index) => {
       // Code blocks
@@ -494,13 +494,7 @@ archon:manage_task(
   };
 
   return (
-    <div>
-      <div className="flex items-center mb-4">
-        <FileCode className="mr-2 text-blue-500 filter drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]" size={20} />
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
-          IDE Global Rules
-        </h2>
-      </div>
+    <Card accentColor="pink" className="p-8">
       <div className="space-y-6">
         <div className="flex justify-between items-start">
           <p className="text-sm text-gray-600 dark:text-zinc-400 w-4/5">
@@ -508,7 +502,7 @@ archon:manage_task(
           </p>
           <Button 
             variant="outline" 
-            accentColor="blue" 
+            accentColor="pink" 
             icon={copied ? <Check className="w-4 h-4 mr-1" /> : <Copy className="w-4 h-4 mr-1" />}
             className="ml-auto whitespace-nowrap px-4 py-2"
             size="md"
@@ -609,6 +603,6 @@ archon:manage_task(
           </p>
         </div>
       </div>
-    </div>
+    </Card>
   );
 };

@@ -9,8 +9,7 @@ instead of direct database access or service imports.
 import httpx
 import json
 import logging
-from typing import Dict, Any, Optional, List
-from urllib.parse import urljoin
+from typing import Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -35,10 +34,11 @@ class MCPClient:
             except ImportError:
                 # Fallback for when running in agents container
                 import os
+                mcp_port = os.getenv("ARCHON_MCP_PORT", "8051")
                 if os.getenv("DOCKER_CONTAINER"):
-                    self.mcp_url = "http://archon-mcp:8051"
+                    self.mcp_url = f"http://archon-mcp:{mcp_port}"
                 else:
-                    self.mcp_url = "http://localhost:8051"
+                    self.mcp_url = f"http://localhost:{mcp_port}"
         
         self.client = httpx.AsyncClient(timeout=30.0)
         logger.info(f"MCP Client initialized with URL: {self.mcp_url}")

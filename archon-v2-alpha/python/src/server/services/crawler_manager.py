@@ -66,14 +66,35 @@ class CrawlerManager:
                 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                 # Set browser type
                 browser_type="chromium",
-                # Extra args for Chromium
+                # Extra args for Chromium - optimized for speed
                 extra_args=[
                     '--disable-blink-features=AutomationControlled',
                     '--disable-dev-shm-usage',
                     '--no-sandbox',
                     '--disable-setuid-sandbox',
                     '--disable-web-security',
-                    '--disable-features=IsolateOrigins,site-per-process'
+                    '--disable-features=IsolateOrigins,site-per-process',
+                    # Performance optimizations
+                    '--disable-images',  # Skip image loading for faster page loads
+                    '--disable-gpu',
+                    '--disable-extensions',
+                    '--disable-plugins',
+                    '--disable-background-timer-throttling',
+                    '--disable-backgrounding-occluded-windows',
+                    '--disable-renderer-backgrounding',
+                    '--disable-features=TranslateUI',
+                    '--disable-ipc-flooding-protection',
+                    # Additional speed optimizations
+                    '--aggressive-cache-discard',
+                    '--disable-background-networking',
+                    '--disable-default-apps',
+                    '--disable-sync',
+                    '--metrics-recording-only',
+                    '--no-first-run',
+                    '--disable-popup-blocking',
+                    '--disable-prompt-on-repost',
+                    '--disable-domain-reliability',
+                    '--disable-component-update'
                 ]
             )
             
@@ -97,7 +118,7 @@ class CrawlerManager:
             tb = traceback.format_exc()
             safe_logfire_error(f"Crawler initialization traceback: {tb}")
             # Also print to stdout for Docker logs
-            print(f"=== CRAWLER INITIALIZATION ERROR ===")
+            print("=== CRAWLER INITIALIZATION ERROR ===")
             print(f"Error: {e}")
             print(f"Traceback:\n{tb}")
             print("=== END CRAWLER ERROR ===")

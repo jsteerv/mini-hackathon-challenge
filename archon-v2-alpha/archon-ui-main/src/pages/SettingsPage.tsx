@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Loader, Settings, ChevronDown, ChevronUp } from 'lucide-react';
+import { Loader, Settings, ChevronDown, ChevronUp, Palette, Key, Brain, Code, Activity, FileCode } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '../contexts/ToastContext';
 import { useSettings } from '../contexts/SettingsContext';
@@ -11,6 +11,7 @@ import { CodeExtractionSettings } from '../components/settings/CodeExtractionSet
 import { TestStatus } from '../components/settings/TestStatus';
 import { IDEGlobalRules } from '../components/settings/IDEGlobalRules';
 import { ButtonPlayground } from '../components/settings/ButtonPlayground';
+import { CollapsibleSettingsCard } from '../components/ui/CollapsibleSettingsCard';
 import { credentialsService, RagSettings, CodeExtractionSettings as CodeExtractionSettingsType } from '../services/credentialsService';
 
 export const SettingsPage = () => {
@@ -104,33 +105,82 @@ export const SettingsPage = () => {
       {/* Main content with two-column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left Column */}
-        <div className="space-y-12">
+        <div className="space-y-6">
           <motion.div variants={itemVariants}>
-            <FeaturesSection />
+            <CollapsibleSettingsCard
+              title="Features"
+              icon={Palette}
+              accentColor="purple"
+              storageKey="features"
+              defaultExpanded={true}
+            >
+              <FeaturesSection />
+            </CollapsibleSettingsCard>
           </motion.div>
+          {projectsEnabled && (
+            <motion.div variants={itemVariants}>
+              <CollapsibleSettingsCard
+                title="IDE Global Rules"
+                icon={FileCode}
+                accentColor="pink"
+                storageKey="ide-rules"
+                defaultExpanded={true}
+              >
+                <IDEGlobalRules />
+              </CollapsibleSettingsCard>
+            </motion.div>
+          )}
           <motion.div variants={itemVariants}>
-            {projectsEnabled && <IDEGlobalRules />}
-          </motion.div>
-          <motion.div variants={itemVariants}>
-            <TestStatus />
+            <CollapsibleSettingsCard
+              title="Test Status"
+              icon={Activity}
+              accentColor="cyan"
+              storageKey="test-status"
+              defaultExpanded={true}
+            >
+              <TestStatus />
+            </CollapsibleSettingsCard>
           </motion.div>
         </div>
 
         {/* Right Column */}
-        <div className="space-y-12">
+        <div className="space-y-6">
           <motion.div variants={itemVariants}>
-            <APIKeysSection />
+            <CollapsibleSettingsCard
+              title="API Keys"
+              icon={Key}
+              accentColor="pink"
+              storageKey="api-keys"
+              defaultExpanded={true}
+            >
+              <APIKeysSection />
+            </CollapsibleSettingsCard>
           </motion.div>
           <motion.div variants={itemVariants}>
-            <RAGSettings ragSettings={ragSettings} setRagSettings={setRagSettings} />
+            <CollapsibleSettingsCard
+              title="RAG Settings"
+              icon={Brain}
+              accentColor="green"
+              storageKey="rag-settings"
+              defaultExpanded={true}
+            >
+              <RAGSettings ragSettings={ragSettings} setRagSettings={setRagSettings} />
+            </CollapsibleSettingsCard>
           </motion.div>
           <motion.div variants={itemVariants}>
-            <CodeExtractionSettings 
-              codeExtractionSettings={codeExtractionSettings} 
-              setCodeExtractionSettings={setCodeExtractionSettings} 
-            />
+            <CollapsibleSettingsCard
+              title="Code Extraction"
+              icon={Code}
+              accentColor="orange"
+              storageKey="code-extraction"
+              defaultExpanded={true}
+            >
+              <CodeExtractionSettings 
+                codeExtractionSettings={codeExtractionSettings} 
+                setCodeExtractionSettings={setCodeExtractionSettings} 
+              />
+            </CollapsibleSettingsCard>
           </motion.div>
-
         </div>
       </div>
 

@@ -11,12 +11,10 @@ service modules directly, enabling true microservices architecture.
 """
 
 from mcp.server.fastmcp import FastMCP, Context
-from typing import List, Dict, Any, Optional
-from urllib.parse import urlparse, urljoin
+from urllib.parse import urljoin
 import json
 import logging
 import os
-from datetime import datetime
 import httpx
 
 # Import service discovery for HTTP communication

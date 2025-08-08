@@ -52,7 +52,7 @@ The storage module has both service classes and utility functions:
 
 | Service | Purpose | Key Methods |
 |---------|---------|-------------|
-| **CrawlOrchestrationService** | Orchestrates entire crawl workflow | `orchestrate_crawl()`, `set_progress_id()` |
+| **CrawlOrchestrationService** | Orchestrates entire crawl workflow | `orchestrate_crawl()`, `set_progress_id()`, `cancel()`, `is_cancelled()` |
 | **KnowledgeItemService** | CRUD operations for knowledge items | `list_items()`, `update_item()`, `get_available_sources()` |
 | **CodeExtractionService** | Code block extraction and processing | `extract_and_store_code_examples()`, `extract_code_blocks_from_html()` |
 | **DatabaseMetricsService** | Database statistics and metrics | `get_metrics()` |
@@ -191,6 +191,34 @@ async def crawl_knowledge_item(request: KnowledgeItemRequest):
     orchestration_service = CrawlOrchestrationService(crawler, get_supabase_client())
     result = await orchestration_service.orchestrate_crawl(request.dict())
     return result
+
+# Example: Crawl cancellation
+@router.post("/knowledge-items/stop/{progress_id}")
+async def stop_crawl_task(progress_id: str):
+    # Cancel orchestration service
+    orchestration = get_active_orchestration(progress_id)
+    if orchestration:
+        orchestration.cancel()
+    
+    # Cancel asyncio task
+    if progress_id in active_crawl_tasks:
+        task = active_crawl_tasks[progress_id]
+        if not task.done():
+            task.cancel()
+            try:
+                await asyncio.wait_for(task, timeout=2.0)
+            except (asyncio.CancelledError, asyncio.TimeoutError):
+                pass
+        del active_crawl_tasks[progress_id]
+    
+    # Emit Socket.IO events
+    await sio.emit('crawl:stopped', {
+        'progressId': progress_id,
+        'status': 'cancelled',
+        'message': 'Crawl cancelled by user'
+    }, room=progress_id)
+    
+    return {'success': True}
 
 # Example: Source deletion
 @router.delete("/sources/{source_id}")

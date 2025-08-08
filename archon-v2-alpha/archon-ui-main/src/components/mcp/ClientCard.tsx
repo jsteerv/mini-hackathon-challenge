@@ -57,8 +57,8 @@ export const ClientCard = ({
   useEffect(() => {
     if (!isArchonClient || !particlesRef.current) return;
 
-    let currentMousePos = { x: 0, y: 0 };
-    let glowOrganisms: HTMLDivElement[] = [];
+    const currentMousePos = { x: 0, y: 0 };
+    const glowOrganisms: HTMLDivElement[] = [];
     let isMousePresent = false;
 
     const createBioluminescentOrganism = (targetX: number, targetY: number, delay = 0) => {

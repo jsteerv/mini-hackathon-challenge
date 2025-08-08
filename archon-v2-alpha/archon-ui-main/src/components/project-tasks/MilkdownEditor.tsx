@@ -45,6 +45,11 @@ export const MilkdownEditor: React.FC<MilkdownEditorProps> = ({
         return doc.content.markdown;
       }
       
+      // Check if this is a PRP document
+      if (doc.content.document_type === 'prp' || doc.document_type === 'prp') {
+        return convertPRPToMarkdown(doc.content);
+      }
+      
       // Otherwise, convert the content object to a readable markdown format
       let markdown = `# ${doc.title}\n\n`;
       
@@ -74,6 +79,201 @@ export const MilkdownEditor: React.FC<MilkdownEditorProps> = ({
     }
     
     return `# ${doc.title}\n\nStart writing...`;
+  };
+
+  // Helper function to format values for markdown
+  // Enhanced formatValue to handle complex nested structures
+  const formatValue = (value: any, indent = '', depth = 0): string => {
+    if (value === null || value === undefined) {
+      return '';
+    }
+    
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      return String(value);
+    }
+    
+    if (Array.isArray(value)) {
+      if (value.length === 0) return '';
+      
+      // Check if it's a simple array (strings/numbers)
+      const isSimple = value.every(item => 
+        typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean'
+      );
+      
+      if (isSimple) {
+        return value.map(item => `${indent}- ${item}`).join('\n') + '\n';
+      }
+      
+      // Complex array with objects
+      return value.map((item, index) => {
+        if (typeof item === 'object' && item !== null) {
+          const itemLines = formatValue(item, indent + '  ', depth + 1).split('\n');
+          const firstLine = itemLines[0];
+          const restLines = itemLines.slice(1).join('\n');
+          
+          if (itemLines.length === 1 || (itemLines.length === 2 && !itemLines[1])) {
+            // Single line item
+            return `${indent}- ${firstLine}`;
+          } else {
+            // Multi-line item
+            return `${indent}-\n${indent}  ${firstLine}${restLines ? '\n' + restLines : ''}`;
+          }
+        }
+        return `${indent}- ${formatValue(item, indent + '  ', depth + 1)}`;
+      }).join('\n') + '\n';
+    }
+    
+    if (typeof value === 'object' && value !== null) {
+      const entries = Object.entries(value);
+      if (entries.length === 0) return '';
+      
+      // Check if it's a simple object (all values are primitives)
+      const isSimple = entries.every(([_, val]) => 
+        typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean'
+      );
+      
+      if (isSimple && entries.length <= 3 && depth > 0) {
+        // Inline simple objects
+        const pairs = entries.map(([k, v]) => `${formatKey(k)}: ${v}`);
+        return pairs.join(', ');
+      }
+      
+      let result = '';
+      entries.forEach(([key, val], index) => {
+        const formattedKey = formatKey(key);
+        
+        if (val === null || val === undefined) {
+          return; // Skip null/undefined
+        }
+        
+        if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') {
+          result += `${indent}**${formattedKey}:** ${val}\n`;
+        } else if (Array.isArray(val)) {
+          result += `${indent}**${formattedKey}:**\n${formatValue(val, indent, depth + 1)}`;
+        } else if (typeof val === 'object') {
+          // Use appropriate heading level based on depth
+          const headingLevel = Math.min(depth + 3, 6);
+          const heading = '#'.repeat(headingLevel);
+          result += `${indent}${heading} ${formattedKey}\n\n${formatValue(val, indent, depth + 1)}`;
+        }
+        
+        // Add spacing between top-level sections
+        if (depth === 0 && index < entries.length - 1) {
+          result += '\n';
+        }
+      });
+      
+      return result;
+    }
+    
+    return String(value);
+  };
+  
+  // Helper to format keys nicely
+  const formatKey = (key: string): string => {
+    return key
+      .replace(/_/g, ' ')
+      .replace(/([a-z])([A-Z])/g, '$1 $2')
+      .split(' ')
+      .filter(word => word.length > 0)
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
+  // Convert PRP document structure to readable markdown - fully dynamic
+  const convertPRPToMarkdown = (content: any): string => {
+    // Handle raw string content
+    if (typeof content === 'string') {
+      return content;
+    }
+    
+    // Handle null/undefined
+    if (!content || typeof content !== 'object') {
+      return `# ${doc.title}\n\nNo content available.`;
+    }
+    
+    // Start with title
+    let markdown = `# ${content.title || doc.title || 'Untitled Document'}\n\n`;
+    
+    // Group metadata fields
+    const metadataFields = ['version', 'author', 'date', 'status', 'document_type', 'created_at', 'updated_at'];
+    const metadata = metadataFields.filter(field => content[field]);
+    
+    if (metadata.length > 0) {
+      markdown += `## Metadata\n\n`;
+      metadata.forEach(field => {
+        const value = content[field];
+        const label = formatKey(field);
+        markdown += `- **${label}:** ${value}\n`;
+      });
+      markdown += '\n';
+    }
+    
+    // Process all other fields dynamically
+    const skipFields = ['title', ...metadataFields, 'id', '_id', 'project_id'];
+    
+    // Sort fields by priority (known important fields first)
+    const priorityFields = [
+      'goal', 'goals', 'objective', 'objectives',
+      'why', 'rationale', 'background',
+      'what', 'description', 'overview',
+      'context', 'background_context',
+      'user_personas', 'personas', 'users', 'stakeholders',
+      'user_flows', 'flows', 'journeys', 'workflows',
+      'requirements', 'functional_requirements', 'non_functional_requirements',
+      'success_metrics', 'metrics', 'kpis', 'success_criteria',
+      'timeline', 'roadmap', 'milestones', 'phases',
+      'implementation_plan', 'implementation_roadmap', 'plan',
+      'technical_requirements', 'technical_implementation', 'architecture',
+      'validation_gates', 'testing_strategy', 'quality_gates',
+      'risks', 'risk_assessment', 'mitigation_strategies'
+    ];
+    
+    // Create ordered list of fields
+    const orderedFields = [];
+    const remainingFields = [];
+    
+    Object.keys(content).forEach(key => {
+      if (skipFields.includes(key)) return;
+      
+      const lowerKey = key.toLowerCase();
+      const priorityIndex = priorityFields.findIndex(pf => 
+        lowerKey === pf || lowerKey.includes(pf) || pf.includes(lowerKey)
+      );
+      
+      if (priorityIndex !== -1) {
+        orderedFields.push({ key, priority: priorityIndex });
+      } else {
+        remainingFields.push(key);
+      }
+    });
+    
+    // Sort by priority
+    orderedFields.sort((a, b) => a.priority - b.priority);
+    
+    // Process fields in order
+    const allFields = [...orderedFields.map(f => f.key), ...remainingFields];
+    
+    allFields.forEach(key => {
+      const value = content[key];
+      if (value === null || value === undefined) return;
+      
+      const sectionTitle = formatKey(key);
+      markdown += `## ${sectionTitle}\n\n`;
+      
+      // Handle different value types
+      if (typeof value === 'string') {
+        markdown += `${value}\n\n`;
+      } else if (typeof value === 'number' || typeof value === 'boolean') {
+        markdown += `${value}\n\n`;
+      } else if (Array.isArray(value)) {
+        markdown += formatValue(value) + '\n';
+      } else if (typeof value === 'object') {
+        markdown += formatValue(value) + '\n';
+      }
+    });
+    
+    return markdown.trim();
   };
 
   // Initialize editor

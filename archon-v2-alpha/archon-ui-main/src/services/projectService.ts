@@ -24,14 +24,12 @@ import {
 
 import { dbTaskToUITask, uiStatusToDBStatus } from '../types/project';
 
-// API configuration
-const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'http://localhost:8080'  // Production backend port
-  : 'http://localhost:8080'; // Development backend port
+// API configuration - use relative URL to go through Vite proxy
+const API_BASE_URL = '/api';
 
 // WebSocket connection for real-time updates
 let websocketConnection: WebSocket | null = null;
-let projectUpdateSubscriptions: Map<string, (event: ProjectManagementEvent) => void> = new Map();
+const projectUpdateSubscriptions: Map<string, (event: ProjectManagementEvent) => void> = new Map();
 
 // Error classes
 export class ProjectServiceError extends Error {
@@ -58,7 +56,9 @@ export class MCPToolError extends ProjectServiceError {
 // Helper function to call FastAPI endpoints directly
 async function callAPI<T = any>(endpoint: string, options: RequestInit = {}): Promise<T> {
   try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    // Remove /api prefix if it exists since API_BASE_URL already includes it
+    const cleanEndpoint = endpoint.startsWith('/api') ? endpoint.substring(4) : endpoint;
+    const response = await fetch(`${API_BASE_URL}${cleanEndpoint}`, {
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
@@ -117,7 +117,10 @@ function initializeWebSocket() {
     return websocketConnection;
   }
 
-  const wsUrl = API_BASE_URL.replace('http', 'ws') + '/ws/project-updates';
+  // Construct WebSocket URL based on current location
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const host = window.location.host;
+  const wsUrl = `${protocol}//${host}/ws/project-updates`;
   websocketConnection = new WebSocket(wsUrl);
 
   websocketConnection.onopen = () => {

@@ -232,16 +232,16 @@ export const GroupedKnowledgeItemCard = ({
     (sum, item) => sum + (item.metadata.word_count || 0), 0
   );
 
-  // Calculate total code examples count
+  // Calculate total code examples count from metadata
   const totalCodeExamples = useMemo(() => {
     return groupedItem.items.reduce(
-      (sum, item) => sum + (item.code_examples?.length || 0),
+      (sum, item) => sum + (item.metadata.code_examples_count || 0),
       0,
     );
   }, [groupedItem.items]);
 
-  // Calculate active item's code examples count
-  const activeCodeExamples = activeItem.code_examples?.length || 0;
+  // Calculate active item's code examples count from metadata
+  const activeCodeExamples = activeItem.metadata.code_examples_count || 0;
   
   // Calculate active item's word count
   const activeWordCount = activeItem.metadata.word_count || 0;
@@ -382,7 +382,7 @@ export const GroupedKnowledgeItemCard = ({
                   ? 'text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300'
                   : 'text-cyan-500 hover:text-cyan-600 dark:text-cyan-400 dark:hover:text-cyan-300'
               }`}
-              title="Refresh this knowledge item"
+              title={`Refresh from: ${item.metadata.original_url || item.url || 'URL not available'}`}
             >
               <RefreshCw className="w-3 h-3" />
               <span className="text-sm font-medium">Recrawl</span>

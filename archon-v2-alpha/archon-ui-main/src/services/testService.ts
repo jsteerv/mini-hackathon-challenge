@@ -39,15 +39,10 @@ export interface TestStatus {
   exit_code?: number;
 }
 
-// Dynamic API base URL that works with different hosts
-const getApiBaseUrl = () => {
-  const protocol = window.location.protocol;
-  const host = window.location.hostname;
-  const port = '8080'; // Backend API port
-  return `${protocol}//${host}:${port}`;
-};
+import { getApiUrl, getWebSocketUrl } from '../config/api';
 
-const API_BASE_URL = getApiBaseUrl();
+// Use unified API configuration
+const API_BASE_URL = getApiUrl();
 
 // Error class for test service errors
 export class TestServiceError extends Error {
@@ -121,19 +116,27 @@ class TestService {
   }
 
   /**
-   * Execute React UI tests locally in the frontend
+   * Execute React UI tests via backend API (runs in Docker container)
    */
   async runUITests(): Promise<TestExecution> {
-    // Generate a local execution ID
-    const execution_id = crypto.randomUUID();
-    
-    // Return immediately with execution info - actual test running happens separately
-    return {
-      execution_id,
+    console.log('[DEBUG TestService] runUITests called');
+    const requestBody: TestExecutionRequest = {
       test_type: 'ui',
-      status: 'pending',
-      start_time: new Date().toISOString()
+      options: {}
     };
+    console.log('[DEBUG TestService] Request body:', requestBody);
+
+    try {
+      const response = await callAPI<TestExecution>('/api/tests/ui/run', {
+        method: 'POST',
+        body: JSON.stringify(requestBody)
+      });
+      console.log('[DEBUG TestService] UI test response:', response);
+      return response;
+    } catch (error) {
+      console.error('[DEBUG TestService] UI test API call failed:', error);
+      throw error;
+    }
   }
 
   /**
@@ -244,47 +247,96 @@ class TestService {
    */
   async hasTestResults(): Promise<boolean> {
     try {
-      // Check for both test results and coverage data
-      const [testResponse, coverageResponse] = await Promise.all([
-        fetch('/test-results/test-results.json'),
-        fetch('/test-results/coverage/coverage-summary.json')
-      ]);
-      
-      // At least one file should exist for results to be available
-      return testResponse.ok || coverageResponse.ok;
+      // Check for latest test results via API
+      const response = await fetch(`${API_BASE_URL}/api/tests/latest-results`);
+      return response.ok;
     } catch {
       return false;
     }
   }
 
   /**
-   * Get coverage data for Test Results Modal
+   * Get coverage data for Test Results Modal from new API endpoints with fallback
    */
   async getCoverageData(): Promise<any> {
     try {
-      const response = await fetch('/coverage/coverage-summary.json');
-      if (!response.ok) {
-        throw new Error('Coverage data not available');
+      // Try new API endpoint first
+      const response = await callAPI<any>('/api/coverage/combined-summary');
+      return response;
+    } catch (apiError) {
+      // Fallback to static files for backward compatibility
+      try {
+        const response = await fetch('/test-results/coverage/coverage-summary.json');
+        if (!response.ok) {
+          throw new Error('Coverage data not available');
+        }
+        return await response.json();
+      } catch (staticError) {
+        throw new Error(`Failed to load coverage data: ${apiError instanceof Error ? apiError.message : 'API and static files unavailable'}`);
       }
-      return await response.json();
-    } catch (error) {
-      throw new Error(`Failed to load coverage data: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
   /**
-   * Get test results for Test Results Modal
+   * Get test results for Test Results Modal from new API endpoints with fallback
    */
   async getTestResults(): Promise<any> {
     try {
-      const response = await fetch('/coverage/test-results.json');
-      if (!response.ok) {
-        throw new Error('Test results not available');
+      // Try new API endpoint first
+      const response = await callAPI<any>('/api/tests/latest-results');
+      return response;
+    } catch (apiError) {
+      // Fallback to static files for backward compatibility
+      try {
+        const response = await fetch('/test-results/test-results.json');
+        if (!response.ok) {
+          throw new Error('Test results not available');
+        }
+        return await response.json();
+      } catch (staticError) {
+        throw new Error(`Failed to load test results: ${apiError instanceof Error ? apiError.message : 'API and static files unavailable'}`);
       }
-      return await response.json();
-    } catch (error) {
-      throw new Error(`Failed to load test results: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  }
+
+  /**
+   * Get pytest coverage data specifically
+   */
+  async getPytestCoverage(): Promise<any> {
+    try {
+      const response = await callAPI<any>('/api/coverage/pytest/json');
+      return response;
+    } catch (error) {
+      throw new Error(`Failed to load pytest coverage: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Get vitest coverage data specifically
+   */
+  async getVitestCoverage(): Promise<any> {
+    try {
+      const response = await callAPI<any>('/api/coverage/vitest/summary');
+      return response;
+    } catch (error) {
+      throw new Error(`Failed to load vitest coverage: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Get URL for coverage HTML report
+   */
+  getCoverageHtmlUrl(): string {
+    // Return URL to pytest coverage HTML report via new API endpoint
+    return '/api/coverage/pytest/html/index.html';
+  }
+
+  /**
+   * Get URL for vitest coverage HTML report
+   */
+  getVitestCoverageHtmlUrl(): string {
+    // Return URL to vitest coverage HTML report via new API endpoint
+    return '/api/coverage/vitest/html/index.html';
   }
 
   /**
@@ -324,7 +376,7 @@ class TestService {
     // Clean up any existing connection
     this.disconnectFromTestStream(executionId);
 
-    const wsUrl = API_BASE_URL.replace('http', 'ws') + `/api/tests/stream/${executionId}`;
+    const wsUrl = getWebSocketUrl() + `/api/tests/stream/${executionId}`;
     const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {

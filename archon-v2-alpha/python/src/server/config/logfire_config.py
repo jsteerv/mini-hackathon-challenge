@@ -17,7 +17,7 @@ Usage:
 
 import os
 import logging
-from typing import Optional, Any, Dict, Union
+from typing import Optional, Any
 from contextlib import contextmanager
 
 # Try to import logfire (optional dependency)

@@ -18,6 +18,7 @@ export interface KnowledgeItemMetadata {
   update_frequency?: number
   next_update?: string
   group_name?: string
+  original_url?: string
 }
 
 export interface KnowledgeItem {
@@ -70,7 +71,8 @@ export interface SearchOptions {
 }
 
 // Use relative URL to go through Vite proxy
-const API_BASE_URL = '/api';
+import { API_BASE_URL } from '../config/api';
+// const API_BASE_URL = '/api'; // Now imported from config
 
 // Helper function for API requests with timeout
 async function apiRequest<T>(
@@ -153,7 +155,24 @@ class KnowledgeBaseService {
     console.log('📋 [KnowledgeBase] Query string:', queryString);
     console.log('📋 [KnowledgeBase] Full endpoint:', `/knowledge-items?${queryString}`);
     
-    return apiRequest<KnowledgeItemsResponse>(`/knowledge-items?${params}`)
+    const response = await apiRequest<KnowledgeItemsResponse>(`/knowledge-items?${params}`)
+    
+    // Debug logging to inspect response
+    console.log('📋 [KnowledgeBase] Response received:', response);
+    console.log('📋 [KnowledgeBase] Total items:', response.items?.length);
+    
+    // Check if any items have code_examples
+    const itemsWithCodeExamples = response.items?.filter(item => item.code_examples && item.code_examples.length > 0) || [];
+    console.log('📋 [KnowledgeBase] Items with code examples:', itemsWithCodeExamples.length);
+    
+    // Log details for modelcontextprotocol.io
+    const mcpItem = response.items?.find(item => item.source_id === 'modelcontextprotocol.io');
+    if (mcpItem) {
+      console.log('📋 [KnowledgeBase] MCP item found:', mcpItem);
+      console.log('📋 [KnowledgeBase] MCP code_examples:', mcpItem.code_examples);
+    }
+    
+    return response
   }
 
   /**
@@ -250,6 +269,31 @@ class KnowledgeBaseService {
         ...options
       })
     })
+  }
+
+  /**
+   * Stop a running crawl task
+   */
+  async stopCrawl(progressId: string) {
+    console.log('🛑 [KnowledgeBase] Stopping crawl:', progressId);
+    
+    return apiRequest(`/knowledge-items/stop/${progressId}`, {
+      method: 'POST'
+    });
+  }
+
+  /**
+   * Get code examples for a specific knowledge item
+   */
+  async getCodeExamples(sourceId: string) {
+    console.log('📚 [KnowledgeBase] Fetching code examples for:', sourceId);
+    
+    return apiRequest<{
+      success: boolean
+      source_id: string
+      code_examples: any[]
+      count: number
+    }>(`/knowledge-items/${sourceId}/code-examples`);
   }
 }
 

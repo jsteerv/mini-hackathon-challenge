@@ -15,12 +15,14 @@ import {
   Cpu,
   Database,
   Code,
-  Zap
+  Zap,
+  Square
 } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { CrawlProgressData } from '../../services/crawlProgressService';
 import { useTerminalScroll } from '../../hooks/useTerminalScroll';
+import { knowledgeBaseService } from '../../services/knowledgeBaseService';
 
 interface CrawlingProgressCardProps {
   progressData: CrawlProgressData;
@@ -29,6 +31,7 @@ interface CrawlingProgressCardProps {
   onProgress?: (data: CrawlProgressData) => void;
   onRetry?: () => void;
   onDismiss?: () => void;
+  onStop?: () => void;
 }
 
 interface ProgressStep {
@@ -43,13 +46,49 @@ interface ProgressStep {
 export const CrawlingProgressCard: React.FC<CrawlingProgressCardProps> = ({
   progressData,
   onRetry,
-  onDismiss
+  onDismiss,
+  onStop
 }) => {
   const [showDetailedProgress, setShowDetailedProgress] = useState(true);
   const [showLogs, setShowLogs] = useState(false);
+  const [isStopping, setIsStopping] = useState(false);
   
   // Use the terminal scroll hook for auto-scrolling logs
   const logsContainerRef = useTerminalScroll([progressData.logs], showLogs);
+
+  // Handle stop crawl action
+  const handleStopCrawl = async () => {
+    console.log('🛑 Stop button clicked!');
+    console.log('🛑 Progress data:', progressData);
+    console.log('🛑 Progress ID:', progressData.progressId);
+    console.log('🛑 Is stopping:', isStopping);
+    console.log('🛑 onStop callback:', onStop);
+    
+    if (!progressData.progressId || isStopping) {
+      console.log('🛑 Stopping early - no progress ID or already stopping');
+      return;
+    }
+    
+    try {
+      setIsStopping(true);
+      console.log('🛑 Stopping crawl with progress ID:', progressData.progressId);
+      
+      // Optimistic UI update - immediately show stopping status
+      progressData.status = 'stopping';
+      
+      // Call the onStop callback if provided - this will handle localStorage and API call
+      if (onStop) {
+        console.log('🛑 Calling onStop callback');
+        onStop();
+      }
+    } catch (error) {
+      console.error('Failed to stop crawl:', error);
+      // Revert optimistic update on error
+      progressData.status = progressData.status === 'stopping' ? 'processing' : progressData.status;
+    } finally {
+      setIsStopping(false);
+    }
+  };
 
   // Calculate individual progress steps based on current status and percentage
   const getProgressSteps = (): ProgressStep[] => {
@@ -323,6 +362,12 @@ export const CrawlingProgressCard: React.FC<CrawlingProgressCardProps> = ({
           color: 'pink' as const,
           icon: <AlertTriangle className="w-4 h-4" />
         };
+      case 'stale':
+        return {
+          text: isUpload ? 'Upload appears stuck' : 'Crawl appears stuck',
+          color: 'pink' as const,
+          icon: <AlertTriangle className="w-4 h-4" />
+        };
       case 'reading':
         return {
           text: 'Reading file...',
@@ -386,6 +431,18 @@ export const CrawlingProgressCard: React.FC<CrawlingProgressCardProps> = ({
           color: 'blue' as const,
           icon: <Zap className="w-4 h-4" />
         };
+      case 'cancelled':
+        return {
+          text: isUpload ? 'Upload cancelled' : 'Crawling cancelled',
+          color: 'pink' as const,
+          icon: <Square className="w-4 h-4" />
+        };
+      case 'stopping':
+        return {
+          text: isUpload ? 'Stopping upload...' : 'Stopping crawl...',
+          color: 'pink' as const,
+          icon: <Square className="w-4 h-4" />
+        };
       default:
         const activeStep = progressSteps.find(step => step.status === 'active');
         return {
@@ -418,7 +475,7 @@ export const CrawlingProgressCard: React.FC<CrawlingProgressCardProps> = ({
   };
 
   return (
-    <Card accentColor={status.color} className="relative overflow-hidden">
+    <Card accentColor={status.color} className="relative" data-testid="crawling-progress-card">
       {/* Status Header */}
       <div className="flex items-center gap-3 mb-4">
         <div className={`p-2 rounded-md ${
@@ -429,8 +486,8 @@ export const CrawlingProgressCard: React.FC<CrawlingProgressCardProps> = ({
         }`}>
           {status.icon}
         </div>
-        <div className="flex-1">
-          <h3 className="font-medium text-gray-800 dark:text-white">
+        <div className="flex-1 min-w-0 overflow-hidden">
+          <h3 className="font-medium text-gray-800 dark:text-white" data-testid="crawling-progress-title">
             {status.text}
           </h3>
           {progressData.currentUrl && (
@@ -439,6 +496,75 @@ export const CrawlingProgressCard: React.FC<CrawlingProgressCardProps> = ({
             </p>
           )}
         </div>
+
+        {/* Stop Button - only show for active crawls */}
+        {progressData.status !== 'completed' && 
+         progressData.status !== 'error' && 
+         progressData.status !== 'cancelled' && 
+         onStop && (
+          <div className="flex-shrink-0 ml-2">
+            <motion.button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('🛑 Button click event triggered');
+                handleStopCrawl();
+              }}
+              disabled={isStopping}
+              data-testid="crawling-progress-stop"
+              className={`
+                relative rounded-full border-2 transition-all duration-300 p-2
+                border-red-400 hover:border-red-300
+                ${isStopping ? 
+                  'bg-gray-100 dark:bg-gray-800 opacity-50 cursor-not-allowed' : 
+                  'bg-gradient-to-b from-gray-900 to-black cursor-pointer'
+                }
+                shadow-[0_0_8px_rgba(239,68,68,0.6)] hover:shadow-[0_0_12px_rgba(239,68,68,0.8)]
+              `}
+              whileHover={{ scale: isStopping ? 1 : 1.05 }}
+              whileTap={{ scale: isStopping ? 1 : 0.95 }}
+              title={isStopping ? "Stopping..." : "Stop Crawl"}
+            >
+              {/* Simplified glow - no overflow issues */}
+              <motion.div
+                className="absolute inset-0 rounded-full border-2 border-red-400"
+                animate={{
+                  opacity: isStopping ? 0 : [0.4, 0.8, 0.4],
+                  scale: isStopping ? 1 : [1, 1.1, 1]
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+              />
+
+              {/* Stop icon with simpler glow */}
+              <motion.div
+                className="relative z-10"
+                animate={{
+                  filter: isStopping ? 'none' : [
+                    'drop-shadow(0 0 4px rgb(239,68,68))',
+                    'drop-shadow(0 0 8px rgb(239,68,68))',
+                    'drop-shadow(0 0 4px rgb(239,68,68))'
+                  ]
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+              >
+                <Square 
+                  className={`w-4 h-4 ${
+                    isStopping ? 'text-gray-600' : 'text-white'
+                  }`} 
+                  fill="currentColor"
+                />
+              </motion.div>
+            </motion.button>
+          </div>
+        )}
 
       </div>
 
@@ -450,14 +576,14 @@ export const CrawlingProgressCard: React.FC<CrawlingProgressCardProps> = ({
               Overall Progress
             </span>
             <span className="text-xs text-gray-500 dark:text-gray-400">
-              {Math.round(progressData.percentage)}%
+              {Math.round(Math.max(0, Math.min(100, progressData.percentage || 0)))}%
             </span>
           </div>
-          <div className="w-full bg-gray-200 dark:bg-zinc-700 rounded-full h-2">
+          <div className="w-full bg-gray-200 dark:bg-zinc-700 rounded-full h-2" data-testid="crawling-progress-bar">
             <motion.div
               className="h-2 rounded-full bg-gradient-to-r from-blue-500 to-blue-600"
               initial={{ width: 0 }}
-              animate={{ width: `${progressData.percentage}%` }}
+              animate={{ width: `${Math.max(0, Math.min(100, progressData.percentage || 0))}%` }}
               transition={{ duration: 0.5, ease: 'easeOut' }}
             />
           </div>
@@ -518,7 +644,7 @@ export const CrawlingProgressCard: React.FC<CrawlingProgressCardProps> = ({
             transition={{ duration: 0.3 }}
             className="overflow-hidden mb-4"
           >
-            <div className="space-y-3 p-3 bg-gray-50 dark:bg-zinc-900/50 rounded-md">
+            <div className="space-y-3 p-3 bg-gray-50 dark:bg-zinc-900/50 rounded-md" data-testid="crawling-progress-details">
               {/* Always show progress steps */}
               {progressSteps.map((step) => (
                 <div key={step.id}>
@@ -775,7 +901,7 @@ export const CrawlingProgressCard: React.FC<CrawlingProgressCardProps> = ({
       )}
 
       {/* Action Buttons */}
-      {progressData.status === 'error' && (onRetry || onDismiss) && (
+      {(progressData.status === 'error' || progressData.status === 'cancelled' || progressData.status === 'stale') && (onRetry || onDismiss) && (
         <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-200 dark:border-zinc-800">
           {onDismiss && (
             <Button 
@@ -787,7 +913,7 @@ export const CrawlingProgressCard: React.FC<CrawlingProgressCardProps> = ({
               Dismiss
             </Button>
           )}
-          {onRetry && (
+          {onRetry && progressData.status !== 'stale' && (
             <Button 
               onClick={onRetry}
               variant="primary" 

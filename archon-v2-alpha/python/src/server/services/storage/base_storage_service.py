@@ -9,12 +9,11 @@ Provides common functionality for all document storage operations including:
 """
 
 import re
-import asyncio
 from typing import List, Dict, Any, Optional, Callable
 from abc import ABC, abstractmethod
 from urllib.parse import urlparse
 
-from ...config.logfire_config import get_logger, search_logger, safe_span
+from ...config.logfire_config import get_logger, safe_span
 
 logger = get_logger(__name__)
 

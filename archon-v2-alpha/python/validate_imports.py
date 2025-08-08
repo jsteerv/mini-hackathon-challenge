@@ -3,7 +3,6 @@
 
 import os
 import re
-import sys
 
 def check_file_imports(filepath):
     """Check imports in a Python file."""

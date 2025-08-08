@@ -5,10 +5,9 @@ This module provides core business logic for document versioning operations
 that can be shared between MCP tools and FastAPI endpoints.
 """
 
-import json
 # Removed direct logging import - using unified config
 from datetime import datetime
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, Tuple
 from src.server.utils import get_supabase_client
 from ...config.logfire_config import get_logger
 

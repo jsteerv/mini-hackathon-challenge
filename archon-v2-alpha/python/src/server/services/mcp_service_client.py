@@ -6,8 +6,7 @@ other services (API and Agents) instead of importing their modules directly.
 """
 
 import httpx
-import json
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, List, Optional
 import uuid
 from urllib.parse import urljoin
 
@@ -172,7 +171,7 @@ class MCPServiceClient:
         """
         # For now, return a simplified response since document upload 
         # through the regular API requires multipart form data
-        mcp_logger.info(f"Document storage through regular API not yet implemented")
+        mcp_logger.info("Document storage through regular API not yet implemented")
         return {
             "success": True,
             "documents_stored": len(documents),

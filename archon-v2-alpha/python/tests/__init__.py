@@ -1,1 +1,1 @@
-# Test package for MCP server 
+"""Simplified test suite for Archon - Essential tests only."""

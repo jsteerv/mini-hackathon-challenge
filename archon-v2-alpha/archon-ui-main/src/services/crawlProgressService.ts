@@ -50,6 +50,23 @@ export interface CrawlProgressData {
   wordCount?: number;
   duration?: string;
   sourceId?: string;
+  // Original crawl parameters for retry functionality
+  originalCrawlParams?: {
+    url: string;
+    knowledge_type?: 'technical' | 'business';
+    tags?: string[];
+    update_frequency?: number;
+    max_depth?: number;
+    crawl_options?: {
+      max_concurrent?: number;
+    };
+  };
+  // Original upload parameters for retry functionality
+  originalUploadParams?: {
+    file: File;
+    tags?: string[];
+    knowledge_type?: string;
+  };
   // Simplified batch progress (snake_case from backend)
   completed_batches?: number;
   total_batches?: number;
@@ -180,6 +197,33 @@ class CrawlProgressService {
             error: message.data?.message || message.error || 'Unknown error',
             percentage: 0
           });
+        }
+      });
+
+      // Add stop event handlers
+      this.wsService.addMessageHandler('crawl:stopping', (message) => {
+        if (message.data?.progressId === progressId) {
+          onMessage({
+            progressId,
+            status: 'stopping',
+            percentage: message.data.percentage || 0,
+            log: message.data.message
+          });
+        }
+      });
+      
+      this.wsService.addMessageHandler('crawl:stopped', (message) => {
+        if (message.data?.progressId === progressId) {
+          onMessage({
+            progressId,
+            status: 'cancelled',
+            percentage: 100,
+            completed: true,
+            log: message.data.message
+          });
+          
+          // Auto-cleanup after stop
+          setTimeout(() => this.stopStreaming(progressId), 1000);
         }
       });
 

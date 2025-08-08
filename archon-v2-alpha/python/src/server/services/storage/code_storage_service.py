@@ -7,16 +7,15 @@ import os
 import re
 import json
 import asyncio
-import time
+from difflib import SequenceMatcher
 from typing import List, Dict, Any, Optional, Callable
 from urllib.parse import urlparse
 from supabase import Client
 
 from ...config.logfire_config import search_logger
-from ..embeddings.embedding_service import create_embeddings_batch, create_embedding, create_embeddings_batch_async, create_embedding_async
+from ..embeddings.embedding_service import create_embeddings_batch_async, create_embedding_async
 from ..embeddings.contextual_embedding_service import generate_contextual_embeddings_batch
 from ..llm_provider_service import get_llm_client_sync
-from ..credential_service import credential_service
 
 
 def _get_model_choice() -> str:
@@ -41,6 +40,118 @@ def _get_max_workers() -> int:
     return int(os.getenv("CONTEXTUAL_EMBEDDINGS_MAX_WORKERS", "3"))
 
 
+def _normalize_code_for_comparison(code: str) -> str:
+    """
+    Normalize code for similarity comparison by removing version-specific variations.
+    
+    Args:
+        code: The code string to normalize
+        
+    Returns:
+        Normalized code string for comparison
+    """
+    # Remove extra whitespace and normalize line endings
+    normalized = re.sub(r'\s+', ' ', code.strip())
+    
+    # Remove common version-specific imports that don't change functionality
+    # Handle typing imports variations
+    normalized = re.sub(r'from typing_extensions import', 'from typing import', normalized)
+    normalized = re.sub(r'from typing import Annotated[^,\n]*,?', '', normalized)
+    normalized = re.sub(r'from typing_extensions import Annotated[^,\n]*,?', '', normalized)
+    
+    # Remove Annotated wrapper variations for comparison
+    # This handles: Annotated[type, dependency] -> type
+    normalized = re.sub(r'Annotated\[\s*([^,\]]+)[^]]*\]', r'\1', normalized)
+    
+    # Normalize common FastAPI parameter patterns
+    normalized = re.sub(r':\s*Annotated\[[^\]]+\]\s*=', '=', normalized)
+    
+    # Remove trailing commas and normalize punctuation spacing
+    normalized = re.sub(r',\s*\)', ')', normalized)
+    normalized = re.sub(r',\s*]', ']', normalized)
+    
+    return normalized
+
+
+def _calculate_code_similarity(code1: str, code2: str) -> float:
+    """
+    Calculate similarity between two code strings using normalized comparison.
+    
+    Args:
+        code1: First code string
+        code2: Second code string
+        
+    Returns:
+        Similarity ratio between 0.0 and 1.0
+    """
+    # Normalize both code strings for comparison
+    norm1 = _normalize_code_for_comparison(code1)
+    norm2 = _normalize_code_for_comparison(code2)
+    
+    # Use difflib's SequenceMatcher for similarity calculation
+    similarity = SequenceMatcher(None, norm1, norm2).ratio()
+    
+    return similarity
+
+
+def _select_best_code_variant(similar_blocks: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Select the best variant from a list of similar code blocks.
+    
+    Criteria:
+    1. Prefer blocks with more complete language specification
+    2. Prefer longer, more comprehensive examples
+    3. Prefer blocks with better context
+    
+    Args:
+        similar_blocks: List of similar code block dictionaries
+        
+    Returns:
+        The best code block variant
+    """
+    if len(similar_blocks) == 1:
+        return similar_blocks[0]
+    
+    def score_block(block):
+        score = 0
+        
+        # Prefer blocks with explicit language specification
+        if block.get('language') and block['language'] not in ['', 'text', 'plaintext']:
+            score += 10
+        
+        # Prefer longer code (more comprehensive examples)
+        score += len(block['code']) * 0.01
+        
+        # Prefer blocks with better context
+        context_before_len = len(block.get('context_before', ''))
+        context_after_len = len(block.get('context_after', ''))
+        score += (context_before_len + context_after_len) * 0.005
+        
+        # Slight preference for Python 3.10+ syntax (most modern)
+        if 'python 3.10' in block.get('full_context', '').lower():
+            score += 5
+        elif 'annotated' in block.get('code', '').lower():
+            score += 3
+        
+        return score
+    
+    # Sort by score and return the best one
+    best_block = max(similar_blocks, key=score_block)
+    
+    # Add metadata about consolidated variants
+    variant_count = len(similar_blocks)
+    if variant_count > 1:
+        languages = [block.get('language', '') for block in similar_blocks if block.get('language')]
+        unique_languages = list(set(filter(None, languages)))
+        
+        # Add consolidated metadata
+        best_block['consolidated_variants'] = variant_count
+        if unique_languages:
+            best_block['variant_languages'] = unique_languages
+    
+    return best_block
+
+
 
 
 def extract_code_blocks(markdown_content: str, min_length: int = None) -> List[Dict[str, Any]]:
@@ -49,18 +160,39 @@ def extract_code_blocks(markdown_content: str, min_length: int = None) -> List[D
     
     Args:
         markdown_content: The markdown content to extract code blocks from
-        min_length: Minimum length of code blocks to extract (default: 250 characters)
+        min_length: Minimum length of code blocks to extract (default: from settings or 250)
         
     Returns:
         List of dictionaries containing code blocks and their context
     """
-    if min_length is None:
-        # Try to get from settings, but fall back to 250 if not available
-        try:
-            from ...services.credential_service import get_credential_sync
+    # Load all code extraction settings
+    try:
+        from ...services.credential_service import get_credential_sync
+        
+        # Get all relevant settings with defaults
+        if min_length is None:
             min_length = int(get_credential_sync('MIN_CODE_BLOCK_LENGTH', 250))
-        except:
-            min_length = 250  # Default to 250 for better code coverage
+        
+        max_length = int(get_credential_sync('MAX_CODE_BLOCK_LENGTH', 5000))
+        enable_prose_filtering = get_credential_sync('ENABLE_PROSE_FILTERING', 'true').lower() == 'true'
+        max_prose_ratio = float(get_credential_sync('MAX_PROSE_RATIO', '0.15'))
+        min_code_indicators = int(get_credential_sync('MIN_CODE_INDICATORS', 3))
+        enable_diagram_filtering = get_credential_sync('ENABLE_DIAGRAM_FILTERING', 'true').lower() == 'true'
+        enable_contextual_length = get_credential_sync('ENABLE_CONTEXTUAL_LENGTH', 'true').lower() == 'true'
+        context_window_size = int(get_credential_sync('CONTEXT_WINDOW_SIZE', 1000))
+        
+    except Exception as e:
+        # Fallback to defaults if settings retrieval fails
+        search_logger.warning(f"Failed to get code extraction settings: {e}, using defaults")
+        if min_length is None:
+            min_length = 250
+        max_length = 5000
+        enable_prose_filtering = True
+        max_prose_ratio = 0.15
+        min_code_indicators = 3
+        enable_diagram_filtering = True
+        enable_contextual_length = True
+        context_window_size = 1000
     
     search_logger.debug(f"Extracting code blocks with minimum length: {min_length} characters")
     code_blocks = []
@@ -111,7 +243,7 @@ def extract_code_blocks(markdown_content: str, min_length: int = None) -> List[D
         if len(lines) > 1:
             # Check if first line is a language specifier (no spaces, common language names)
             first_line = lines[0].strip()
-            if first_line and not ' ' in first_line and len(first_line) < 20:
+            if first_line and ' ' not in first_line and len(first_line) < 20:
                 language = first_line.lower()
                 # Keep the code content with its original formatting (don't strip)
                 code_content = lines[1] if len(lines) > 1 else ""
@@ -126,6 +258,12 @@ def extract_code_blocks(markdown_content: str, min_length: int = None) -> List[D
         
         # Skip if code block is too short
         if len(code_content) < min_length:
+            i += 2  # Move to next pair
+            continue
+        
+        # Skip if code block is too long (likely corrupted or not actual code)
+        if len(code_content) > max_length:
+            search_logger.debug(f"Skipping code block that exceeds max length ({len(code_content)} > {max_length})")
             i += 2  # Move to next pair
             continue
         
@@ -164,15 +302,16 @@ def extract_code_blocks(markdown_content: str, min_length: int = None) -> List[D
             content_lines = code_content.split('\n')
             non_empty_lines = [line for line in content_lines if line.strip()]
             
-            # If high documentation score relative to content size, skip
-            words = code_content.split()
-            if len(words) > 0:
-                doc_ratio = doc_score / len(words)
-                # If more than 10% of words are documentation indicators, likely not code
-                if doc_ratio > 0.1:
-                    search_logger.debug(f"Skipping documentation text disguised as code | doc_ratio={doc_ratio:.2f} | first_50_chars={repr(code_content[:50])}")
-                    i += 2
-                    continue
+            # If high documentation score relative to content size, skip (if prose filtering enabled)
+            if enable_prose_filtering:
+                words = code_content.split()
+                if len(words) > 0:
+                    doc_ratio = doc_score / len(words)
+                    # Use configurable prose ratio threshold
+                    if doc_ratio > max_prose_ratio:
+                        search_logger.debug(f"Skipping documentation text disguised as code | doc_ratio={doc_ratio:.2f} | threshold={max_prose_ratio} | first_50_chars={repr(code_content[:50])}")
+                        i += 2
+                        continue
             
             # Additional check: if no typical code patterns found
             code_patterns = [
@@ -183,18 +322,44 @@ def extract_code_blocks(markdown_content: str, min_length: int = None) -> List[D
             ]
             
             code_pattern_count = sum(1 for pattern in code_patterns if pattern in code_content)
-            if code_pattern_count < 3 and len(non_empty_lines) > 5:
+            if code_pattern_count < min_code_indicators and len(non_empty_lines) > 5:
                 # Looks more like prose than code
-                search_logger.debug(f"Skipping prose text | code_patterns={code_pattern_count} | lines={len(non_empty_lines)}")
+                search_logger.debug(f"Skipping prose text | code_patterns={code_pattern_count} | min_indicators={min_code_indicators} | lines={len(non_empty_lines)}")
                 i += 2
                 continue
+            
+            # Check for ASCII art diagrams if diagram filtering is enabled
+            if enable_diagram_filtering:
+                # Common indicators of ASCII art diagrams
+                diagram_indicators = [
+                    '┌', '┐', '└', '┘', '│', '─', '├', '┤', '┬', '┴', '┼',  # Box drawing chars
+                    '+-+', '|_|', '___', '...',  # ASCII art patterns
+                    '→', '←', '↑', '↓', '⟶', '⟵',  # Arrows
+                ]
+                
+                # Count lines that are mostly special characters or whitespace
+                special_char_lines = 0
+                for line in non_empty_lines[:10]:  # Check first 10 lines
+                    # Count non-alphanumeric characters
+                    special_chars = sum(1 for c in line if not c.isalnum() and not c.isspace())
+                    if len(line) > 0 and special_chars / len(line) > 0.7:
+                        special_char_lines += 1
+                
+                # Check for diagram indicators
+                diagram_indicator_count = sum(1 for indicator in diagram_indicators if indicator in code_content)
+                
+                # If looks like a diagram, skip it
+                if (special_char_lines >= 3 or diagram_indicator_count >= 5) and code_pattern_count < 5:
+                    search_logger.debug(f"Skipping ASCII art diagram | special_lines={special_char_lines} | diagram_indicators={diagram_indicator_count}")
+                    i += 2
+                    continue
         
-        # Extract context before (1000 chars)
-        context_start = max(0, start_pos - 1000)
+        # Extract context before (configurable window size)
+        context_start = max(0, start_pos - context_window_size)
         context_before = markdown_content[context_start:start_pos].strip()
         
-        # Extract context after (1000 chars)
-        context_end = min(len(markdown_content), end_pos + 3 + 1000)
+        # Extract context after (configurable window size)
+        context_end = min(len(markdown_content), end_pos + 3 + context_window_size)
         context_after = markdown_content[end_pos + 3:context_end].strip()
         
         # Add the extracted code block
@@ -210,7 +375,46 @@ def extract_code_blocks(markdown_content: str, min_length: int = None) -> List[D
         # Move to next pair (skip the closing backtick we just processed)
         i += 2
     
-    return code_blocks
+    # Apply deduplication logic to remove similar code variants
+    if not code_blocks:
+        return code_blocks
+    
+    search_logger.debug(f"Starting deduplication process for {len(code_blocks)} code blocks")
+    
+    # Group similar code blocks together
+    similarity_threshold = 0.85  # 85% similarity threshold
+    grouped_blocks = []
+    processed_indices = set()
+    
+    for i, block1 in enumerate(code_blocks):
+        if i in processed_indices:
+            continue
+            
+        # Start a new group with this block
+        similar_group = [block1]
+        processed_indices.add(i)
+        
+        # Find all similar blocks
+        for j, block2 in enumerate(code_blocks):
+            if j <= i or j in processed_indices:
+                continue
+                
+            similarity = _calculate_code_similarity(block1['code'], block2['code'])
+            
+            if similarity >= similarity_threshold:
+                similar_group.append(block2)
+                processed_indices.add(j)
+                search_logger.debug(f"Found similar code blocks with {similarity:.2f} similarity")
+        
+        # Select the best variant from the similar group
+        best_variant = _select_best_code_variant(similar_group)
+        grouped_blocks.append(best_variant)
+    
+    deduplicated_count = len(code_blocks) - len(grouped_blocks)
+    if deduplicated_count > 0:
+        search_logger.info(f"Code deduplication: removed {deduplicated_count} duplicate variants, kept {len(grouped_blocks)} unique code blocks")
+    
+    return grouped_blocks
 
 
 def generate_code_example_summary(code: str, context_before: str, context_after: str, language: str = "", provider: str = None) -> Dict[str, str]:
@@ -310,7 +514,7 @@ Format your response as JSON:
         }
 
 
-async def generate_code_summaries_batch(code_blocks: List[Dict[str, Any]], max_workers: int = 3, progress_callback = None) -> List[Dict[str, str]]:
+async def generate_code_summaries_batch(code_blocks: List[Dict[str, Any]], max_workers: int = None, progress_callback = None) -> List[Dict[str, str]]:
     """
     Generate summaries for multiple code blocks with rate limiting and proper worker management.
     
@@ -324,6 +528,14 @@ async def generate_code_summaries_batch(code_blocks: List[Dict[str, Any]], max_w
     """
     if not code_blocks:
         return []
+    
+    # Get max_workers from settings if not provided
+    if max_workers is None:
+        try:
+            from ...services.credential_service import get_credential_sync
+            max_workers = int(get_credential_sync('CODE_SUMMARY_MAX_WORKERS', 3))
+        except:
+            max_workers = 3  # Default fallback
     
     search_logger.info(f"Generating summaries for {len(code_blocks)} code blocks with max_workers={max_workers}")
     
@@ -527,9 +739,12 @@ async def add_code_examples_to_supabase(
         for j, embedding in enumerate(valid_embeddings):
             idx = i + j
             
-            # Extract source_id from URL
-            parsed_url = urlparse(urls[idx])
-            source_id = parsed_url.netloc or parsed_url.path
+            # Use source_id from metadata if available, otherwise extract from URL
+            if metadatas[idx] and 'source_id' in metadatas[idx]:
+                source_id = metadatas[idx]['source_id']
+            else:
+                parsed_url = urlparse(urls[idx])
+                source_id = parsed_url.netloc or parsed_url.path
             
             batch_data.append({
                 'url': urls[idx],

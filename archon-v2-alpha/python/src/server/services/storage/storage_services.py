@@ -5,17 +5,13 @@ This module contains all storage service classes that handle document and data s
 These services extend the base storage functionality with specific implementations.
 """
 
-import os
-import asyncio
 from typing import List, Dict, Any, Optional, Tuple
-from urllib.parse import urlparse
 
 from fastapi import WebSocket
 
 from .base_storage_service import BaseStorageService
 from .document_storage_service import add_documents_to_supabase
-from .code_storage_service import add_code_examples_to_supabase
-from ...config.logfire_config import search_logger, get_logger, safe_span
+from ...config.logfire_config import get_logger, safe_span
 
 logger = get_logger(__name__)
 
@@ -31,7 +27,8 @@ class DocumentStorageService(BaseStorageService):
         knowledge_type: str = "documentation",
         tags: Optional[List[str]] = None,
         websocket: Optional[WebSocket] = None,
-        progress_callback: Optional[Any] = None
+        progress_callback: Optional[Any] = None,
+        cancellation_check: Optional[Any] = None
     ) -> Tuple[bool, Dict[str, Any]]:
         """
         Upload and process a document file with progress reporting.
@@ -144,7 +141,8 @@ class DocumentStorageService(BaseStorageService):
                     batch_size=15,
                     progress_callback=progress_callback,
                     enable_parallel_batches=True,
-                    provider=None  # Use configured provider
+                    provider=None,  # Use configured provider
+                    cancellation_check=cancellation_check
                 )
                 
                 await report_progress("Document upload completed!", 100)
@@ -198,7 +196,8 @@ class DocumentStorageService(BaseStorageService):
                 knowledge_type=doc.get('knowledge_type', 'documentation'),
                 tags=doc.get('tags'),
                 websocket=kwargs.get('websocket'),
-                progress_callback=kwargs.get('progress_callback')
+                progress_callback=kwargs.get('progress_callback'),
+                cancellation_check=kwargs.get('cancellation_check')
             )
             results.append(result)
         

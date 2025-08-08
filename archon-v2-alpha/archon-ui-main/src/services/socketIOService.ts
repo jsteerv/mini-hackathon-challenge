@@ -55,6 +55,10 @@ export class WebSocketService {
   private connectionRejector: ((error: Error) => void) | null = null;
   
   private _state: WebSocketState = WebSocketState.DISCONNECTED;
+  
+  // Deduplication support
+  private lastMessages: Map<string, { data: any; timestamp: number }> = new Map();
+  private deduplicationWindow = 100; // 100ms window
 
   constructor(config: WebSocketConfig = {}) {
     this.config = {
@@ -120,24 +124,19 @@ export class WebSocketService {
   }
 
   private parseEndpoint(endpoint: string): { sessionId: string } {
-    // Extract session ID from endpoint - we'll use this for room identification
-    const sessionMatch = endpoint.match(/sessions\/([^\/]+)/);
-    const sessionId = sessionMatch ? sessionMatch[1] : '';
+    // Simplified endpoint parsing - focus on project IDs for task updates
+    const projectMatch = endpoint.match(/projects\/([^/]+)/);
+    if (projectMatch) {
+      return { sessionId: projectMatch[1] };
+    }
     
-    // Extract project ID for task updates
-    const projectMatch = endpoint.match(/projects\/([^\/]+)/);
-    const projectId = projectMatch ? projectMatch[1] : '';
+    // Legacy support for other endpoint types
+    const sessionMatch = endpoint.match(/sessions\/([^/]+)/);
+    const progressMatch = endpoint.match(/crawl-progress\/([^/]+)/);
+    const projectProgressMatch = endpoint.match(/project-creation-progress\/([^/]+)/);
     
-    // Extract progress ID for crawl progress
-    const progressMatch = endpoint.match(/crawl-progress\/([^\/]+)/);
-    const progressId = progressMatch ? progressMatch[1] : '';
-    
-    // Extract progress ID for project creation progress
-    const projectProgressMatch = endpoint.match(/project-creation-progress\/([^\/]+)/);
-    const projectProgressId = projectProgressMatch ? projectProgressMatch[1] : '';
-    
-    // Return the most relevant ID for room joining
-    return { sessionId: sessionId || projectId || progressId || projectProgressId };
+    const sessionId = sessionMatch?.[1] || progressMatch?.[1] || projectProgressMatch?.[1] || '';
+    return { sessionId };
   }
 
   private async establishConnection(): Promise<void> {
@@ -216,7 +215,7 @@ export class WebSocketService {
 
     this.socket.on('connect_error', (error: Error) => {
       console.error('❌ Socket.IO connection error:', error);
-      console.error('❌ Error type:', error.type);
+      console.error('❌ Error type:', (error as any).type);
       console.error('❌ Error message:', error.message);
       console.error('❌ Socket transport:', this.socket?.io?.engine?.transport?.name);
       this.notifyError(error);
@@ -269,7 +268,47 @@ export class WebSocketService {
     });
   }
 
+  private isDuplicateMessage(type: string, data: any): boolean {
+    const lastMessage = this.lastMessages.get(type);
+    if (!lastMessage) return false;
+    
+    const now = Date.now();
+    const timeDiff = now - lastMessage.timestamp;
+    
+    // If message arrived within deduplication window and data is identical
+    if (timeDiff < this.deduplicationWindow) {
+      const isDupe = JSON.stringify(lastMessage.data) === JSON.stringify(data);
+      if (isDupe) {
+        console.log(`[Socket] Duplicate ${type} message filtered`);
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
   private handleMessage(message: WebSocketMessage): void {
+    // Add deduplication check
+    if (this.isDuplicateMessage(message.type, message.data)) {
+      return;
+    }
+    
+    // Store message for deduplication
+    this.lastMessages.set(message.type, {
+      data: message.data,
+      timestamp: Date.now()
+    });
+    
+    // Clean old messages periodically
+    if (this.lastMessages.size > 100) {
+      const cutoff = Date.now() - 5000;
+      for (const [key, value] of this.lastMessages.entries()) {
+        if (value.timestamp < cutoff) {
+          this.lastMessages.delete(key);
+        }
+      }
+    }
+    
     // Notify specific type handlers
     const handlers = this.messageHandlers.get(message.type) || [];
     handlers.forEach(handler => {
@@ -415,6 +454,14 @@ export class WebSocketService {
     return this.socket?.connected === true;
   }
 
+  /**
+   * Configure deduplication window (in milliseconds)
+   * @param windowMs - Time window for deduplication (default: 100ms)
+   */
+  setDeduplicationWindow(windowMs: number): void {
+    this.deduplicationWindow = windowMs;
+  }
+
   disconnect(): void {
     this.setState(WebSocketState.DISCONNECTED);
     
@@ -430,6 +477,7 @@ export class WebSocketService {
     this.connectionPromise = null;
     this.connectionResolver = null;
     this.connectionRejector = null;
+    this.lastMessages.clear(); // Clear deduplication cache
   }
 }
 

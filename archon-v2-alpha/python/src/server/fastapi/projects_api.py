@@ -8,14 +8,11 @@ Handles:
 - Socket.IO progress updates for project creation
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Dict, Any, List, Optional, Set
+from typing import Dict, Any, List, Optional
 import asyncio
 import secrets
-from datetime import datetime, timedelta
-import json
-import uuid
 
 from ..utils import get_supabase_client
 # Removed direct logging import - using unified config
@@ -105,6 +102,13 @@ async def list_projects():
 @router.post("/projects")
 async def create_project(request: CreateProjectRequest):
     """Create a new project with streaming progress."""
+    # Validate title
+    if not request.title:
+        raise HTTPException(status_code=422, detail="Title is required")
+    
+    if not request.title.strip():
+        raise HTTPException(status_code=422, detail="Title cannot be empty")
+    
     try:
         logfire.info(f"Creating new project | title={request.title} | github_repo={request.github_repo}")
         

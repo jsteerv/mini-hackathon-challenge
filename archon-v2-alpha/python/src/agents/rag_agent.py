@@ -8,13 +8,12 @@ intelligent responses based on the retrieved information.
 
 import os
 import logging
-import json
-from typing import Optional, Dict, Any, List, Union
+from typing import Optional, Dict, Any, List
 from dataclasses import dataclass
 from datetime import datetime
 
 from pydantic import BaseModel, Field
-from pydantic_ai import Agent, RunContext, ModelRetry
+from pydantic_ai import Agent, RunContext
 
 from .base_agent import BaseAgent, ArchonDependencies
 from .mcp_client import get_mcp_client
@@ -336,7 +335,7 @@ class RagAgent(BaseAgent[RagDependencies, str]):
         try:
             # Run the agent and get the string response
             response_text = await self.run(user_message, deps)
-            self.logger.info(f"RAG query completed successfully")
+            self.logger.info("RAG query completed successfully")
             
             # Create a structured result from the response text
             # Try to extract some basic information from the response

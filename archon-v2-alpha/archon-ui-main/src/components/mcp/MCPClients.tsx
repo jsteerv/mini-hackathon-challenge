@@ -830,7 +830,7 @@ const EditClientDrawer: React.FC<EditClientDrawerProps> = ({ client, isOpen, onC
                 type="button"
                 variant="ghost" 
                 accentColor="cyan"
-                onClick={() => window.open(`http://localhost:8080/api/mcp/clients/${client.id}/status`, '_blank')}
+                onClick={() => window.open(`/api/mcp/clients/${client.id}/status`, '_blank')}
               >
                 Debug Status
               </Button>

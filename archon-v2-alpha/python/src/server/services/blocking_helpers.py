@@ -8,7 +8,6 @@ import asyncio
 from typing import Any, Coroutine, List, Dict, Optional
 from queue import Queue
 import threading
-from urllib.parse import urlparse
 
 from ..config.logfire_config import get_logger
 

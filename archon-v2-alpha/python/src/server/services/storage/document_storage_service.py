@@ -5,18 +5,14 @@ Handles storage of documents in Supabase with parallel processing support.
 """
 import os
 import asyncio
-import concurrent.futures
 from typing import List, Dict, Any, Optional
-from supabase import Client
 from urllib.parse import urlparse
 
 from ...config.logfire_config import search_logger, safe_span
 from ..embeddings.embedding_service import create_embeddings_batch_async
 from ..embeddings.contextual_embedding_service import (
-    process_chunk_with_context,
     generate_contextual_embeddings_batch
 )
-from ..client_manager import get_supabase_client
 from ..credential_service import credential_service
 
 
@@ -27,10 +23,11 @@ async def add_documents_to_supabase(
     contents: List[str], 
     metadatas: List[Dict[str, Any]],
     url_to_full_document: Dict[str, str],
-    batch_size: int = 15,
+    batch_size: int = None,  # Will load from settings
     progress_callback: Optional[Any] = None,
     enable_parallel_batches: bool = True,
-    provider: Optional[str] = None
+    provider: Optional[str] = None,
+    cancellation_check: Optional[Any] = None
 ) -> None:
     """
     Add documents to Supabase with threading optimizations.
@@ -57,22 +54,58 @@ async def add_documents_to_supabase(
             if progress_callback and asyncio.iscoroutinefunction(progress_callback):
                 await progress_callback(message, percentage, batch_info)
         
+        # Load settings from database
+        try:
+            rag_settings = await credential_service.get_credentials_by_category("rag_strategy")
+            if batch_size is None:
+                batch_size = int(rag_settings.get("DOCUMENT_STORAGE_BATCH_SIZE", "50"))
+            delete_batch_size = int(rag_settings.get("DELETE_BATCH_SIZE", "50"))
+            enable_parallel = rag_settings.get("ENABLE_PARALLEL_BATCHES", "true").lower() == "true"
+        except Exception as e:
+            search_logger.warning(f"Failed to load storage settings: {e}, using defaults")
+            if batch_size is None:
+                batch_size = 50
+            delete_batch_size = 50
+            enable_parallel = True
+            
         # Get unique URLs to delete existing records
         unique_urls = list(set(urls))
         
-        # Delete existing records for these URLs
+        # Delete existing records for these URLs in batches
         try:
             if unique_urls:
-                client.table("crawled_pages").delete().in_("url", unique_urls).execute()
-                search_logger.info(f"Deleted existing records for {len(unique_urls)} URLs")
+                # Delete in configured batch sizes
+                for i in range(0, len(unique_urls), delete_batch_size):
+                    # Check for cancellation before each delete batch
+                    if cancellation_check:
+                        cancellation_check()
+                    
+                    batch_urls = unique_urls[i:i + delete_batch_size]
+                    client.table("crawled_pages").delete().in_("url", batch_urls).execute()
+                    # Yield control to allow Socket.IO to process messages
+                    if i + delete_batch_size < len(unique_urls):
+                        await asyncio.sleep(0.05)  # Reduced pause between delete batches
+                search_logger.info(f"Deleted existing records for {len(unique_urls)} URLs in batches")
         except Exception as e:
-            search_logger.warning(f"Batch delete failed: {e}. Trying one-by-one deletion as fallback.")
-            # Fallback: delete records one by one
-            for url in unique_urls:
+            search_logger.warning(f"Batch delete failed: {e}. Trying smaller batches as fallback.")
+            # Fallback: delete in smaller batches with rate limiting
+            failed_urls = []
+            fallback_batch_size = max(10, delete_batch_size // 5)
+            for i in range(0, len(unique_urls), fallback_batch_size):
+                # Check for cancellation before each fallback delete batch
+                if cancellation_check:
+                    cancellation_check()
+                
+                batch_urls = unique_urls[i:i + 10]
                 try:
-                    client.table("crawled_pages").delete().eq("url", url).execute()
+                    client.table("crawled_pages").delete().in_("url", batch_urls).execute()
+                    await asyncio.sleep(0.05)  # Rate limit to prevent overwhelming
                 except Exception as inner_e:
-                    search_logger.error(f"Error deleting record for URL {url}: {inner_e}")
+                    search_logger.error(f"Error deleting batch of {len(batch_urls)} URLs: {inner_e}")
+                    failed_urls.extend(batch_urls)
+            
+            if failed_urls:
+                search_logger.error(f"Failed to delete {len(failed_urls)} URLs")
         
         # Check if contextual embeddings are enabled
         # Fix: Get from credential service instead of environment
@@ -91,6 +124,10 @@ async def add_documents_to_supabase(
         
         # Process in batches to avoid memory issues
         for batch_num, i in enumerate(range(0, len(contents), batch_size), 1):
+            # Check for cancellation before each batch
+            if cancellation_check:
+                cancellation_check()
+            
             batch_end = min(i + batch_size, len(contents))
             
             # Get batch slices
@@ -132,44 +169,56 @@ async def add_documents_to_supabase(
             # Apply contextual embedding to each chunk if enabled
             if use_contextual_embeddings:
                 
-                # Prepare arguments for parallel processing
-                process_args = []
+                # Prepare full documents list for batch processing
+                full_documents = []
                 for j, content in enumerate(batch_contents):
                     url = batch_urls[j]
                     full_document = url_to_full_document.get(url, "")
-                    process_args.append((url, content, full_document))
+                    full_documents.append(full_document)
                 
-                # Track processing
-                contextual_contents = [None] * len(batch_contents)
+                # Get contextual embedding batch size from settings
+                try:
+                    contextual_batch_size = int(rag_settings.get("CONTEXTUAL_EMBEDDING_BATCH_SIZE", "50"))
+                except:
+                    contextual_batch_size = 50
                 
-                # Process in parallel using ThreadPoolExecutor
-                with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-                    # Submit all tasks and collect futures with their indices
-                    future_to_idx = {executor.submit(process_chunk_with_context, arg): idx 
-                                   for idx, arg in enumerate(process_args)}
+                try:
+                    # Process in smaller sub-batches to avoid token limits
+                    contextual_contents = []
+                    successful_count = 0
                     
-                    # Process results as they complete
-                    for future in concurrent.futures.as_completed(future_to_idx):
-                        idx = future_to_idx[future]
-                        try:
-                            result, success = future.result()
-                            contextual_contents[idx] = result
+                    for ctx_i in range(0, len(batch_contents), contextual_batch_size):
+                        # Check for cancellation before each contextual sub-batch
+                        if cancellation_check:
+                            cancellation_check()
+                        
+                        ctx_end = min(ctx_i + contextual_batch_size, len(batch_contents))
+                        
+                        sub_batch_contents = batch_contents[ctx_i:ctx_end]
+                        sub_batch_docs = full_documents[ctx_i:ctx_end]
+                        
+                        # Process sub-batch with a single API call using asyncio.to_thread
+                        sub_results = await asyncio.to_thread(
+                            generate_contextual_embeddings_batch,
+                            sub_batch_docs,
+                            sub_batch_contents
+                        )
+                        
+                        # Extract results from this sub-batch
+                        for idx, (contextual_text, success) in enumerate(sub_results):
+                            contextual_contents.append(contextual_text)
                             if success:
-                                batch_metadatas[idx]["contextual_embedding"] = True
-                                search_logger.debug(f"Successfully generated contextual embedding for chunk {idx} in batch {batch_num}")
-                        except Exception as e:
-                            search_logger.warning(f"Error processing chunk {idx}: {e}")
-                            # Use original content as fallback
-                            contextual_contents[idx] = batch_contents[idx]
-                
-                # Ensure all results are populated (shouldn't be None if everything worked)
-                for idx, content in enumerate(contextual_contents):
-                    if content is None:
-                        contextual_contents[idx] = batch_contents[idx]
-                
-                # Log summary of contextual embedding results
-                successful_count = sum(1 for meta in batch_metadatas if meta.get("contextual_embedding", False))
-                search_logger.info(f"Batch {batch_num}: Generated {successful_count}/{len(batch_contents)} contextual embeddings using {max_workers} workers")
+                                original_idx = ctx_i + idx
+                                batch_metadatas[original_idx]["contextual_embedding"] = True
+                                successful_count += 1
+                    
+                    search_logger.info(f"Batch {batch_num}: Generated {successful_count}/{len(batch_contents)} contextual embeddings using batch API (sub-batch size: {contextual_batch_size})")
+                    
+                except Exception as e:
+                    search_logger.error(f"Error in batch contextual embedding: {e}")
+                    # Fallback to original contents
+                    contextual_contents = batch_contents
+                    search_logger.warning(f"Batch {batch_num}: Falling back to original content due to error")
             else:
                 # If not using contextual embeddings, use original contents
                 contextual_contents = batch_contents
@@ -211,6 +260,10 @@ async def add_documents_to_supabase(
             retry_delay = 1.0
             
             for retry in range(max_retries):
+                # Check for cancellation before each retry attempt
+                if cancellation_check:
+                    cancellation_check()
+                
                 try:
                     client.table("crawled_pages").insert(batch_data).execute()
                     
@@ -245,6 +298,10 @@ async def add_documents_to_supabase(
                         # Try individual inserts as last resort
                         successful_inserts = 0
                         for record in batch_data:
+                            # Check for cancellation before each individual insert
+                            if cancellation_check:
+                                cancellation_check()
+                            
                             try:
                                 client.table("crawled_pages").insert(record).execute()
                                 successful_inserts += 1
@@ -253,10 +310,10 @@ async def add_documents_to_supabase(
                         
                         search_logger.info(f"Individual inserts: {successful_inserts}/{len(batch_data)} successful")
             
-            # WebSocket-safe delay between batches
+            # Minimal delay between batches to prevent overwhelming
             if i + batch_size < len(contents):
-                delay = 1.5 if use_contextual_embeddings else 0.5
-                await asyncio.sleep(delay)
+                # Only yield control briefly to keep Socket.IO responsive
+                await asyncio.sleep(0.1)  # Reduced from 1.5s/0.5s to 0.1s
         
         # Send final 100% progress report to ensure UI shows completion
         if progress_callback and asyncio.iscoroutinefunction(progress_callback):

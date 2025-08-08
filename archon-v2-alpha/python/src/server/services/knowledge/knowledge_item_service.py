@@ -3,9 +3,7 @@ Knowledge Item Service
 
 Handles all knowledge item CRUD operations and data transformations.
 """
-import json
 from typing import Dict, Any, List, Optional, Tuple
-from urllib.parse import urlparse
 
 from ...config.logfire_config import safe_logfire_info, safe_logfire_error
 
@@ -82,9 +80,12 @@ class KnowledgeItemService:
             # Get source IDs for batch queries
             source_ids = [source['source_id'] for source in sources]
             
+            # Debug log source IDs
+            safe_logfire_info(f"Source IDs for batch query: {source_ids}")
+            
             # Batch fetch related data to avoid N+1 queries
             first_urls = {}
-            code_examples = {}
+            code_example_counts = {}
             chunk_counts = {}
             
             if source_ids:
@@ -99,23 +100,22 @@ class KnowledgeItemService:
                     if item['source_id'] not in first_urls:
                         first_urls[item['source_id']] = item['url']
                 
-                # Batch fetch code examples
-                code_result = self.supabase.from_('code_examples')\
-                    .select('id, source_id, content, summary, metadata')\
-                    .in_('source_id', source_ids)\
-                    .execute()
-                
-                # Group code examples by source_id
-                for item in (code_result.data or []):
-                    if item['source_id'] not in code_examples:
-                        code_examples[item['source_id']] = []
-                    code_examples[item['source_id']].append(item)
-                
-                # For chunk counts, we'll set them to 0 initially and update if we can
-                # This avoids N queries for counts which is the main performance issue
-                # In a future optimization, we could store chunk count in the sources table
+                # Get code example counts per source - NO CONTENT, just counts!
+                # Fetch counts individually for each source
                 for source_id in source_ids:
+                    count_result = self.supabase.from_('code_examples')\
+                        .select('id', count='exact', head=True)\
+                        .eq('source_id', source_id)\
+                        .execute()
+                    code_example_counts[source_id] = count_result.count if hasattr(count_result, 'count') else 0
+                
+                # Ensure all sources have a count (default to 0)
+                for source_id in source_ids:
+                    if source_id not in code_example_counts:
+                        code_example_counts[source_id] = 0
                     chunk_counts[source_id] = 0  # Default to 0 to avoid timeout
+                
+                safe_logfire_info(f"Code example counts: {code_example_counts}")
             
             # Transform sources to items with batched data
             items = []
@@ -125,7 +125,7 @@ class KnowledgeItemService:
                 
                 # Use batched data instead of individual queries
                 first_page_url = first_urls.get(source_id, f"source://{source_id}")
-                source_code_examples = code_examples.get(source_id, [])
+                code_examples_count = code_example_counts.get(source_id, 0)
                 chunks_count = chunk_counts.get(source_id, 0)
                 
                 # Determine source type
@@ -136,7 +136,7 @@ class KnowledgeItemService:
                     'title': source.get('title', source.get('summary', 'Untitled')),
                     'url': first_page_url,
                     'source_id': source_id,
-                    'code_examples': source_code_examples,
+                    'code_examples': [{'count': code_examples_count}] if code_examples_count > 0 else [],  # Minimal array just for count display
                     'metadata': {
                         'knowledge_type': source_metadata.get('knowledge_type', 'technical'),
                         'tags': source_metadata.get('tags', []),
@@ -151,7 +151,7 @@ class KnowledgeItemService:
                         'file_name': source_metadata.get('file_name'),
                         'file_type': source_metadata.get('file_type'),
                         'update_frequency': source_metadata.get('update_frequency', 7),
-                        'code_examples_count': len(source_code_examples),
+                        'code_examples_count': code_examples_count,
                         **source_metadata
                     },
                     'created_at': source.get('created_at'),

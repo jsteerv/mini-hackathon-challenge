@@ -66,17 +66,14 @@ const MCPResponseSchema = z.object({
 export type MCPTool = z.infer<typeof MCPToolSchema>;
 export type MCPParameter = z.infer<typeof MCPParameterSchema>;
 
+import { getWebSocketUrl } from '../config/api';
+
 /**
  * MCP Server Service - Handles the Archon MCP server lifecycle via FastAPI
  */
 class MCPServerService {
   private baseUrl = ''; // Use relative URL to go through Vite proxy
-
-  private getApiBaseUrl() {
-    // Always use relative URL in production, goes through Vite proxy
-    return '';
-  }
-  private wsUrl = ''; // Use relative WebSocket path through proxy
+  private wsUrl = getWebSocketUrl(); // Use WebSocket URL from config
   private logWebSocket: WebSocket | null = null;
   private reconnectTimeout: NodeJS.Timeout | null = null;
   public isReconnecting = false;
@@ -191,7 +188,7 @@ class MCPServerService {
     // Close existing connection if any
     this.disconnectLogs();
 
-    const ws = new WebSocket(`${this.wsUrl}/api/mcp/logs/stream`);
+    const ws = new WebSocket(`${getWebSocketUrl()}/api/mcp/logs/stream`);
     this.logWebSocket = ws;
 
     ws.onmessage = (event) => {

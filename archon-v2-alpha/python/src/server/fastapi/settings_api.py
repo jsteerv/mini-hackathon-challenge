@@ -10,11 +10,10 @@ Handles:
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Dict, Any, Optional
-import json
 from datetime import datetime
 
 from ..utils import get_supabase_client
-from ..services.credential_service import credential_service, CredentialItem, initialize_credentials
+from ..services.credential_service import credential_service, initialize_credentials
 
 # Import logging
 from ..config.logfire_config import logfire
@@ -45,7 +44,7 @@ class CredentialResponse(BaseModel):
 async def get_openai_key_status():
     """Check if OpenAI API key is configured."""
     try:
-        logfire.info(f"Checking OpenAI API key status")
+        logfire.info("Checking OpenAI API key status")
         supabase_client = get_supabase_client()
         
         response = supabase_client.table("credentials").select("key_value").eq("key_name", "openai_api_key").execute()
@@ -67,7 +66,7 @@ async def get_openai_key_status():
 async def set_openai_key(request: SetOpenAIKeyRequest):
     """Set the OpenAI API key."""
     try:
-        logfire.info(f"Setting OpenAI API key")
+        logfire.info("Setting OpenAI API key")
         supabase_client = get_supabase_client()
         
         # Check if key already exists
@@ -75,20 +74,20 @@ async def set_openai_key(request: SetOpenAIKeyRequest):
         
         if existing.data:
             # Update existing key
-            logfire.info(f"Updating existing OpenAI API key")
+            logfire.info("Updating existing OpenAI API key")
             response = supabase_client.table("credentials").update({
                 "key_value": request.api_key
             }).eq("key_name", "openai_api_key").execute()
         else:
             # Insert new key
-            logfire.info(f"Creating new OpenAI API key")
+            logfire.info("Creating new OpenAI API key")
             response = supabase_client.table("credentials").insert({
                 "key_name": "openai_api_key",
                 "key_value": request.api_key
             }).execute()
         
         if response.data:
-            logfire.info(f"OpenAI API key saved successfully")
+            logfire.info("OpenAI API key saved successfully")
             return CredentialResponse(
                 success=True,
                 message="OpenAI API key saved successfully"
@@ -108,12 +107,12 @@ async def set_openai_key(request: SetOpenAIKeyRequest):
 async def delete_openai_key():
     """Delete the stored OpenAI API key."""
     try:
-        logfire.info(f"Deleting OpenAI API key")
+        logfire.info("Deleting OpenAI API key")
         supabase_client = get_supabase_client()
         
         response = supabase_client.table("credentials").delete().eq("key_name", "openai_api_key").execute()
         
-        logfire.info(f"OpenAI API key deleted successfully")
+        logfire.info("OpenAI API key deleted successfully")
         
         return CredentialResponse(
             success=True,

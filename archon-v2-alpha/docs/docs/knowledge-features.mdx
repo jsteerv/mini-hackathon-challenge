@@ -104,6 +104,7 @@ import Admonition from '@theme/Admonition';
 - **URL Input**: Simple URL entry with validation
 - **Crawl Options**: Configure depth, filters
 - **Progress Monitoring**: Live crawl status via Socket.IO
+- **Stop Functionality**: Cancel crawls immediately with proper cleanup
 - **Result Preview**: See crawled content immediately
 
 ## 🔧 Technical Capabilities
@@ -138,6 +139,13 @@ import Admonition from '@theme/Admonition';
 - **Batch Operations**: Process multiple documents efficiently
 - **Socket.IO Progress**: Real-time status updates
 - **Caching**: Intelligent result caching
+
+### Crawl Cancellation
+- **Immediate Response**: Stop button provides instant UI feedback
+- **Proper Cleanup**: Cancels both orchestration service and asyncio tasks
+- **State Persistence**: Uses localStorage to prevent zombie crawls on refresh
+- **Socket.IO Events**: Real-time cancellation status via `crawl:stopping` and `crawl:stopped`
+- **Resource Management**: Ensures all server resources are properly released
 
 ## 🚀 Advanced Features
 
@@ -228,6 +236,7 @@ The system will:
 - **Crawl Progress**: Percentage completion with smooth updates
 - **Current URL**: What's being processed in real-time
 - **Batch Updates**: Processing batches with accurate progress
+- **Stop Support**: Cancel crawls with immediate feedback
 - **Error Reporting**: Failed URLs with detailed errors
 - **Completion Status**: Final statistics and results
 
@@ -252,6 +261,18 @@ socket.on('progress_complete', (data) => {
   console.log('Crawl completed!');
   console.log(`Chunks stored: ${data.chunksStored}`);
   console.log(`Word count: ${data.wordCount}`);
+});
+
+// Stop a crawl
+socket.emit('crawl_stop', { progress_id: 'uuid' });
+
+// Handle stop events
+socket.on('crawl:stopping', (data) => {
+  console.log('Crawl is stopping...');
+});
+
+socket.on('crawl:stopped', (data) => {
+  console.log('Crawl cancelled successfully');
 });
 ```
 

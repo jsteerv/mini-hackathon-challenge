@@ -13,18 +13,15 @@ from pydantic import BaseModel
 from typing import Dict, Any, List, Optional
 import asyncio
 import docker
-import os
 import time
 from collections import deque
 from datetime import datetime
-import json
-import aiohttp
 from docker.errors import NotFound, APIError
 
 from ..utils import get_supabase_client
 
 # Import unified logging
-from ..config.logfire_config import mcp_logger, api_logger, safe_span, safe_set_attribute, safe_record_exception
+from ..config.logfire_config import mcp_logger, api_logger, safe_span, safe_set_attribute
 
 router = APIRouter(prefix="/api/mcp", tags=["mcp"])
 
@@ -600,10 +597,14 @@ async def get_mcp_config():
         try:
             api_logger.info("Getting MCP server configuration")
             
-            # Fixed configuration for SSE-only mode
+            # Get actual MCP port from environment or use default
+            import os
+            mcp_port = int(os.getenv('ARCHON_MCP_PORT', '8051'))
+            
+            # Configuration for SSE-only mode with actual port
             config = {
                 'host': 'localhost',
-                'port': 8051,
+                'port': mcp_port,
                 'transport': 'sse',
             }
             

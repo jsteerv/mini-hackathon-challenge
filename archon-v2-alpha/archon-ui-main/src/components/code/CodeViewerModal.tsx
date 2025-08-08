@@ -43,11 +43,13 @@ export interface CodeExample {
 interface CodeViewerModalProps {
   examples: CodeExample[]
   onClose: () => void
+  isLoading?: boolean
 }
 
 export const CodeViewerModal: React.FC<CodeViewerModalProps> = ({
   examples,
   onClose,
+  isLoading = false,
 }) => {
   const [activeTab, setActiveTab] = useState<'code' | 'metadata'>('code')
   const [activeExampleIndex, setActiveExampleIndex] = useState(0)
@@ -300,7 +302,21 @@ export const CodeViewerModal: React.FC<CodeViewerModalProps> = ({
           
           {/* Content */}
           <div className="flex-1 overflow-auto">
-            {activeTab === 'code' && activeExample && (
+            {isLoading ? (
+              <div className="h-full flex items-center justify-center">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-400 mx-auto mb-4"></div>
+                  <p className="text-gray-400">Loading code examples...</p>
+                </div>
+              </div>
+            ) : !activeExample || examples.length === 0 ? (
+              <div className="h-full flex items-center justify-center">
+                <div className="text-center">
+                  <CodeIcon className="w-12 h-12 text-gray-600 mx-auto mb-4" />
+                  <p className="text-gray-400">No code examples available</p>
+                </div>
+              </div>
+            ) : activeTab === 'code' && activeExample && (
               <div className="h-full p-4">
                 <div className="bg-[#2d2d2d] rounded-lg border border-gray-800 h-full overflow-auto">
                   <pre className="p-4 text-sm">

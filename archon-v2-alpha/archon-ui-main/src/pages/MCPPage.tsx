@@ -131,10 +131,12 @@ export const MCPPage = () => {
     } catch (error) {
       console.error('Failed to load configuration:', error);
       // Set a default config if loading fails
+      // Try to detect port from environment or use default
+      const defaultPort = import.meta.env.ARCHON_MCP_PORT || 8051;
       setConfig({
         transport: 'http',
         host: 'localhost',
-        port: 8051
+        port: typeof defaultPort === 'string' ? parseInt(defaultPort) : defaultPort
       });
     }
   };

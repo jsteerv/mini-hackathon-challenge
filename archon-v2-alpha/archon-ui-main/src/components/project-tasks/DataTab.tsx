@@ -683,8 +683,8 @@ const EditTableModal = ({
       
       let columnType: 'regular' | 'pk' | 'fk' = 'regular';
       let name = nameAndType;
-      let referencedTable = '';
-      let referencedColumn = '';
+      const referencedTable = '';
+      const referencedColumn = '';
       
       if (nameAndType.includes('(PK)')) {
         columnType = 'pk';

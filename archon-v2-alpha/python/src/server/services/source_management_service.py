@@ -4,16 +4,12 @@ Source Management Service
 Handles source metadata, summaries, and management.
 Consolidates both utility functions and class-based service.
 """
-import os
-import json
 from typing import List, Dict, Any, Tuple, Optional
-from datetime import datetime
 from supabase import Client
 
 from ..config.logfire_config import search_logger, get_logger
 from .client_manager import get_supabase_client
 from .llm_provider_service import get_llm_client_sync
-from .credential_service import credential_service
 
 logger = get_logger(__name__)
 
@@ -74,7 +70,7 @@ The above content is from the documentation for '{source_id}'. Please provide a 
         # Get LLM client using the provider service
         try:
             client = get_llm_client_sync()
-            search_logger.info(f"Successfully created LLM client for summary generation")
+            search_logger.info("Successfully created LLM client for summary generation")
         except Exception as e:
             search_logger.error(f"Failed to create LLM client: {e}")
             return default_summary
@@ -191,7 +187,8 @@ def update_source_info(
     content: str = "", 
     knowledge_type: str = "technical", 
     tags: Optional[List[str]] = None, 
-    update_frequency: int = 7
+    update_frequency: int = 7,
+    original_url: Optional[str] = None
 ):
     """
     Update or insert source information in the sources table.
@@ -222,6 +219,8 @@ def update_source_info(
                 "auto_generated": False,  # Mark as not auto-generated since we're preserving
                 "update_frequency": update_frequency
             }
+            if original_url:
+                metadata["original_url"] = original_url
             
             # Update existing source (preserving title)
             result = client.table('sources').update({
@@ -238,8 +237,10 @@ def update_source_info(
                 source_id, content, knowledge_type, tags
             )
             
-            # Add update_frequency to metadata
+            # Add update_frequency and original_url to metadata
             metadata["update_frequency"] = update_frequency
+            if original_url:
+                metadata["original_url"] = original_url
             
             # Insert new source
             client.table('sources').insert({
@@ -337,7 +338,7 @@ class SourceManagementService:
                 logger.error(f"Failed to delete from sources: {source_error}")
                 return False, {"error": f"Failed to delete source: {str(source_error)}"}
             
-            logger.info(f"Delete operation completed successfully")
+            logger.info("Delete operation completed successfully")
             return True, {
                 "source_id": source_id,
                 "pages_deleted": pages_deleted,
