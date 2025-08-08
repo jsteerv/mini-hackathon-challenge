@@ -1,0 +1,7 @@
+examples
+venv
+venv_windows
+venv_linux
+__pycache__
+.pytest_cache
+.env

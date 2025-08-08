@@ -1,5 +1,5 @@
 {
-  "name": "AI News Agent",
+  "name": "WS-Part1 (Thomas)",
   "nodes": [
     {
       "parameters": {
@@ -14,429 +14,14 @@
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
-        -600,
-        760
+        -2144,
+        688
       ],
-      "id": "76091934-44f6-4d3e-b93a-fbe752dcc94d",
+      "id": "8fa70293-66f7-4620-a928-fe2048cd070d",
       "name": "Schedule Trigger"
     },
     {
       "parameters": {
-        "options": {}
-      },
-      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
-      "typeVersion": 1.1,
-      "position": [
-        0,
-        -420
-      ],
-      "id": "d5d765b8-1b13-4361-a6b8-2c4f7c212524",
-      "name": "When chat message received",
-      "webhookId": "d2d4f9eb-8605-4579-9b0f-4e2c2e94a9f6"
-    },
-    {
-      "parameters": {
-        "options": {
-          "systemMessage": "=You are a helpful assistant who helps users manage their RSS feeds, YouTube channels, and research topics in their DB. Users will ask you to view, update, create, and delete each of these from their respective tables. Here are the schemas for each table so you understand how to insert/update records:\n\n-- RSS Feeds Table\nCREATE TABLE rss_feeds (\n    id SERIAL PRIMARY KEY,\n    name VARCHAR(255) NOT NULL,\n    url VARCHAR(500) NOT NULL UNIQUE,\n    description TEXT,\n    is_active BOOLEAN DEFAULT true,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);\n\n-- YouTube Channels Table\nCREATE TABLE youtube_channels (\n    id SERIAL PRIMARY KEY,\n    channel_name VARCHAR(255) NOT NULL,\n    channel_url VARCHAR(500) NOT NULL UNIQUE,\n    channel_id VARCHAR(100), -- YouTube channel ID for API calls\n    description TEXT,\n    is_active BOOLEAN DEFAULT true,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);\n\n-- Research Topics Table\nCREATE TABLE research_topics (\n    id SERIAL PRIMARY KEY,\n    topic VARCHAR(255) NOT NULL,\n    keywords TEXT, -- JSON array of related keywords\n    priority INTEGER DEFAULT 5, -- 1-10 priority scale\n    is_active BOOLEAN DEFAULT true,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);\n\nTo update records, just delete and recreate them."
-        }
-      },
-      "type": "@n8n/n8n-nodes-langchain.agent",
-      "typeVersion": 1.9,
-      "position": [
-        220,
-        -420
-      ],
-      "id": "893752f0-c881-4e22-9694-3b779a4ed3fb",
-      "name": "AI Agent"
-    },
-    {
-      "parameters": {},
-      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
-      "typeVersion": 1.3,
-      "position": [
-        260,
-        -160
-      ],
-      "id": "5a1adf20-f724-4738-9406-1c346b35af9e",
-      "name": "Postgres Chat Memory",
-      "credentials": {
-        "postgres": {
-          "id": "NVTCVHVTJAsl0wR7",
-          "name": "Postgres account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "model": {
-          "__rl": true,
-          "value": "gpt-4.1-mini",
-          "mode": "list",
-          "cachedResultName": "gpt-4.1-mini"
-        },
-        "options": {}
-      },
-      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
-      "typeVersion": 1.2,
-      "position": [
-        100,
-        -160
-      ],
-      "id": "1a234709-0fd2-47b9-9d7d-ad3a8f3550a2",
-      "name": "OpenAI Chat Model",
-      "credentials": {
-        "openAiApi": {
-          "id": "KnSSZQEFv82oFpIv",
-          "name": "OpenAi account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "descriptionType": "manual",
-        "toolDescription": "Use this tool to get the RSS feeds that we already have in our database.",
-        "operation": "getAll",
-        "tableId": "rss_feeds",
-        "returnAll": true
-      },
-      "type": "n8n-nodes-base.supabaseTool",
-      "typeVersion": 1,
-      "position": [
-        420,
-        -160
-      ],
-      "id": "b2287c7f-c5ab-4cd7-9ed6-ca8e60c6ab4b",
-      "name": "Supabase",
-      "credentials": {
-        "supabaseApi": {
-          "id": "e27gFPB9uME4YIGb",
-          "name": "Supabase Prod"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "descriptionType": "manual",
-        "toolDescription": "Use this tool to create a record in the RSS feeds table",
-        "tableId": "rss_feeds",
-        "fieldsUi": {
-          "fieldValues": [
-            {
-              "fieldId": "name",
-              "fieldValue": "={{ $fromAI('name', ``, 'string') }}"
-            },
-            {
-              "fieldId": "url",
-              "fieldValue": "={{ $fromAI('url', ``, 'string') }}"
-            },
-            {
-              "fieldId": "description",
-              "fieldValue": "={{ $fromAI('description', ``, 'string') }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabaseTool",
-      "typeVersion": 1,
-      "position": [
-        560,
-        -160
-      ],
-      "id": "df63ebcc-c37b-4fd5-ba48-3f031a964eac",
-      "name": "Supabase1",
-      "credentials": {
-        "supabaseApi": {
-          "id": "e27gFPB9uME4YIGb",
-          "name": "Supabase Prod"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "delete",
-        "tableId": "rss_feeds",
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "id",
-              "condition": "eq",
-              "keyValue": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Field_Value', ``, 'string') }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabaseTool",
-      "typeVersion": 1,
-      "position": [
-        700,
-        -160
-      ],
-      "id": "bf04326b-2de6-47ac-8450-1a1b9377b8a6",
-      "name": "Supabase2",
-      "credentials": {
-        "supabaseApi": {
-          "id": "e27gFPB9uME4YIGb",
-          "name": "Supabase Prod"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "toolDescription": "Use this tool to fetch the RSS feed so you can get the title and description before creating or updating an RSS feed in the database.",
-        "url": "={url}",
-        "placeholderDefinitions": {
-          "values": [
-            {
-              "name": "url",
-              "description": "The URL of the RSS feed",
-              "type": "string"
-            }
-          ]
-        }
-      },
-      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
-      "typeVersion": 1.1,
-      "position": [
-        860,
-        -160
-      ],
-      "id": "2fd860ac-ddf2-4aad-9318-aacefb6c9e77",
-      "name": "HTTP Request"
-    },
-    {
-      "parameters": {
-        "descriptionType": "manual",
-        "toolDescription": "Use this tool to get the YouTube channels that we already have in our database.",
-        "operation": "getAll",
-        "tableId": "youtube_channels",
-        "returnAll": true
-      },
-      "type": "n8n-nodes-base.supabaseTool",
-      "typeVersion": 1,
-      "position": [
-        420,
-        20
-      ],
-      "id": "6106394c-5450-45b3-bc24-4dfbf6fe71e8",
-      "name": "Supabase3",
-      "credentials": {
-        "supabaseApi": {
-          "id": "e27gFPB9uME4YIGb",
-          "name": "Supabase Prod"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "descriptionType": "manual",
-        "toolDescription": "Use this tool to create a record in the YouTube channels table",
-        "tableId": "youtube_channels",
-        "fieldsUi": {
-          "fieldValues": [
-            {
-              "fieldId": "channel_name",
-              "fieldValue": "={{ $fromAI('channel_name', ``, 'string') }}"
-            },
-            {
-              "fieldId": "channel_url",
-              "fieldValue": "={{ $fromAI('channel_url', ``, 'string') }}"
-            },
-            {
-              "fieldId": "channel_id",
-              "fieldValue": "={{ $fromAI('channel_id', ``, 'string') }}"
-            },
-            {
-              "fieldId": "description",
-              "fieldValue": "={{ $fromAI('description', ``, 'string') }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabaseTool",
-      "typeVersion": 1,
-      "position": [
-        560,
-        20
-      ],
-      "id": "f155caa5-c4ca-4670-bf9c-3d5d5d530893",
-      "name": "Supabase4",
-      "credentials": {
-        "supabaseApi": {
-          "id": "e27gFPB9uME4YIGb",
-          "name": "Supabase Prod"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "delete",
-        "tableId": "youtube_channels",
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "id",
-              "condition": "eq",
-              "keyValue": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Field_Value', ``, 'string') }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabaseTool",
-      "typeVersion": 1,
-      "position": [
-        700,
-        20
-      ],
-      "id": "ac568084-8064-43bb-935a-bcf74040ab84",
-      "name": "Supabase5",
-      "credentials": {
-        "supabaseApi": {
-          "id": "e27gFPB9uME4YIGb",
-          "name": "Supabase Prod"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "descriptionType": "manual",
-        "toolDescription": "Use this tool to get the research topics that we already have in our database.",
-        "operation": "getAll",
-        "tableId": "research_topics",
-        "returnAll": true
-      },
-      "type": "n8n-nodes-base.supabaseTool",
-      "typeVersion": 1,
-      "position": [
-        420,
-        200
-      ],
-      "id": "d8f4923b-724f-4a14-a1f7-575479148762",
-      "name": "Supabase6",
-      "credentials": {
-        "supabaseApi": {
-          "id": "e27gFPB9uME4YIGb",
-          "name": "Supabase Prod"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "descriptionType": "manual",
-        "toolDescription": "Use this tool to create a record in the research topics table",
-        "tableId": "research_topics",
-        "fieldsUi": {
-          "fieldValues": [
-            {
-              "fieldId": "topic",
-              "fieldValue": "={{ $fromAI('topic', ``, 'string') }}"
-            },
-            {
-              "fieldId": "keywords",
-              "fieldValue": "={{ $fromAI('keywords', ``, 'string') }}"
-            },
-            {
-              "fieldId": "priority",
-              "fieldValue": "={{ $fromAI('priority', ``, 'string') }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabaseTool",
-      "typeVersion": 1,
-      "position": [
-        560,
-        200
-      ],
-      "id": "41f6cfa4-c0a6-4085-a9a5-f47800c22a8a",
-      "name": "Supabase7",
-      "credentials": {
-        "supabaseApi": {
-          "id": "e27gFPB9uME4YIGb",
-          "name": "Supabase Prod"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "delete",
-        "tableId": "research_topics",
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "id",
-              "condition": "eq",
-              "keyValue": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Field_Value', ``, 'string') }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabaseTool",
-      "typeVersion": 1,
-      "position": [
-        700,
-        200
-      ],
-      "id": "5f0119eb-bff0-4c8d-b959-ff4233e31f70",
-      "name": "Supabase8",
-      "credentials": {
-        "supabaseApi": {
-          "id": "e27gFPB9uME4YIGb",
-          "name": "Supabase Prod"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "toolDescription": "Use this tool to search the YouTube channel with Brave to get the description and other info you need.",
-        "url": "https://api.search.brave.com/res/v1/web/search",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendQuery": true,
-        "parametersQuery": {
-          "values": [
-            {
-              "name": "q"
-            },
-            {
-              "name": "count",
-              "valueProvider": "fieldValue",
-              "value": "5"
-            }
-          ]
-        },
-        "sendHeaders": true,
-        "parametersHeaders": {
-          "values": [
-            {
-              "name": "Accept",
-              "valueProvider": "fieldValue",
-              "value": "application/json"
-            },
-            {
-              "name": "Accept-Encoding",
-              "valueProvider": "fieldValue",
-              "value": "gzip"
-            }
-          ]
-        }
-      },
-      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
-      "typeVersion": 1.1,
-      "position": [
-        860,
-        20
-      ],
-      "id": "372a7692-6acc-4d40-af3b-b25513c74e2c",
-      "name": "HTTP Request1",
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "vM51hriUc9B8cNEv",
-          "name": "Brave API Key"
-        }
-      }
-    },
-    {
-      "parameters": {
         "operation": "getAll",
         "tableId": "rss_feeds",
         "returnAll": true
@@ -444,15 +29,15 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -40,
-        500
+        -1440,
+        848
       ],
-      "id": "031b2e2f-aa1f-4531-8425-3c7fb3b6f528",
+      "id": "690d2043-dd96-49a4-bfaa-9b19ffe12e50",
       "name": "Supabase9",
       "credentials": {
         "supabaseApi": {
-          "id": "e27gFPB9uME4YIGb",
-          "name": "Supabase Prod"
+          "id": "ueMxQVOm86nISlgG",
+          "name": "Supabase Dynamous-Test (Thomas)"
         }
       }
     },
@@ -465,15 +50,15 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -40,
-        760
+        -1440,
+        1440
       ],
-      "id": "b11fdbe4-fadd-4df7-8fec-e6e922b3d3aa",
+      "id": "30f3492b-d92f-4699-95cd-ef5e718e2535",
       "name": "Supabase10",
       "credentials": {
         "supabaseApi": {
-          "id": "e27gFPB9uME4YIGb",
-          "name": "Supabase Prod"
+          "id": "ueMxQVOm86nISlgG",
+          "name": "Supabase Dynamous-Test (Thomas)"
         }
       }
     },
@@ -486,31 +71,63 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -40,
-        1000
+        -1440,
+        384
       ],
-      "id": "9758b129-0132-46ed-9186-c36cb8f6085e",
+      "id": "e1de230f-342f-4acf-aa9e-093d3a10d82b",
       "name": "Supabase11",
       "credentials": {
         "supabaseApi": {
-          "id": "e27gFPB9uME4YIGb",
-          "name": "Supabase Prod"
+          "id": "ueMxQVOm86nISlgG",
+          "name": "Supabase Dynamous-Test (Thomas)"
         }
       }
     },
     {
       "parameters": {
-        "url": "={{ $json.url }}",
-        "options": {}
+        "url": "=https://api.supadata.ai/v1/transcript",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "url",
+              "value": "={{ $json.url }}"
+            },
+            {
+              "name": "lang",
+              "value": "=en"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.description }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
       },
-      "type": "n8n-nodes-base.rssFeedRead",
-      "typeVersion": 1.1,
+      "id": "cbbf615c-94c4-4126-bb18-fa6e4ca4aa04",
+      "name": "Get Transcript from Supadata",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
-        180,
-        500
+        -112,
+        1440
       ],
-      "id": "cf101b35-bc1e-4353-855d-2788ab3c2b2f",
-      "name": "RSS Read"
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "mw9FVtPEU4DaPRNk",
+          "name": "Header Auth account 3"
+        }
+      }
     },
     {
       "parameters": {
@@ -519,16 +136,26 @@
             "caseSensitive": true,
             "leftValue": "",
             "typeValidation": "strict",
-            "version": 2
+            "version": 1
           },
           "conditions": [
             {
-              "id": "7e16c1a7-4976-4f66-94d6-86ed5179cc62",
-              "leftValue": "={{ $json.pubDate.toDateTime() }}",
-              "rightValue": "={{ $now.minus(7, 'days') }}",
+              "id": "8a9b0c1d-2e3f-4g5h-6i7j-8k9l0m1n2o3p",
+              "leftValue": "={{ $json.content.toString() }}",
+              "rightValue": "",
               "operator": {
-                "type": "dateTime",
-                "operation": "after"
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            },
+            {
+              "id": "fd3d53e7-1be1-4dab-8f0b-aed5378f2afd",
+              "leftValue": "={{ $('Get Video Metadata').item.json.title }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
               }
             }
           ],
@@ -536,98 +163,150 @@
         },
         "options": {}
       },
-      "type": "n8n-nodes-base.filter",
-      "typeVersion": 2.2,
+      "id": "d18faf78-142c-45ab-b468-69c5e709a881",
+      "name": "Check if Transcript Retrieved",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
       "position": [
-        440,
-        500
-      ],
-      "id": "8cc03e18-64c3-4434-a005-28ef781c133a",
-      "name": "Filter"
+        128,
+        1440
+      ]
     },
     {
       "parameters": {
-        "url": "=https://api.search.brave.com/res/v1/summarizer/search?key={{ $json.summarizer.key }}&entity_info=1",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "assignments": {
+          "assignments": [
             {
-              "name": "Accept",
-              "value": "application/json"
+              "id": "9b0c1d2e-3f4g-5h6i-7j8k-9l0m1n2o3p4q",
+              "name": "transcript",
+              "value": "={{ $json.content }}",
+              "type": "string"
             },
             {
-              "name": "Accept-Encoding",
-              "value": "gzip"
+              "id": "0c1d2e3f-4g5h-6i7j-8k9l-0m1n2o3p4q5r",
+              "name": "language",
+              "value": "={{ $json.lang }}",
+              "type": "string"
+            },
+            {
+              "id": "1d2e3f4g-5h6i-7j8k-9l0m-1n2o3p4q5r6s",
+              "name": "availableLanguages",
+              "value": "={{ $json.availableLangs }}",
+              "type": "array"
+            },
+            {
+              "id": "2e3f4g5h-6i7j-8k9l-0m1n-2o3p4q5r6s7t",
+              "name": "videoUrl",
+              "value": "={{ $('Code1').item.json.url }}",
+              "type": "string"
+            },
+            {
+              "id": "3f4g5h6i-7j8k-9l0m-1n2o-3p4q5r6s7t8u",
+              "name": "timestamp",
+              "value": "={{ new Date().toISOString() }}",
+              "type": "string"
             }
           ]
         },
         "options": {}
       },
-      "id": "dbe07b7b-c215-4df6-9f08-1017cff167aa",
-      "name": "Summarize Web Research",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "id": "2cf60993-997e-4fa5-929e-110d27202084",
+      "name": "Format Transcript Data1",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
       "position": [
-        940,
-        500
-      ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "vM51hriUc9B8cNEv",
-          "name": "Brave API Key"
-        }
-      }
+        384,
+        1440
+      ]
     },
     {
       "parameters": {
-        "url": "=https://api.search.brave.com/res/v1/web/search?q={{ $('Supabase9').item.json.name }}+{{ $json.title }}&summary=1",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "assignments": {
+          "assignments": [
             {
-              "name": "Accept",
-              "value": "application/json"
+              "id": "1a2b3c4d-5e6f-7g8h-9i0j-1k2l3m4n5o6p",
+              "name": "videoTitle",
+              "value": "={{ $('Get Video Metadata').item.json.title }}",
+              "type": "string"
             },
             {
-              "name": "Accept-Encoding",
-              "value": "gzip"
+              "id": "2b3c4d5e-6f7g-8h9i-0j1k-2l3m4n5o6p7q",
+              "name": "videoUrl",
+              "value": "={{ $('Format Transcript Data1').item.json.videoUrl }}",
+              "type": "string"
+            },
+            {
+              "id": "3c4d5e6f-7g8h-9i0j-1k2l-3m4n5o6p7q8r",
+              "name": "transcript",
+              "value": "={{ $('Format Transcript Data1').item.json.transcript }}",
+              "type": "string"
+            },
+            {
+              "id": "4d5e6f7g-8h9i-0j1k-2l3m-4n5o6p7q8r9s",
+              "name": "language",
+              "value": "={{ $('Format Transcript Data1').item.json.language }}",
+              "type": "string"
+            },
+            {
+              "id": "5e6f7g8h-9i0j-1k2l-3m4n-5o6p7q8r9s0t",
+              "name": "publishDate",
+              "value": "={{ $('Get Video Metadata').item.json.uploadDate }}",
+              "type": "string"
+            },
+            {
+              "id": "6f7g8h9i-0j1k-2l3m-4n5o-6p7q8r9s0t1u",
+              "name": "channelName",
+              "value": "={{ $('Get Video Metadata').item.json.channel.name }}",
+              "type": "string"
+            },
+            {
+              "id": "7g8h9i0j-1k2l-3m4n-5o6p-7q8r9s0t1u2v",
+              "name": "duration",
+              "value": "={{ $('Get Video Metadata').item.json.duration }}",
+              "type": "string"
+            },
+            {
+              "id": "8h9i0j1k-2l3m-4n5o-6p7q-8r9s0t1u2v3w",
+              "name": "viewCount",
+              "value": "={{ $('Get Video Metadata').item.json.viewCount }}",
+              "type": "number"
+            },
+            {
+              "id": "9i0j1k2l-3m4n-5o6p-7q8r-9s0t1u2v3w4x",
+              "name": "description",
+              "value": "={{ $('Get Video Metadata').item.json.description }}",
+              "type": "string"
             }
           ]
         },
         "options": {}
       },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "id": "f6d14420-4121-4210-a9c3-2d7244065e77",
+      "name": "Prepare Video Data for Analysis1",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
       "position": [
-        700,
-        500
-      ],
-      "id": "a5a9b132-67b9-45fe-8729-6adddffab006",
-      "name": "Brave Web Search",
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "vM51hriUc9B8cNEv",
-          "name": "Brave API Key"
-        }
-      }
+        608,
+        1440
+      ]
     },
     {
       "parameters": {
-        "amount": 2
+        "promptType": "define",
+        "text": "=Here is the transcript from a YouTube video:\n\nVideo Title: {{ $json.videoTitle }}\nChannel: {{ $json.channelName }}\nPublish Date: {{ $json.publishDate }}\nVideo URL: {{ $json.videoUrl }}\nLanguage: {{ $json.language }}\nDuration: {{ $json.duration }}\nView Count: {{ $json.viewCount }}\n\nVideo Description:\n{{ $json.description }}\n\nFull Transcript:\n{{ $json.transcript }}\n\n---\n\n## DATABASE SCHEMA:\nYou are working with a news_items table with this exact structure:\n\n```sql\nCREATE TABLE news_items (    \n    id SERIAL PRIMARY KEY,    \n    run_date DATE NOT NULL,    \n    title VARCHAR(500) NOT NULL,    \n    summary TEXT NOT NULL,    \n    relevance_score INTEGER CHECK (relevance_score >= 0 AND relevance_score <= 10),    \n    mention_count INTEGER DEFAULT 1,    \n    source_type VARCHAR(50) NOT NULL, -- 'rss', 'youtube', 'brave_search'    \n    source_url VARCHAR(500),    \n    source_name VARCHAR(255),    \n    article_url VARCHAR(500), -- Link to original article/video    \n    raw_content TEXT, -- Store original content for reference    \n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,    \n    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);\nIMPORTANT: YOU MUST USE THE AVAILABLE TOOLS\nYou have 3 Supabase tools available. You MUST use these tools to perform database operations. Do not just write text responses - actually execute the tools:\n\n\"Get many rows in Supabase\" - Get existing records\n\"Create a row in Supabase\" - Create new records\n\"Update a row in Supabase\" - Update existing records\n\nNEVER just describe what you would do - ALWAYS actually do it using the tools!\nYOUR PROCESS:\nSTEP 1: GET EXISTING NEWS (MANDATORY FIRST STEP)\nBEFORE doing anything else, use the Supabase GET tool to retrieve ALL existing news items for today's date. This is critical for deduplication.\nSTEP 2: ANALYZE VIDEO STRUCTURE AND TRANSCRIPT\nFirst, check for video chapters in the description:\n\nCHAPTER ANALYSIS:\nIf the video description contains timestamps/chapters (format like \"00:01:46 - Topic Name\"), use these to guide your analysis:\n\nParse chapters to identify distinct topic segments\nGroup related chapters that cover the same story (e.g., multiple GPT-5 segments = one news item)\nUse chapter timing to better segment the transcript content\nPrioritize chapters that indicate substantial news over intro/outro segments\n\nExample chapter patterns to look for:\n\n00:01:46 - Company XYZ announces new product\n00:05:30 - CEO departure at TechCorp\n00:08:15 - New funding round for StartupABC\n00:12:00 - AI breakthrough from Research Lab\n\nThen extract news pieces related to:\n\nAI/ML: New AI models, LLMs, AI platforms, research breakthroughs, AI company developments\nTech Products: Product launches, updates, feature releases, new tools\nBusiness: Company acquisitions, mergers, partnerships, funding rounds, IPOs\nIndustry: Regulatory changes, policy updates, market shifts\nPeople: Executive appointments, departures, notable hires, key interviews\nResearch: Scientific breakthroughs, academic publications, research findings\nPlatforms: Major platform changes, shutdowns, launches, policy changes\nSecurity: Cybersecurity incidents, vulnerabilities, patches, breaches\n\nCHAPTER-GUIDED EXTRACTION:\n\nIf chapters exist: Use them to segment your analysis and extract one news item per distinct topic\nIf no chapters: Analyze the full transcript for topic transitions\nConsolidate related chapters: Multiple chapters about the same story = one news item with higher relevance\nSkip non-news chapters: Ignore intro, outro, recap, or purely commentary segments\n\nSTEP 3: DEDUPLICATION CHECK (CRITICAL)\nMANDATORY: After getting existing records, you MUST check each extracted news item against ALL existing records.\nFor EACH news item you extract, you MUST explicitly state:\n\n\"Checking news item: [extracted title]\"\n\"Against [X] existing records from today...\"\n\"Comparison results: [your analysis]\"\n\"Decision: UPDATE record ID [X] / CREATE new record\"\n\nSTRICT DEDUPLICATION RULES (Check in this order):\n\nSAME VIDEO URL (HIGHEST PRIORITY)\n\nIf ANY existing record has source_url = \"{{ $json.videoUrl }}\" → ALWAYS UPDATE, NEVER CREATE NEW\nSame video = same content, regardless of different extraction\n\n\nSAME TITLE/TOPIC\n\nIf extracted title is 70%+ similar to existing title → UPDATE existing\nExamples: \"GPT-5 Release\" vs \"GPT-5 Launch\" = UPDATE existing\n\n\nSAME COMPANY + SAME NEWS TYPE\n\nSame company (OpenAI, Google, etc.) + same type (product launch, funding, etc.) = likely duplicate\nExample: \"OpenAI GPT-5\" existing + \"OpenAI GPT-5 development\" new = UPDATE existing\n\n\n\nEXPLICIT EXAMPLE PROCESS:\nStep 1: Found 3 existing records for 2025-07-30\nStep 2: Extracted news: \"OpenAI announces GPT-5 features\"  \nStep 3: Checking against existing records:\n  - Record ID 15: \"OpenAI GPT-5 development\" from same video URL ✅ MATCH\n  - Decision: UPDATE record ID 15 (same video + same topic)\nStep 4: Using UPDATE tool with id=15, mention_count=3\nFORCE DETAILED COMPARISON:\nFor each extracted item, you MUST compare against existing records and state:\n\n\"Existing: [title]\" vs \"New: [title]\" → Similar? Yes/No\n\"Same video URL?\" → Yes/No\n\"Same company/topic?\" → Yes/No\n\"Decision: UPDATE ID [X] / CREATE NEW\"\n\nDeduplication Examples:\n\nExisting: \"OpenAI announces GPT-5 development\"\nVideo extract: \"OpenAI working on GPT-5 model\"\nAction: UPDATE existing record (same company + same announcement)\nExisting: \"Chat2DB AI SQL assistant featured\"\nVideo extract: \"Chat2DB database tool showcase\"\nAction: UPDATE existing record (same tool/product)\n\nNOT Duplicates Examples:\n\nExisting: \"OpenAI announces GPT-5 development\"\nVideo extract: \"Google launches Gemini 2.0\"\nAction: CREATE new record (completely different companies and products)\n\nSTEP 4: DATABASE OPERATIONS (EXECUTE IMMEDIATELY)\nCRITICAL: After each decision, you MUST immediately use the appropriate Supabase tool. Do not just describe what you would do - actually do it.\nFor EXISTING/DUPLICATE items:\n\nState: \"Found duplicate: [existing title] matches [new extract] because [reason]\"\nIMMEDIATELY use the \"Update a row in Supabase\" tool with:\n\nid: ONLY the integer number (e.g., 30, not \"30\", not \"record ID 30\")\nmention_count: [existing count + 1]\n\n\n\nFor NEW items:\n\nState: \"Creating new item: [title] - no duplicates found\"\nIMMEDIATELY use the \"Create a row in Supabase\" tool with ALL required fields\n\nMANDATORY EXECUTION PATTERN:\nDecision: UPDATE record ID 30\n→ IMMEDIATELY USE UPDATE TOOL with id=30, mention_count=2\n→ Tool execution result: [success/error]\n\nDecision: CREATE new record for Google Opal\n→ IMMEDIATELY USE CREATE TOOL with all fields\n→ Tool execution result: [success/error]\nDO NOT just describe actions - EXECUTE them immediately using the tools!\nDEBUGGING OUTPUT (MANDATORY):\nFor each news item you process, you MUST explicitly output:\n\n\"EXISTING RECORDS ANALYSIS:\"\n\n\"Retrieved [X] existing records for today\"\n\"Record ID [X]: [title] from [source_url]\"\n(List all existing records)\n\n\n\"NEWS EXTRACTION:\"\n\n\"Extracted [X] news items from transcript\"\n\"Item 1: [title]\"\n\"Item 2: [title]\" etc.\n\n\n\"DEDUPLICATION CHECK:\"\nFor each extracted item:\n\n\"Checking: [extracted title]\"\n\"Against existing records:\"\n\"- Record ID [X]: [existing title] → Same video URL? [Yes/No] → Same topic? [Yes/No]\"\n\"Decision: UPDATE record ID [X] / CREATE new record\"\n\"Reason: [explain why duplicate or new]\"\n\n\n\"DATABASE ACTIONS:\"\n\n\"Action 1: UPDATE record ID [X] - mention_count [old] → [new]\"\n\"Action 2: CREATE new record: [title]\"\n\n\n\nCRITICAL NOTES:\n\nYou MUST show this debugging output for every execution\nYou MUST explicitly compare each extracted item against ALL existing records\nYou MUST justify every UPDATE vs CREATE decision\nIf same video URL exists, you MUST update it, never create new\n\nDATA TYPE REQUIREMENTS:\n\nrun_date: DATE format (YYYY-MM-DD)\ntitle: String, max 500 characters\nsummary: Text string, no length limit\nrelevance_score_1_to_10: Integer between 1-10\nmention_count: Integer (1 for new items)\nsource_type: String, max 50 characters\nsource_url: String, max 500 characters\nsource_name: String, max 255 characters\narticle_url: String, max 500 characters\nraw_content: Text string, no length limit\n\nQUALITY GUIDELINES:\n\nOnly extract substantial, factual news - no opinions or speculation\nEach news item must be significant enough to warrant tracking\nBe specific about companies, people, and technical details\nWhen chapters exist: Use them to focus on newsworthy segments, skip intro/outro/commentary\nChapter-based relevance: News items spanning multiple chapters likely have higher significance scores\nConsolidation rule: Multiple chapters about the same story = one higher-relevance news item\nIf no significant news found, don't create any records\n\nCHAPTER QUALITY INDICATORS:\n\n✅ High value chapters: Company names, product launches, funding, acquisitions, leadership changes\n✅ Medium value chapters: Feature updates, partnerships, industry trends, research findings\n❌ Low value chapters: \"Intro\", \"Outro\", \"Fazit\", \"Rückblick\", pure commentary without facts\n\nCRITICAL NOTES:\n\nAlways use the Supabase tools for database operations\nCheck existing items FIRST before inserting new ones\nUse EXACT field names as specified above\nFor updates: Provide the id as ONLY the integer number (e.g., 9, not \"id=9\", not \"9\" in quotes, not any text)\nFor updates: The id value should be just the bare number: 9, 15, 23, etc.\nFor updates: Only provide the fields you want to update (mention_count)\nEnsure all required fields (run_date, title, summary, source_type) are provided for new records\nSet source_type to \"YouTube Video\" for all new records\n\nStart by getting today's existing news items, then analyze the transcript systematically.",
+        "options": {
+          "systemMessage": "You are an expert AI analyst with access to Supabase database tools for managing news items. Your job is to EXTRACT news from YouTube transcripts and EXECUTE database operations using the provided tools. You must ACTUALLY USE the tools to perform database operations - never just describe what you would do. Always execute the appropriate Supabase tool immediately after making each decision. You are not generating reports - you are actively managing a database."
+        }
       },
-      "type": "n8n-nodes-base.wait",
-      "typeVersion": 1.1,
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
       "position": [
-        1620,
-        500
+        848,
+        1440
       ],
-      "id": "afca2c3a-c72f-456b-8e25-72f0cf38a117",
-      "name": "Wait",
-      "webhookId": "704134f1-637a-4754-acd2-85ea15317e9c"
+      "id": "0dfe2cec-9509-4233-b495-830f7b4f6dda",
+      "name": "YouTube Transcript Analyzer1",
+      "executeOnce": false
     },
     {
       "parameters": {
@@ -642,14 +321,251 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.2,
       "position": [
-        1180,
-        720
+        880,
+        1744
       ],
-      "id": "be3a1b73-cd24-4ef7-a3db-a086b770cfa8",
-      "name": "OpenAI Chat Model1",
+      "id": "630b7754-63f9-4cd4-b6b7-0c191632c855",
+      "name": "OpenAI Chat Model2",
       "credentials": {
         "openAiApi": {
-          "id": "KnSSZQEFv82oFpIv",
+          "id": "bdOkM2LWuGP5shra",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "news_items",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $fromAI('Id') }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "mention_count",
+              "fieldValue": "={{ $fromAI('mention_count', ``, 'string') }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "position": [
+        1360,
+        1728
+      ],
+      "id": "274770bb-296c-4c8e-99c0-9449a9ee18f0",
+      "name": "Update a row in Supabase",
+      "credentials": {
+        "supabaseApi": {
+          "id": "ueMxQVOm86nISlgG",
+          "name": "Supabase Dynamous-Test (Thomas)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "news_items",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "run_date",
+              "fieldValue": "={{ $now.toString().split('T')[0] }}"
+            },
+            {
+              "fieldId": "title",
+              "fieldValue": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('fieldValues1_Field_Value', ``, 'string') }}"
+            },
+            {
+              "fieldId": "summary",
+              "fieldValue": "={{ $fromAI('summary', ``, 'string') }}"
+            },
+            {
+              "fieldId": "relevance_score",
+              "fieldValue": "={{ $fromAI('relevance_score_1_to_10', ``, 'string') }}"
+            },
+            {
+              "fieldId": "mention_count",
+              "fieldValue": "1"
+            },
+            {
+              "fieldId": "source_type",
+              "fieldValue": "YouTube"
+            },
+            {
+              "fieldId": "source_url",
+              "fieldValue": "={{ $fromAI('source_url', ``, 'string') }}"
+            },
+            {
+              "fieldId": "source_name",
+              "fieldValue": "={{ $fromAI('source_name', ``, 'string') }}"
+            },
+            {
+              "fieldId": "article_url",
+              "fieldValue": "={{ $fromAI('article_url', ``, 'string') }}"
+            },
+            {
+              "fieldId": "raw_content",
+              "fieldValue": "={{ $fromAI('raw_content', ``, 'string') }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        1728
+      ],
+      "id": "6602e443-0810-4a29-893a-14f8a3332e2f",
+      "name": "Create a row in Supabase",
+      "credentials": {
+        "supabaseApi": {
+          "id": "ueMxQVOm86nISlgG",
+          "name": "Supabase Dynamous-Test (Thomas)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Use this tool to get the current AI news for the run, do this before adding anything to the DB.",
+        "operation": "getAll",
+        "tableId": "news_items",
+        "returnAll": true,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "run_date",
+              "condition": "eq",
+              "keyValue": "={{ new Date().toISOString().split('T')[0] }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "position": [
+        1056,
+        1728
+      ],
+      "id": "6c8a9bb5-41ab-435f-96b9-7501e897ae1f",
+      "name": "Get many rows in Supabase",
+      "credentials": {
+        "supabaseApi": {
+          "id": "ueMxQVOm86nISlgG",
+          "name": "Supabase Dynamous-Test (Thomas)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://api.supadata.ai/v1/youtube/channel/videos",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "id",
+              "value": "={{ $json.channel_id }}"
+            },
+            {
+              "name": "limit",
+              "value": "2"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "id": "2dab6d79-4912-4871-ae42-390ddfd6fdff",
+      "name": "Get Channel Videos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1232,
+        1440
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "mw9FVtPEU4DaPRNk",
+          "name": "Header Auth account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://api.supadata.ai/v1/youtube/video",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "id",
+              "value": "={{ $json.videoId }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "id": "2488ec47-1827-4ecf-8646-b138286e6cc3",
+      "name": "Get Video Metadata",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -640,
+        1440
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "mw9FVtPEU4DaPRNk",
+          "name": "Header Auth account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -192,
+        1072
+      ],
+      "id": "62d791f5-d605-4138-a7f0-d59f4e75f420",
+      "name": "OpenAI Chat Model4",
+      "credentials": {
+        "openAiApi": {
+          "id": "bdOkM2LWuGP5shra",
           "name": "OpenAi account"
         }
       }
@@ -657,17 +573,17 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "=Here is the summary of the current article:\n\n{{ JSON.stringify($json.summary) }}\n\nHere is info from the RSS feed:\n\nTitle: {{ $('RSS Read').item.json.title }}\nLink: {{ $('RSS Read').item.json.link }}\nPublish date: {{ $('RSS Read').item.json.pubDate }}\nSource name: {{ $('Supabase9').item.json.name }}\n\nYour job is to extract the pieces of news from this article - new LLMs, new AI platforms, acquisitions, any kind of something new in the industry.\n\nIf that piece of news is already in the run (all records listed below) just increase the mention count. Otherwise, create a new record in the news_item table for each piece of news found in the article.\n\nGenerally an article will only have one piece of news (since that will be the topic) but also sometimes there might be multiple.",
+        "text": "=Here is the analysis of the current article:\n{{ $json.data }}\n\n\nOriginal RSS feed info:\nTitle: {{ $('RSS').item.json.title }}\nLink: {{ $('RSS').item.json.link }}\nPublish date: {{ $('RSS').item.json.pubDate }}\nSource name: RSS Feed\n\nYour job is to extract the pieces of news from this article - new LLMs, new AI platforms, acquisitions, any kind of something new in the industry.\n\nIf that piece of news is already in the run (all records listed below) just increase the mention count. Otherwise, create a new record in the news_item table for each piece of news found in the article.\n\nGenerally an article will only have one piece of news (since that will be the topic) but also sometimes there might be multiple.\n\nUse the fields as follows:\n- title: A clear, descriptive title for the news item\n- summary: The comprehensive summary from the analysis\n- relevance_score_1_to_10: The relevance score from the analysis\n- source_url: The RSS feed URL from Supabase9\n- source_name: The source name from Supabase9\n- article_url: The article link from RSS Read\n- raw_content: The key points and technical details combined from the analysis",
         "options": {}
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 1.9,
       "position": [
-        1240,
-        500
+        -112,
+        848
       ],
-      "id": "f7547069-8ca5-42b9-9546-e60abefc32a2",
-      "name": "AI Agent1",
+      "id": "335909eb-7079-468b-874d-6fb38aa4abe0",
+      "name": "AI Agent4",
       "executeOnce": false
     },
     {
@@ -695,15 +611,15 @@
       "type": "n8n-nodes-base.supabaseTool",
       "typeVersion": 1,
       "position": [
-        1640,
-        720
+        -16,
+        1072
       ],
-      "id": "9103aeea-5d83-4563-ac14-3b2f19dcd5da",
-      "name": "Supabase13",
+      "id": "f736ec85-c753-4738-92b1-ac1d098ed158",
+      "name": "Supabase19",
       "credentials": {
         "supabaseApi": {
-          "id": "e27gFPB9uME4YIGb",
-          "name": "Supabase Prod"
+          "id": "ueMxQVOm86nISlgG",
+          "name": "Supabase Dynamous-Test (Thomas)"
         }
       }
     },
@@ -758,15 +674,15 @@
       "type": "n8n-nodes-base.supabaseTool",
       "typeVersion": 1,
       "position": [
-        1480,
-        720
+        128,
+        1072
       ],
-      "id": "f5d0671b-07d3-4147-9c96-f3e04c51ee84",
-      "name": "Supabase14",
+      "id": "e92bb5a2-ee9e-4a46-a0c0-8e9b4cdad456",
+      "name": "Supabase20",
       "credentials": {
         "supabaseApi": {
-          "id": "e27gFPB9uME4YIGb",
-          "name": "Supabase Prod"
+          "id": "ueMxQVOm86nISlgG",
+          "name": "Supabase Dynamous-Test (Thomas)"
         }
       }
     },
@@ -790,178 +706,836 @@
       "type": "n8n-nodes-base.supabaseTool",
       "typeVersion": 1,
       "position": [
-        1800,
-        720
+        272,
+        1072
       ],
-      "id": "5641ea79-0c8c-413d-8d34-f23370aba304",
-      "name": "Supabase15",
+      "id": "ba5b1491-b9e7-4515-8ed2-532a86f7d6ae",
+      "name": "Supabase21",
       "credentials": {
         "supabaseApi": {
-          "id": "e27gFPB9uME4YIGb",
-          "name": "Supabase Prod"
+          "id": "ueMxQVOm86nISlgG",
+          "name": "Supabase Dynamous-Test (Thomas)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "html": "={{ $json.data }}",
+        "destinationKey": "=data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.markdown",
+      "typeVersion": 1,
+      "position": [
+        -576,
+        848
+      ],
+      "id": "29d63353-41f6-4346-9f24-5a58383c4356",
+      "name": "HTML to Markdown2"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.link }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {}
+          },
+          "timeout": 15000
+        }
+      },
+      "id": "7635bdc7-44c2-45a3-9e40-d10223a791b2",
+      "name": "Get Linked Article1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -800,
+        848
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.1,
+      "position": [
+        -1216,
+        848
+      ],
+      "id": "40165a24-3011-4317-9267-22ac15897b42",
+      "name": "RSS"
+    },
+    {
+      "parameters": {
+        "maxItems": 4
+      },
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        -352,
+        848
+      ],
+      "id": "7972dcfc-6b7d-4ae6-9c65-dc299ee6436e",
+      "name": "Limit1"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-pro",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        688,
+        1744
+      ],
+      "id": "09b28007-5cdc-47f3-8a2b-06d1bcffdd0f",
+      "name": "Google Gemini Chat Model2",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "g0yJu4jGXOArjtaZ",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -368,
+        1072
+      ],
+      "id": "23cb75c9-941e-438b-b249-294fa60d723f",
+      "name": "Google Gemini Chat Model3",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "g0yJu4jGXOArjtaZ",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "const items = [];\n\n// Loop through each input item\nfor (const item of $input.all()) {\n  // Loop through each videoId in the array\n  for (const videoId of item.json.videoIds) {\n    items.push({\n      json: {\n        videoId: videoId,\n        // Optionally keep the original arrays if needed\n        originalVideoIds: item.json.videoIds,\n        shortIds: item.json.shortIds,\n        liveIds: item.json.liveIds\n      }\n    });\n  }\n}\n\nreturn items;"
+      },
+      "id": "59ebfca7-282b-4bc9-8715-dd92004562d2",
+      "name": "Split",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        -848,
+        1440
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Sort videos by upload date (newest first)\nconst sortedVideos = items.sort((a, b) => {\n  const dateA = new Date(a.json.uploadDate);\n  const dateB = new Date(b.json.uploadDate);\n  return dateB - dateA;\n});\n\n// Add index and format the output\nreturn sortedVideos.map((item, index) => {\n  return {\n    json: {\n      index: index + 1,\n      videoId: item.json.id,\n      title: item.json.title,\n      channelName: item.json.channel?.name || $('Split').first().json.channelName || 'Unknown',\n      uploadDate: item.json.uploadDate,\n      daysAgo: item.json.daysAgo,\n      viewCount: item.json.viewCount || 0,\n      duration: item.json.duration || 0,\n      description: item.json.description?.substring(0, 200) + '...' || '',\n      thumbnail: item.json.thumbnail,\n      url: `https://youtube.com/watch?v=${item.json.id}`\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -384,
+        1440
+      ],
+      "id": "420fbebd-3471-45b4-a551-51a2e37f932f",
+      "name": "Code1"
+    },
+    {
+      "parameters": {
+        "content": "## Perplexity Resarch\n\n",
+        "height": 432,
+        "width": 2224,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1536,
+        304
+      ],
+      "id": "d2284a67-27c3-410f-9856-ff1ba05d2540",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## RSS Feeds\n",
+        "height": 480,
+        "width": 2224,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1536,
+        768
+      ],
+      "id": "b5afbb6d-9d69-4c69-8db1-fcddedb2a497",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## Youtube Channels\n",
+        "height": 656,
+        "width": 3040,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1536,
+        1280
+      ],
+      "id": "8b07bc73-b27d-4bf7-8cdb-039d04c087d9",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "## News Aggreator and Posting Agent\n",
+        "height": 656,
+        "width": 3040,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1616,
+        640
+      ],
+      "id": "d7ba64e8-8520-445f-bb34-df215ead0777",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "news_items",
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1680,
+        800
+      ],
+      "id": "f91520ff-6bcc-4b9e-9829-6195ee8499ff",
+      "name": "Get many rows",
+      "credentials": {
+        "supabaseApi": {
+          "id": "ueMxQVOm86nISlgG",
+          "name": "Supabase Dynamous-Test (Thomas)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are creating a SINGLE Slack message using EXACTLY the template below.  \nDO NOT add or remove any lines. DO NOT change emojis, punctuation, or formatting.  \nOnly replace text inside [brackets] with the corresponding values from the provided JSON array (top 5 items).  \nIf any field is missing, leave it empty but still include the line.\n\nTemplate (REPLACE ONLY BRACKET CONTENT, KEEP FORMATTING):\n\n📰 *AI News Brief - [Today's Date]* \n\n🥇 *[News Item 1 Title]*\nSummary: [One sentence summary - max 20 words]\nArticle: [Comprehensive Description - max 500 words]\n\nRelevance: [X]/10 | Mentions: [Y]\n[Source URL]\n\n🥈 *[News Item 2 Title]*\nSummary: [One sentence summary - max 20 words]\nArticle: [Comprehensive Description - max 500 words]\n\nRelevance: [X]/10 | Mentions: [Y]\n[Source URL]\n\n🥉 *[News Item 3 Title]*\nSummary: [One sentence summary - max 20 words]\nArticle: [Comprehensive Description - max 500 words]\n\nRelevance: [X]/10 | Mentions: [Y]\n[Source URL]\n\n🏅 *[News Item 4 Title]*\nSummary: [One sentence summary - max 20 words]\nArticle: [Comprehensive Description - max 500 words]\n\nRelevance: [X]/10 | Mentions: [Y]\n[Source URL]\n\n🏅 *[News Item 5 Title]*\nSummary: [One sentence summary - max 20 words]\nArticle: [Comprehensive Description - max 500 words]\n\nRelevance: [X]/10 | Mentions: [Y]\n[Source URL]\n\n\n_Top themes: [5-10 word summary of what these stories represent]_\n\n---\n\nRules:\n- Output ONLY the Slack message text — nothing before or after it.\n- Keep total message under 1000 characters.\n- Titles must be punchy and clear.\n- Always include the \"Article\" field with up to 500 words (even if short).\n- Always use 🥇, 🥈, 🥉, 🏅 emojis for ranking.\n- Always include ALL five items, in order of relevance score.\n\nData:\n{{ JSON.stringify($json, null, 2) }}\n",
+        "options": {
+          "systemMessage": "You are a concise news curator. Create ONE short Slack message with exactly 5 news items. Be direct and impactful. No variations or alternatives - just one perfect message."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [
+        2784,
+        800
+      ],
+      "id": "f4f97062-1137-440e-9fd7-c46ad1b281d1",
+      "name": "News Agent",
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-pro",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        2784,
+        1056
+      ],
+      "id": "32a20955-ed10-42d5-9226-45d797e986cc",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "g0yJu4jGXOArjtaZ",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C08RW2ULK6G",
+          "mode": "list",
+          "cachedResultName": "new-channel"
+        },
+        "text": "=###################\n{{ $json.output }}\n###################",
+        "otherOptions": {
+          "botProfile": {
+            "imageValues": {
+              "profilePhotoType": "image",
+              "icon_url": "https://dynamous.ai/lovable-uploads/b314e692-51f5-42a1-b1a2-cef2db649b7f.png"
+            }
+          },
+          "unfurl_links": true,
+          "unfurl_media": true
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        3168,
+        800
+      ],
+      "id": "3eaa72a2-edd1-4e7b-a7ca-26414bfe4387",
+      "name": "Send a message",
+      "webhookId": "cb477c6a-79c2-42ca-bf81-b54505ab5031",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "Ryqdk3ebwuDEff4a",
+          "name": "Dynamous YT Slack"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Use this tool to get the current AI news for the run, do this before adding anything to the DB.",
+        "operation": "getAll",
+        "tableId": "news_items",
+        "returnAll": true,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "run_date",
+              "condition": "eq",
+              "keyValue": "={{ new Date().toISOString().split('T')[0] }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "position": [
+        2976,
+        1056
+      ],
+      "id": "320e5825-b79d-4fae-b4ff-0bdb6b991fae",
+      "name": "Get many rows in Supabase1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "ueMxQVOm86nISlgG",
+          "name": "Supabase Dynamous-Test (Thomas)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sortFieldsUi": {
+          "sortField": [
+            {
+              "fieldName": "mention_count",
+              "order": "descending"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.sort",
+      "typeVersion": 1,
+      "position": [
+        1872,
+        800
+      ],
+      "id": "be48e364-5f19-4588-8189-238b107f8edc",
+      "name": "Sort"
+    },
+    {
+      "parameters": {
+        "maxItems": 10
+      },
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        2320,
+        800
+      ],
+      "id": "9fe08303-fb6f-43d8-97f8-e4cd190c31f7",
+      "name": "Limit"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        2560,
+        800
+      ],
+      "id": "a2a00137-35b9-4740-8797-47149ccb158b",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "maxItems": 3
+      },
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        -1184,
+        384
+      ],
+      "id": "a183a21c-d65b-4ec6-a66d-90df178b316e",
+      "name": "Limit Research Topics"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "extract-content",
+              "name": "research_content",
+              "value": "={{ $json.choices[0].message.content }}",
+              "type": "string"
+            },
+            {
+              "id": "add-topic",
+              "name": "topic",
+              "value": "={{ $('Limit Research Topics').item.json.topic }}",
+              "type": "string"
+            },
+            {
+              "id": "add-keywords",
+              "name": "keywords",
+              "value": "={{ $('Limit Research Topics').item.json.keywords }}",
+              "type": "string"
+            },
+            {
+              "id": "add-priority",
+              "name": "priority",
+              "value": "={{ $('Limit Research Topics').item.json.priority }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f5045562-1474-489c-b8b9-bbf23c496745",
+      "name": "Format Perplexity Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -688,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=# Perplexity Research Agent Prompt (n8n)\n\nHere is research content from Perplexity AI:\n\n**Topic:** `{{ $json.topic }}`\n**Keywords:** `{{ $json.keywords }}`\n**Priority:** `{{ $json.priority }}`\n\n**Research Content:**\n\n```\n{{ $json.research_content }}\n```\n\n---\n\n## DATABASE SCHEMA\n\nYou are working with a `news_items` table with this exact structure:\n\n```sql\nCREATE TABLE news_items (\n    id SERIAL PRIMARY KEY,\n    run_date DATE NOT NULL,\n    title VARCHAR(500) NOT NULL,\n    summary TEXT NOT NULL,\n    relevance_score INTEGER CHECK (relevance_score >= 0 AND relevance_score <= 10),\n    mention_count INTEGER DEFAULT 1,\n    source_type VARCHAR(50) NOT NULL, -- 'rss', 'youtube', 'brave_search'\n    source_url VARCHAR(500),\n    source_name VARCHAR(255),\n    article_url VARCHAR(500), -- Link to original article/video\n    raw_content TEXT, -- Store original content for reference\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);\n```\n\n---\n\n## IMPORTANT: YOU MUST USE THE AVAILABLE TOOLS\n\nYou have **3 Supabase tools** available. You MUST use these tools to perform database operations:\n\n1. **Get many rows in Supabase (Research)** → Get existing records\n2. **Create a row in Supabase (Research)** → Create new records\n3. **Update a row in Supabase (Research)** → Update existing records\n\n---\n\n## PROCESS\n\n### STEP 1: GET EXISTING NEWS (MANDATORY FIRST STEP)\n\nCall **Get many rows in Supabase (Research)** with this exact JSON to retrieve **all** existing news items for today's date:\n\n```json\n{\"ack\": \"go\"}\n```\n\n---\n\n### STEP 2: EXTRACT NEWS ITEMS\n\nFrom the Perplexity research content, extract **distinct** news items of these types:\n\n* Company announcements & product launches\n* Funding rounds & acquisitions\n* Leadership changes & appointments\n* Research breakthroughs & publications\n* Regulatory updates & policy changes\n* Platform updates & new features\n* Industry partnerships & collaborations\n\n---\n\n### STEP 3: DEDUPLICATION CHECK (CRITICAL)\n\nFor **each** extracted news item, check against existing records:\n\n**Rules:**\n\n1. If title is **70%+ similar** to existing → **UPDATE existing record**\n2. If **same company + same news type** → **UPDATE existing record**\n3. If **completely different** → **CREATE new record**\n\nFor updates: **Increment `mention_count` by 1** and then call the update tool.\n\n---\n\n### STEP 4: DATABASE OPERATIONS (EXECUTE IMMEDIATELY)\n\nAfter **each decision**, **immediately** use the appropriate Supabase tool.\n\n#### For **NEW** items\n\nCall **Create a row in Supabase (Research)** with:\n\n```json\n{\n  \"title\": \"...\",\n  \"summary\": \"...\",\n  \"relevance_score_1_to_10\": 7,\n  \"topic_name\": \"...\",\n  \"article_url\": \"...\",\n  \"raw_content\": \"...\"\n}\n```\n\n#### For **EXISTING** items\n\nCall **Update a row in Supabase (Research)** with:\n\n```json\n{\n  \"id\": 123,\n  \"mention_count\": 2\n}\n```\n\n---\n\n## QUALITY GUIDELINES\n\n* Only extract **factual, verifiable** news\n* Focus on events from the **last 24–48 hours**\n* Be **specific** about companies, people, and technical details\n* If **no significant news** found → **Do not create** any records\n\n---\n\n**Always execute the appropriate Supabase tool immediately after making each decision.**\n",
+        "options": {
+          "systemMessage": "You are an expert AI analyst with access to Supabase database tools for managing news items. Your job is to EXTRACT news from Perplexity research and EXECUTE database operations using the provided tools. Always execute the appropriate Supabase tool immediately after making each decision."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [
+        -112,
+        384
+      ],
+      "id": "93e44dd5-9c3d-464a-b8e8-831d93ac2aa2",
+      "name": "Perplexity Research Analyzer",
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-pro",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -112,
+        576
+      ],
+      "id": "b8822b79-13f2-4de7-a48c-353a8e300fcd",
+      "name": "Google Gemini Chat Model (Research)",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "g0yJu4jGXOArjtaZ",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Use this tool to get the current AI news for the run, do this before adding anything to the DB.",
+        "operation": "getAll",
+        "tableId": "news_items",
+        "returnAll": true,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "run_date",
+              "condition": "eq",
+              "keyValue": "={{ new Date().toISOString().split('T')[0] }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "position": [
+        64,
+        576
+      ],
+      "id": "bee2b1d8-90c3-4440-914b-9ba8e9fa67c3",
+      "name": "Get many rows in Supabase (Research)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "ueMxQVOm86nISlgG",
+          "name": "Supabase Dynamous-Test (Thomas)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "news_items",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "run_date",
+              "fieldValue": "={{ $now.toString().split('T')[0] }}"
+            },
+            {
+              "fieldId": "title",
+              "fieldValue": "={{ $fromAI('title', ``, 'string') }}"
+            },
+            {
+              "fieldId": "summary",
+              "fieldValue": "={{ $fromAI('summary', ``, 'string') }}"
+            },
+            {
+              "fieldId": "relevance_score",
+              "fieldValue": "={{ $fromAI('relevance_score_1_to_10', ``, 'string') }}"
+            },
+            {
+              "fieldId": "mention_count",
+              "fieldValue": "1"
+            },
+            {
+              "fieldId": "source_type",
+              "fieldValue": "perplexity_research"
+            },
+            {
+              "fieldId": "source_url",
+              "fieldValue": "perplexity.ai"
+            },
+            {
+              "fieldId": "source_name",
+              "fieldValue": "={{ 'Perplexity Research - ' + $fromAI('topic_name', ``, 'string') }}"
+            },
+            {
+              "fieldId": "article_url",
+              "fieldValue": "={{ $fromAI('article_url', ``, 'string') }}"
+            },
+            {
+              "fieldId": "raw_content",
+              "fieldValue": "={{ $fromAI('raw_content', ``, 'string') }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "position": [
+        208,
+        576
+      ],
+      "id": "1a050598-b9b9-4eb1-b940-f3f35177ab6f",
+      "name": "Create a row in Supabase (Research)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "ueMxQVOm86nISlgG",
+          "name": "Supabase Dynamous-Test (Thomas)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "news_items",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $fromAI('id', ``, 'string') }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "mention_count",
+              "fieldValue": "={{ $fromAI('mention_count', ``, 'string') }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "position": [
+        352,
+        576
+      ],
+      "id": "d8a8cea5-d80f-44b9-944d-97b3ab1adeb1",
+      "name": "Update a row in Supabase (Research)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "ueMxQVOm86nISlgG",
+          "name": "Supabase Dynamous-Test (Thomas)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "sonar-deep-research",
+        "messages": {
+          "message": [
+            {
+              "content": "=You are an expert AI research analyst with access to Perplexity AI and Supabase database tools for managing news items. Your job is to conduct deep research on specified topics using Perplexity, extract relevant news and developments, and manage them in the database using the provided tools. You must ACTUALLY USE the tools to perform database operations - never just describe what you would do. Always execute the appropriate Supabase tool immediately after making each decision. You are not generating reports - you are actively managing a database.",
+              "role": "system"
+            },
+            {
+              "content": "=Research Topic: {{ $json.topic }}\nKeywords: {{ $json.keywords }}\nPriority: {{ $json.priority }}\n\nUse Perplexity AI to conduct comprehensive research on the above topic. Focus on finding the latest developments, news, and significant updates from the past 7 days.\nLimit to the top 3 News!\n\n## DATABASE SCHEMA:\nYou are working with a news_items table with this exact structure:\n\n```sql\nCREATE TABLE news_items (    \n    id SERIAL PRIMARY KEY,    \n    run_date DATE NOT NULL,    \n    title VARCHAR(500) NOT NULL,    \n    summary TEXT NOT NULL,    \n    relevance_score INTEGER CHECK (relevance_score >= 0 AND relevance_score <= 10),    \n    mention_count INTEGER DEFAULT 1,    \n    source_type VARCHAR(50) NOT NULL, -- 'rss', 'youtube', 'brave_search', 'perplexity'    \n    source_url VARCHAR(500),    \n    source_name VARCHAR(255),    \n    article_url VARCHAR(500),    \n    raw_content TEXT,    \n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,    \n    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);"
+            }
+          ]
+        },
+        "options": {},
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-base.perplexity",
+      "typeVersion": 1,
+      "position": [
+        -944,
+        384
+      ],
+      "id": "ff99cb3c-a747-4f83-8024-11785d4b594e",
+      "name": "Message a model",
+      "credentials": {
+        "perplexityApi": {
+          "id": "neiDUJVH8s84BRdq",
+          "name": "Perplexity account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "for (const item of $input.all()) {\n  // Remove <think>...</think> tags and everything between them\n  if ($input.first().json.research_content) {\n    $input.first().json.research_content = $input.first().json.research_content.replace(/<think>[\\s\\S]*?<\\/think>/gi, '').trim();\n  }\n  \n  // If the response is in a different field, adjust accordingly\n  // For example, if it's in item.json.content:\n  // item.json.content = item.json.content.replace(/<think>[\\s\\S]*?<\\/think>/gi, '').trim();\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -432,
+        384
+      ],
+      "id": "6c932975-5f89-4eec-9496-2240decc24aa",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- RSS Feeds Table\nCREATE TABLE rss_feeds (\n    id SERIAL PRIMARY KEY,\n    name VARCHAR(255) NOT NULL,\n    url VARCHAR(500) NOT NULL UNIQUE,\n    description TEXT,\n    is_active BOOLEAN DEFAULT true,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);\n-- YouTube Channels Table\nCREATE TABLE youtube_channels (\n    id SERIAL PRIMARY KEY,\n    channel_name VARCHAR(255) NOT NULL,\n    channel_url VARCHAR(500) NOT NULL UNIQUE,\n    channel_id VARCHAR(100), -- YouTube channel ID for API calls\n    description TEXT,\n    is_active BOOLEAN DEFAULT true,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);\n-- Research Topics Table\nCREATE TABLE research_topics (\n    id SERIAL PRIMARY KEY,\n    topic VARCHAR(255) NOT NULL,\n    keywords TEXT, -- JSON array of related keywords\n    priority INTEGER DEFAULT 5, -- 1-10 priority scale\n    is_active BOOLEAN DEFAULT true,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);\n-- News Items Table (stores aggregated news for each run)\nCREATE TABLE news_items (\n    id SERIAL PRIMARY KEY,\n    run_date DATE NOT NULL,\n    title VARCHAR(500) NOT NULL,\n    summary TEXT NOT NULL,\n    relevance_score INTEGER CHECK (relevance_score >= 0 AND relevance_score <= 10),\n    mention_count INTEGER DEFAULT 1,\n    source_type VARCHAR(50) NOT NULL, -- 'rss', 'youtube', 'brave_search'\n    source_url VARCHAR(500),\n    source_name VARCHAR(255),\n    article_url VARCHAR(500), -- Link to original article/video\n    raw_content TEXT, -- Store original content for reference\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);\n-- Removed processed_items table - using news_items for deduplication instead\n-- Indexes for better performance\nCREATE INDEX idx_rss_feeds_active ON rss_feeds (is_active);\nCREATE INDEX idx_youtube_channels_active ON youtube_channels (is_active);\nCREATE INDEX idx_research_topics_active ON research_topics (is_active);\nCREATE INDEX idx_news_items_run_date ON news_items (run_date);\nCREATE INDEX idx_news_items_run_date_relevance ON news_items (run_date, relevance_score DESC);\nCREATE INDEX idx_news_items_title_run_date ON news_items (title, run_date);\nCREATE INDEX idx_news_items_article_url ON news_items (article_url);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -1424,
+        64
+      ],
+      "id": "f6109b9e-1c74-4c5e-949a-bb1a58d52c1e",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "z7Ypirg5el7UCs9Q",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Database Setup",
+        "height": 320,
+        "width": 352,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1536,
+        -48
+      ],
+      "id": "85586a9d-934f-4d1b-831f-7f261f4e074f",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "7e16c1a7-4976-4f66-94d6-86ed5179cc62",
+              "leftValue": "={{ $('Supabase10').item.json.created_at }}",
+              "rightValue": "={{ $now.minus({ days: 3 }) }}",
+              "operator": {
+                "type": "dateTime",
+                "operation": "after"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        -1040,
+        1440
+      ],
+      "id": "9e6316fa-b438-41ee-9432-485cf21b13e5",
+      "name": "Last 3 Days"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "7e16c1a7-4976-4f66-94d6-86ed5179cc62",
+              "leftValue": "={{ $('RSS').item.json.pubDate }}",
+              "rightValue": "={{ $now.minus({ days: 3 }) }}",
+              "operator": {
+                "type": "dateTime",
+                "operation": "after"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        -1024,
+        848
+      ],
+      "id": "da7fef3f-4e2f-42a1-a508-35be4752e66b",
+      "name": "Last 3 Days1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "7e16c1a7-4976-4f66-94d6-86ed5179cc62",
+              "leftValue": "={{ $json.created_at }}",
+              "rightValue": "={{ $now.minus({ days: 2 }) }}",
+              "operator": {
+                "type": "dateTime",
+                "operation": "after"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        2080,
+        800
+      ],
+      "id": "4671a70e-ba9d-41bc-8be2-12deedb4a8cb",
+      "name": "Last 3 Days2"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C08RW2ULK6G",
+          "mode": "list",
+          "cachedResultName": "new-channel"
+        },
+        "text": "=###################\n###################",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        3392,
+        800
+      ],
+      "id": "e40907eb-4de1-42c0-b5ca-b41935795b81",
+      "name": "Send a message1",
+      "webhookId": "cb477c6a-79c2-42ca-bf81-b54505ab5031",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "Ryqdk3ebwuDEff4a",
+          "name": "Dynamous YT Slack"
         }
       }
     }
   ],
   "pinData": {},
   "connections": {
-    "When chat message received": {
-      "main": [
-        [
-          {
-            "node": "AI Agent",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Postgres Chat Memory": {
-      "ai_memory": [
-        [
-          {
-            "node": "AI Agent",
-            "type": "ai_memory",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "OpenAI Chat Model": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "AI Agent",
-            "type": "ai_languageModel",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Supabase": {
-      "ai_tool": [
-        [
-          {
-            "node": "AI Agent",
-            "type": "ai_tool",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Supabase1": {
-      "ai_tool": [
-        [
-          {
-            "node": "AI Agent",
-            "type": "ai_tool",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Supabase2": {
-      "ai_tool": [
-        [
-          {
-            "node": "AI Agent",
-            "type": "ai_tool",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "HTTP Request": {
-      "ai_tool": [
-        [
-          {
-            "node": "AI Agent",
-            "type": "ai_tool",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Supabase3": {
-      "ai_tool": [
-        [
-          {
-            "node": "AI Agent",
-            "type": "ai_tool",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Supabase4": {
-      "ai_tool": [
-        [
-          {
-            "node": "AI Agent",
-            "type": "ai_tool",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Supabase5": {
-      "ai_tool": [
-        [
-          {
-            "node": "AI Agent",
-            "type": "ai_tool",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Supabase6": {
-      "ai_tool": [
-        [
-          {
-            "node": "AI Agent",
-            "type": "ai_tool",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Supabase7": {
-      "ai_tool": [
-        [
-          {
-            "node": "AI Agent",
-            "type": "ai_tool",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Supabase8": {
-      "ai_tool": [
-        [
-          {
-            "node": "AI Agent",
-            "type": "ai_tool",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "HTTP Request1": {
-      "ai_tool": [
-        [
-          {
-            "node": "AI Agent",
-            "type": "ai_tool",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Schedule Trigger": {
       "main": [
         [
+          {
+            "node": "Supabase11",
+            "type": "main",
+            "index": 0
+          },
           {
             "node": "Supabase9",
             "type": "main",
@@ -969,11 +1543,6 @@
           },
           {
             "node": "Supabase10",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Supabase11",
             "type": "main",
             "index": 0
           }
@@ -984,112 +1553,503 @@
       "main": [
         [
           {
-            "node": "RSS Read",
+            "node": "RSS",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "RSS Read": {
+    "Get Transcript from Supadata": {
       "main": [
         [
           {
-            "node": "Filter",
+            "node": "Check if Transcript Retrieved",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Filter": {
+    "Check if Transcript Retrieved": {
       "main": [
         [
           {
-            "node": "Brave Web Search",
+            "node": "Format Transcript Data1",
             "type": "main",
             "index": 0
           }
-        ]
-      ]
-    },
-    "Brave Web Search": {
-      "main": [
-        [
-          {
-            "node": "Summarize Web Research",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Summarize Web Research": {
-      "main": [
-        [
-          {
-            "node": "AI Agent1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Wait": {
-      "main": [
+        ],
         []
       ]
     },
-    "OpenAI Chat Model1": {
+    "Format Transcript Data1": {
+      "main": [
+        [
+          {
+            "node": "Prepare Video Data for Analysis1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Video Data for Analysis1": {
+      "main": [
+        [
+          {
+            "node": "YouTube Transcript Analyzer1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "YouTube Transcript Analyzer1": {
+      "main": [
+        [
+          {
+            "node": "Get many rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model2": {
+      "ai_languageModel": [
+        []
+      ]
+    },
+    "Update a row in Supabase": {
+      "ai_tool": [
+        [
+          {
+            "node": "YouTube Transcript Analyzer1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row in Supabase": {
+      "ai_tool": [
+        [
+          {
+            "node": "YouTube Transcript Analyzer1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many rows in Supabase": {
+      "ai_tool": [
+        [
+          {
+            "node": "YouTube Transcript Analyzer1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase10": {
+      "main": [
+        [
+          {
+            "node": "Get Channel Videos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Channel Videos": {
+      "main": [
+        [
+          {
+            "node": "Last 3 Days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Video Metadata": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model4": {
+      "ai_languageModel": [
+        []
+      ]
+    },
+    "Supabase19": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent4",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase20": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent4",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase21": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent4",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTML to Markdown2": {
+      "main": [
+        [
+          {
+            "node": "Limit1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Linked Article1": {
+      "main": [
+        [
+          {
+            "node": "HTML to Markdown2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS": {
+      "main": [
+        [
+          {
+            "node": "Last 3 Days1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model2": {
       "ai_languageModel": [
         [
           {
-            "node": "AI Agent1",
+            "node": "YouTube Transcript Analyzer1",
             "type": "ai_languageModel",
             "index": 0
           }
         ]
       ]
     },
-    "Supabase13": {
-      "ai_tool": [
+    "Google Gemini Chat Model3": {
+      "ai_languageModel": [
         [
           {
-            "node": "AI Agent1",
-            "type": "ai_tool",
+            "node": "AI Agent4",
+            "type": "ai_languageModel",
             "index": 0
           }
         ]
       ]
     },
-    "Supabase14": {
-      "ai_tool": [
-        [
-          {
-            "node": "AI Agent1",
-            "type": "ai_tool",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "AI Agent1": {
+    "Split": {
       "main": [
         [
           {
-            "node": "Wait",
+            "node": "Get Video Metadata",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Supabase15": {
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "Get Transcript from Supadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many rows": {
+      "main": [
+        [
+          {
+            "node": "Sort",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "News Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "News Agent": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many rows in Supabase1": {
       "ai_tool": [
         [
           {
-            "node": "AI Agent1",
+            "node": "News Agent",
             "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sort": {
+      "main": [
+        [
+          {
+            "node": "Last 3 Days2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "News Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase11": {
+      "main": [
+        [
+          {
+            "node": "Limit Research Topics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit Research Topics": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Perplexity Data": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model (Research)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Perplexity Research Analyzer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many rows in Supabase (Research)": {
+      "ai_tool": [
+        [
+          {
+            "node": "Perplexity Research Analyzer",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row in Supabase (Research)": {
+      "ai_tool": [
+        [
+          {
+            "node": "Perplexity Research Analyzer",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update a row in Supabase (Research)": {
+      "ai_tool": [
+        [
+          {
+            "node": "Perplexity Research Analyzer",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Format Perplexity Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Perplexity Research Analyzer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Last 3 Days": {
+      "main": [
+        [
+          {
+            "node": "Split",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Last 3 Days1": {
+      "main": [
+        [
+          {
+            "node": "Get Linked Article1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Last 3 Days2": {
+      "main": [
+        [
+          {
+            "node": "Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Perplexity Research Analyzer": {
+      "main": [
+        [
+          {
+            "node": "Get many rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent4": {
+      "main": [
+        [
+          {
+            "node": "Get many rows",
+            "type": "main",
             "index": 0
           }
         ]
@@ -1100,11 +2060,11 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "0638ab55-d2b7-4438-b021-745f7a0baea9",
+  "versionId": "62d8d6e7-06e1-41c4-909d-f36fa49a2cc3",
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "283ffa8d05f0aea5fd537be52c7be659b3a880d9175d738aa61bb7798a0dea8e"
+    "instanceId": "e42d6d82f39f22264e8343635848d36033cd88faee7b120a8cabc9a91605fef5"
   },
-  "id": "TqsDBqgXKrc34S2q",
+  "id": "j0sQOt164rwhLGK1",
   "tags": []
 }
