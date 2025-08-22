@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python:*)",
+      "Bash(uv pip install:*)",
+      "mcp__archon",
+      "Bash(uv add:*)",
+      "Bash(uv run pytest tests/test_rag_agent.py -v --asyncio-mode=auto)",
+      "Bash(uv run pytest:*)",
+      "Bash(uv run:*)",
+      "Bash(find:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
