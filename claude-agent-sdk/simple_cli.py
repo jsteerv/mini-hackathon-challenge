@@ -75,7 +75,7 @@ async def chat_loop(resume_session: bool = False):
         "cwd": os.getcwd(),  # Working directory for file operations
         "system_prompt": "You are a helpful AI assistant.",
         # Uncomment to limit tools:
-        # "allowed_tools": ["Read", "Write", "Bash"],
+        "allowed_tools": ["Read", "Write", "Bash"],
     }
 
     # Add resume parameter if we have a session ID

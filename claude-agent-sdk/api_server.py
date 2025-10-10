@@ -185,9 +185,17 @@ async def chat_completions(request: ChatCompletionRequest):
             print("🆕 New conversation")
 
         # Configure Claude Agent options
+        working_dir = os.getenv("WORKING_DIRECTORY", os.getcwd())
         options_dict = {
-            "cwd": os.getcwd(),
-            "system_prompt": "You are a helpful AI assistant.",
+            "cwd": working_dir,
+            "system_prompt": "You are a helpful AI assistant. You are currently powered by Claude Sonnet 4.5, with the exact model ID claude-sonnet-4-5-20250929.",
+            "allowed_tools": ["Read", "Write", "Bash", "Edit", "mcp__sequential-thinking"],
+            "mcp_servers": {
+                "sequential-thinking": {
+                    "command": "npx",
+                    "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+                }
+            }
         }
         if session_id:
             options_dict["resume"] = session_id
