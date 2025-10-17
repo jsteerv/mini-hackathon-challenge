@@ -18,7 +18,6 @@ dist/
 # Session files
 sessions/
 api_sessions/
-telegram_sessions/
 
 # Local workspace
 workspace/
