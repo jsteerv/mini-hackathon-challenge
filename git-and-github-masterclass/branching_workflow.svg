@@ -1,0 +1,110 @@
+<svg width="100%" height="100%" viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg" style="background-color: #0f172a; font-family: 'Segoe UI', sans-serif;">
+  <defs>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <linearGradient id="mainBranchGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#60a5fa"/>
+    </linearGradient>
+    <linearGradient id="featureBranchGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#34d399"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Animation Loop Controller -->
+  <rect width="0" height="0">
+    <animate id="cycle" attributeName="opacity" from="0" to="0" dur="8s" begin="0s; cycle.end"/>
+  </rect>
+
+  <!-- Legend -->
+  <g transform="translate(50, 30)">
+    <circle r="6" fill="#3b82f6" filter="url(#glow)"/>
+    <text x="15" y="5" fill="#94a3b8" font-size="14">Main Branch</text>
+    <circle r="6" cx="150" fill="#10b981" filter="url(#glow)"/>
+    <text x="165" y="5" fill="#94a3b8" font-size="14">Feature Branch</text>
+  </g>
+
+  <!-- Main Branch Line -->
+  <path d="M 50 200 L 750 200" stroke="#1e293b" stroke-width="4" stroke-linecap="round"/>
+  <path d="M 50 200 L 750 200" stroke="url(#mainBranchGrad)" stroke-width="4" stroke-linecap="round" stroke-dasharray="700" stroke-dashoffset="700">
+    <animate attributeName="stroke-dashoffset" from="700" to="0" begin="cycle.begin" dur="2s" fill="freeze"/>
+  </path>
+
+  <!-- Feature Branch Line -->
+  <!-- Splits at 200, merges at 600 -->
+  <path d="M 200 200 Q 250 200 275 120 L 525 120 Q 550 120 600 200" stroke="#1e293b" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <path d="M 200 200 Q 250 200 275 120 L 525 120 Q 550 120 600 200" stroke="url(#featureBranchGrad)" stroke-width="4" fill="none" stroke-linecap="round" stroke-dasharray="500" stroke-dashoffset="500">
+    <animate attributeName="stroke-dashoffset" from="500" to="0" begin="cycle.begin + 2s" dur="2s" fill="freeze"/>
+  </path>
+
+  <!-- Commits on Main -->
+  <g>
+    <circle cx="100" cy="200" r="8" fill="#3b82f6" filter="url(#glow)" opacity="0">
+      <animate attributeName="opacity" from="0" to="1" begin="cycle.begin + 0.5s" dur="0.3s" fill="freeze"/>
+    </circle>
+    <circle cx="200" cy="200" r="8" fill="#3b82f6" filter="url(#glow)" opacity="0">
+      <animate attributeName="opacity" from="0" to="1" begin="cycle.begin + 1.0s" dur="0.3s" fill="freeze"/>
+    </circle>
+    <!-- Main continues while feature is active -->
+    <circle cx="400" cy="200" r="8" fill="#3b82f6" filter="url(#glow)" opacity="0">
+      <animate attributeName="opacity" from="0" to="1" begin="cycle.begin + 1.5s" dur="0.3s" fill="freeze"/>
+    </circle>
+    <circle cx="600" cy="200" r="8" fill="#3b82f6" filter="url(#glow)" opacity="0">
+      <animate attributeName="opacity" from="0" to="1" begin="cycle.begin + 4.5s" dur="0.3s" fill="freeze"/>
+    </circle>
+    <circle cx="700" cy="200" r="8" fill="#3b82f6" filter="url(#glow)" opacity="0">
+      <animate attributeName="opacity" from="0" to="1" begin="cycle.begin + 5.0s" dur="0.3s" fill="freeze"/>
+    </circle>
+  </g>
+
+  <!-- Commits on Feature -->
+  <g>
+
+    <circle cx="400" cy="120" r="8" fill="#10b981" filter="url(#glow)" opacity="0">
+      <animate attributeName="opacity" from="0" to="1" begin="cycle.begin + 3.0s" dur="0.3s" fill="freeze"/>
+    </circle>
+    <circle cx="500" cy="120" r="8" fill="#10b981" filter="url(#glow)" opacity="0">
+      <animate attributeName="opacity" from="0" to="1" begin="cycle.begin + 3.5s" dur="0.3s" fill="freeze"/>
+    </circle>
+
+    <!-- Merge commit -->
+    <circle cx="600" cy="200" r="10" fill="#8b5cf6" filter="url(#glow)" opacity="0">
+      <animate attributeName="opacity" from="0" to="1" begin="cycle.begin + 4.5s" dur="0.3s" fill="freeze"/>
+      <animate attributeName="r" values="10;15;10" begin="cycle.begin + 4.5s" dur="0.5s"/>
+    </circle>
+    <text x="600" y="240" text-anchor="middle" fill="#8b5cf6" font-size="14" opacity="0">
+      Merge!
+      <animate attributeName="opacity" from="0" to="1" begin="cycle.begin + 4.5s" dur="0.3s" fill="freeze"/>
+    </text>
+  </g>
+
+  <!-- Commits on Feature -->
+  <g>
+
+    <circle cx="300" cy="120" r="8" fill="#10b981" filter="url(#glow)" opacity="0">
+      <animate attributeName="opacity" from="0" to="1" begin="cycle.begin + 2.5s" dur="0.3s" fill="freeze"/>
+    </circle>
+    <text x="300" y="90" text-anchor="middle" fill="#10b981" font-size="12" opacity="0">
+      New Feature
+      <animate attributeName="opacity" from="0" to="1" begin="cycle.begin + 2.5s" dur="0.3s" fill="freeze"/>
+    </text>
+
+    <circle cx="450" cy="120" r="8" fill="#10b981" filter="url(#glow)" opacity="0">
+      <animate attributeName="opacity" from="0" to="1" begin="cycle.begin + 3.5s" dur="0.3s" fill="freeze"/>
+    </circle>
+    <text x="450" y="90" text-anchor="middle" fill="#10b981" font-size="12" opacity="0">
+      Bug Fix
+      <animate attributeName="opacity" from="0" to="1" begin="cycle.begin + 3.5s" dur="0.3s" fill="freeze"/>
+    </text>
+  </g>
+
+  <!-- Labels -->
+  <text x="50" y="240" fill="#64748b" font-size="12">Initial Commit</text>
+
+</svg>

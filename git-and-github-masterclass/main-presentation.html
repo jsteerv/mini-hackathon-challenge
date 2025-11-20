@@ -1,0 +1,1811 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Git & GitHub Workshop for Beginners</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.05);
+            --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            --accent-primary: #6366f1;
+            --accent-secondary: #ec4899;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --font-heading: 'Outfit', sans-serif;
+            --font-body: 'Inter', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --font-hand: 'Caveat', cursive;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-body);
+            background: var(--bg-gradient);
+            color: var(--text-primary);
+            overflow: hidden;
+            height: 100vh;
+            perspective: 1000px;
+            /* For 3D transitions */
+        }
+
+        .presentation {
+            width: 100%;
+            height: 100vh;
+            position: relative;
+        }
+
+        .slide {
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            padding: 60px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            background: transparent;
+            transform-style: preserve-3d;
+            backface-visibility: hidden;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .slide.active {
+            display: flex;
+            opacity: 1;
+            z-index: 10;
+            animation: slideIn 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(40px) scale(0.95) rotateX(5deg);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1) rotateX(0);
+            }
+        }
+
+        /* Background Animation */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background:
+                radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.15) 0%, transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(236, 72, 153, 0.15) 0%, transparent 25%);
+            animation: pulseBg 10s ease-in-out infinite alternate;
+        }
+
+        @keyframes pulseBg {
+            0% {
+                transform: scale(1);
+                opacity: 0.5;
+            }
+
+            100% {
+                transform: scale(1.1);
+                opacity: 0.8;
+            }
+        }
+
+        /* Dark theme for AI coding assistant slides */
+        .slide.dark-theme {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        }
+
+        .slide.dark-theme h2 {
+            color: #e0e6ed;
+        }
+
+        .slide.dark-theme p {
+            color: #b8c5d6;
+        }
+
+        .slide.dark-theme .visual-box {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .slide.dark-theme .info-list li {
+            color: #b8c5d6;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .slide h1 {
+            font-family: var(--font-heading);
+            font-size: 4.5rem;
+            font-weight: 800;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+            position: relative;
+            letter-spacing: -0.02em;
+            text-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .slide h1::after {
+            content: '';
+            position: absolute;
+            bottom: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+            border-radius: 2px;
+            box-shadow: 0 0 20px var(--accent-primary);
+        }
+
+        .slide h2 {
+            font-family: var(--font-heading);
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 40px;
+            color: var(--text-primary);
+            text-align: center;
+            letter-spacing: -0.01em;
+        }
+
+        .slide p {
+            font-size: 1.4rem;
+            line-height: 1.7;
+            max-width: 900px;
+            text-align: center;
+            color: var(--text-secondary);
+            margin-bottom: 25px;
+            font-weight: 300;
+        }
+
+        .subtitle {
+            font-family: 'Caveat', cursive;
+            font-size: 2rem;
+            color: #667eea;
+            font-weight: 700;
+            margin-top: 10px;
+        }
+
+        /* Doodle elements */
+        .doodle {
+            position: absolute;
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .doodle-circle {
+            width: 100px;
+            height: 100px;
+            border: 3px dashed #667eea;
+            border-radius: 50%;
+            top: 10%;
+            right: 10%;
+        }
+
+        .doodle-arrow {
+            width: 150px;
+            height: 3px;
+            background: #764ba2;
+            bottom: 20%;
+            left: 5%;
+            transform: rotate(-15deg);
+        }
+
+        .doodle-arrow::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: -5px;
+            width: 0;
+            height: 0;
+            border-left: 15px solid #764ba2;
+            border-top: 6px solid transparent;
+            border-bottom: 6px solid transparent;
+        }
+
+        /* Visual elements */
+        /* Visual elements */
+        .visual-box {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 40px;
+            margin: 30px 0;
+            max-width: 1000px;
+            width: 100%;
+            position: relative;
+            box-shadow: var(--glass-shadow);
+            transition: transform 0.3s ease;
+        }
+
+        .visual-box:hover {
+            transform: translateY(-5px);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .visual-box::before {
+            content: '';
+            position: absolute;
+            top: -1px;
+            left: 30px;
+            width: 60px;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+            border-radius: 0 0 4px 4px;
+            box-shadow: 0 2px 10px rgba(99, 102, 241, 0.5);
+        }
+
+        .svg-visual {
+            width: 100%;
+            max-width: 100%;
+            height: auto;
+            margin: 20px auto;
+            display: block;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .visual-box::before {
+            content: '';
+            position: absolute;
+            top: -3px;
+            left: 20px;
+            width: 60px;
+            height: 6px;
+            background: #667eea;
+            border-radius: 3px;
+        }
+
+        .sketch-container {
+            display: flex;
+            gap: 40px;
+            justify-content: center;
+            align-items: center;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+
+        .sketch-item {
+            text-align: center;
+            position: relative;
+        }
+
+        .sketch-icon {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 15px;
+            position: relative;
+        }
+
+        .sketch-label {
+            font-family: 'Caveat', cursive;
+            font-size: 1.5rem;
+            color: #2d3748;
+            font-weight: 700;
+        }
+
+        .sketch-desc {
+            font-size: 0.95rem;
+            color: #718096;
+            margin-top: 5px;
+        }
+
+        /* Command examples */
+        .command-box {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid #334155;
+            color: #4ade80;
+            padding: 25px 35px;
+            border-radius: 12px;
+            font-family: var(--font-mono);
+            font-size: 1.3rem;
+            margin: 25px 0;
+            text-align: left;
+            max-width: 800px;
+            width: 100%;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            position: relative;
+            backdrop-filter: blur(5px);
+        }
+
+        .command-box::before {
+            content: '$ ';
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .command-label {
+            font-size: 0.9rem;
+            color: #a0aec0;
+            margin-bottom: 5px;
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Prompt and response boxes for AI coding assistants */
+        .prompt-box {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            padding: 30px 40px;
+            border-radius: 16px;
+            font-family: var(--font-mono);
+            font-size: 1.2rem;
+            margin: 25px 0;
+            text-align: left;
+            max-width: 900px;
+            width: 100%;
+            color: var(--text-primary);
+            position: relative;
+            box-shadow: 0 8px 32px rgba(99, 102, 241, 0.15);
+            backdrop-filter: blur(8px);
+        }
+
+        .prompt-box::before {
+            content: '💬 You';
+            position: absolute;
+            top: -14px;
+            left: 30px;
+            background: var(--accent-primary);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-family: var(--font-body);
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+        }
+
+        .response-box {
+            background: rgba(16, 185, 129, 0.05);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            padding: 30px 40px;
+            border-radius: 16px;
+            font-family: var(--font-mono);
+            font-size: 1.1rem;
+            margin: 25px 0;
+            text-align: left;
+            max-width: 900px;
+            width: 100%;
+            color: var(--text-primary);
+            position: relative;
+            box-shadow: 0 8px 32px rgba(16, 185, 129, 0.1);
+            backdrop-filter: blur(8px);
+        }
+
+        .response-box::before {
+            content: '🤖 Coding Agent';
+            position: absolute;
+            top: -14px;
+            left: 30px;
+            background: #10b981;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-family: var(--font-body);
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+
+        /* Two column layout */
+        .two-column {
+            display: flex;
+            gap: 60px;
+            justify-content: center;
+            align-items: center;
+            max-width: 1200px;
+            width: 100%;
+            margin: 30px 0;
+        }
+
+        .column {
+            flex: 1;
+            text-align: center;
+        }
+
+        .vs-divider {
+            font-family: 'Caveat', cursive;
+            font-size: 3rem;
+            color: #667eea;
+            font-weight: 700;
+        }
+
+        /* List styling */
+        .info-list {
+            text-align: left;
+            max-width: 700px;
+            margin: 20px auto;
+            list-style: none;
+        }
+
+        .info-list li {
+            font-size: 1.2rem;
+            color: #ffffff;
+            margin: 15px 0;
+            padding-left: 30px;
+            position: relative;
+            line-height: 1.6;
+        }
+
+        .info-list li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #48bb78;
+            font-weight: bold;
+            font-size: 1.4rem;
+        }
+
+        /* Emoji styling */
+        .emoji {
+            font-size: 4rem;
+            margin: 20px 0;
+            display: inline-block;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        /* Workflow visualization */
+        .workflow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            margin: 40px 0;
+            flex-wrap: wrap;
+        }
+
+        .workflow-step {
+            background: white;
+            border: 3px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 25px;
+            min-width: 150px;
+            position: relative;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .workflow-step h3 {
+            font-size: 1.1rem;
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .workflow-step p {
+            font-size: 0.9rem;
+            color: #718096;
+            margin: 0;
+        }
+
+        .workflow-arrow {
+            font-size: 2rem;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        /* Exercise section */
+        .exercise-box {
+            background: rgba(255, 255, 255, 0.05);
+            border-left: 4px solid var(--accent-primary);
+            padding: 35px;
+            border-radius: 0 12px 12px 0;
+            margin: 30px 0;
+            max-width: 900px;
+            width: 100%;
+            backdrop-filter: blur(5px);
+        }
+
+        .exercise-box h3 {
+            font-family: var(--font-heading);
+            font-size: 2rem;
+            color: var(--text-primary);
+            margin-bottom: 20px;
+        }
+
+        .exercise-step {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 18px 25px;
+            margin: 12px 0;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: background 0.3s ease;
+        }
+
+        .exercise-step:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .exercise-step strong {
+            color: var(--accent-primary);
+        }
+
+        /* Highlight box */
+        .highlight-box {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(236, 72, 153, 0.2) 100%);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            color: white;
+            padding: 40px 50px;
+            border-radius: 20px;
+            margin: 35px 0;
+            max-width: 900px;
+            width: 100%;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            text-align: center;
+        }
+
+        .highlight-box h3 {
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+        }
+
+        .highlight-box p {
+            color: rgba(255, 255, 255, 0.95);
+            font-size: 1.2rem;
+        }
+
+        /* Navigation */
+        .controls {
+            position: fixed;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 25px;
+            z-index: 100;
+            transition: opacity 0.3s ease;
+        }
+
+        button {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 15px 40px;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            font-family: var(--font-heading);
+            letter-spacing: 0.05em;
+        }
+
+        button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Progress bar */
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 6px;
+            background: linear-gradient(90deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+            transition: width 0.3s ease;
+            z-index: 99;
+            box-shadow: 0 0 15px var(--accent-primary);
+        }
+
+        /* Slide counter */
+        .slide-counter {
+            position: fixed;
+            top: 30px;
+            right: 40px;
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 12px 25px;
+            border-radius: 30px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-family: var(--font-mono);
+        }
+
+        /* Toggle controls button */
+        .toggle-controls-btn {
+            position: fixed;
+            top: 30px;
+            left: 40px;
+            font-size: 1.5rem;
+            color: var(--text-secondary);
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 12px 20px;
+            border-radius: 30px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-controls-btn:hover {
+            background: rgba(0, 0, 0, 0.5);
+            border-color: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+
+        .controls.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Comparison table */
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 25px;
+            margin: 35px 0;
+            max-width: 1100px;
+            width: 100%;
+        }
+
+        .comparison-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 30px;
+            text-align: center;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+
+        .comparison-card:hover {
+            border-color: var(--accent-primary);
+            transform: translateY(-10px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .comparison-card h3 {
+            color: var(--accent-primary);
+            font-size: 1.6rem;
+            margin-bottom: 15px;
+        }
+
+        .comparison-card p {
+            font-size: 1rem;
+            text-align: center;
+            color: var(--text-secondary);
+        }
+
+        /* Timeline */
+        .timeline {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            margin: 40px 0;
+            max-width: 1000px;
+            width: 100%;
+        }
+
+        .timeline-item {
+            flex: 1;
+            text-align: center;
+            position: relative;
+            padding: 20px;
+        }
+
+        .timeline-item::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 50%;
+            width: 100%;
+            height: 2px;
+            background: var(--glass-border);
+            z-index: -1;
+        }
+
+        .timeline-item:last-child::after {
+            display: none;
+        }
+
+        .timeline-number {
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin: 0 auto 20px;
+            box-shadow: 0 10px 20px rgba(99, 102, 241, 0.4);
+            border: 4px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .timeline-label {
+            font-family: var(--font-hand);
+            font-size: 1.5rem;
+            color: var(--text-primary);
+            font-weight: 700;
+        }
+
+        /* Demo box */
+        .demo-box {
+            background: rgba(0, 0, 0, 0.05);
+            border: 2px dashed rgba(102, 126, 234, 0.5);
+            padding: 40px;
+            border-radius: 12px;
+            margin: 30px 0;
+            max-width: 1000px;
+            width: 100%;
+        }
+
+        .demo-box h3 {
+            font-family: 'Caveat', cursive;
+            font-size: 2rem;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        /* Issue card */
+        .issue-card {
+            background: rgba(255, 255, 255, 0.03);
+            border-left: 4px solid var(--accent-primary);
+            padding: 25px 30px;
+            margin: 20px 0;
+            border-radius: 0 12px 12px 0;
+            text-align: left;
+            border: 1px solid var(--glass-border);
+        }
+
+        .issue-card h4 {
+            color: var(--text-primary);
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+            font-family: var(--font-heading);
+        }
+
+        .issue-card p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            margin: 0;
+            text-align: left;
+        }
+
+        .issue-label {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            margin-top: 12px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+        }
+
+        .label-bug {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .label-feature {
+            background: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .code-output {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            padding: 25px;
+            border-radius: 12px;
+            font-family: var(--font-mono);
+            font-size: 1rem;
+            color: #c9d1d9;
+            text-align: left;
+            margin: 20px 0;
+            max-width: 900px;
+            width: 100%;
+            overflow-x: auto;
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .split-view {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            max-width: 1200px;
+            width: 100%;
+            margin: 30px 0;
+        }
+
+        .split-panel {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 30px;
+            backdrop-filter: blur(5px);
+        }
+
+        .split-panel h3 {
+            color: var(--accent-primary);
+            font-size: 1.6rem;
+            margin-bottom: 25px;
+            text-align: center;
+            font-family: var(--font-heading);
+        }
+
+        @media (max-width: 768px) {
+            .slide {
+                padding: 40px 20px;
+            }
+
+            .slide h1 {
+                font-size: 2rem;
+            }
+
+            .slide h2 {
+                font-size: 1.5rem;
+            }
+
+            .slide p {
+                font-size: 1rem;
+            }
+
+            .two-column {
+                flex-direction: column;
+                gap: 30px;
+            }
+
+            .comparison-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .workflow {
+                flex-direction: column;
+            }
+
+            .split-view {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="progress-bar" id="progressBar"></div>
+    <div class="slide-counter"><span id="currentSlide">1</span> / <span id="totalSlides">34</span></div>
+    <button class="toggle-controls-btn" id="toggleControlsBtn" onclick="toggleControls()" title="Toggle navigation buttons">👁️</button>
+
+    <div class="bg-animation"></div>
+    <div class="presentation">
+        <!-- Slide 1: Title -->
+        <div class="slide active">
+            <div class="doodle doodle-circle"></div>
+            <h1>Git & GitHub Workshop</h1>
+            <p class="subtitle">Version Control for Absolute Beginners</p>
+            <div class="emoji">🚀</div>
+            <p>Welcome! Let's learn how developers save their work, collaborate with teams, and never lose code again.
+            </p>
+            <p style="margin-top: 40px; font-size: 1rem; color: #a0aec0;">Duration: 1.5 hour |
+                Prerequisites: None</p>
+        </div>
+
+        <!-- Slide 2: The Problem -->
+        <div class="slide">
+            <h2>The Problem Without Version Control</h2>
+            <div class="emoji">😱</div>
+            <div class="visual-box">
+                <img src="problem_chaos.svg" alt="The Problem: File Chaos" class="svg-visual">
+            </div>
+            <p>Sound familiar? This chaos happens when you track changes manually. There's a better way!</p>
+        </div>
+
+        <!-- Slide 3: What is Version Control -->
+        <div class="slide">
+            <h2>What is Version Control?</h2>
+            <div class="highlight-box">
+                <h3>Think of it like a Time Machine for Your Code</h3>
+                <p>Version control tracks every change you make, who made it, when, and why. You can travel back to any
+                    point in time, see what changed, and even try different experiments without fear.</p>
+            </div>
+            <div class="sketch-container">
+                <div class="sketch-item">
+                    <div class="emoji" style="font-size: 3rem;">💾</div>
+                    <div class="sketch-label">Save Points</div>
+                    <div class="sketch-desc">Like in video games</div>
+                </div>
+                <div class="sketch-item">
+                    <div class="emoji" style="font-size: 3rem;">📸</div>
+                    <div class="sketch-label">Snapshots</div>
+                    <div class="sketch-desc">Photos of your code</div>
+                </div>
+                <div class="sketch-item">
+                    <div class="emoji" style="font-size: 3rem;">🕰️</div>
+                    <div class="sketch-label">Time Travel</div>
+                    <div class="sketch-desc">Go back in history</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: Meet Git -->
+        <div class="slide">
+            <h2>Meet Git</h2>
+            <div class="emoji">🌳</div>
+            <p>Git is a distributed version control system created by Linus Torvalds in 2005 for Linux development. It's
+                now the industry standard used by millions of developers worldwide.</p>
+            <div class="visual-box">
+                <ul class="info-list">
+                    <li>Works completely offline on your computer</li>
+                    <li>Blazingly fast and efficient</li>
+                    <li>Free and open source</li>
+                    <li>Every developer has the complete history</li>
+                    <li>Branching and experimenting is cheap and easy</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Slide 5: The Four Locations -->
+        <div class="slide">
+            <h2>Understanding Git's Four Locations</h2>
+            <p>This is the most important concept to grasp! Your code lives in four places during development.</p>
+            <div class="visual-box">
+                <img src="four_locations.svg" alt="Git Four Locations" class="svg-visual">
+            </div>
+        </div>
+
+        <!-- Slide 6: Why Staging Exists -->
+        <div class="slide">
+            <h2>Why Do We Need the Staging Area?</h2>
+            <p class="subtitle">The Shopping Cart Process</p>
+
+            <div
+                style="display: flex; flex-direction: column; gap: 25px; margin: 40px 0; max-width: 900px; width: 100%;">
+                <!-- Step 1: Browse -->
+                <div class="stagger-box" style="display: flex; align-items: center; gap: 20px;">
+                    <div
+                        style="background: #edf2f7; border: 3px solid #cbd5e0; border-radius: 12px; padding: 25px 35px; flex: 1; min-height: 100px; display: flex; align-items: center; gap: 20px;">
+                        <div style="font-size: 3rem;">🛍️</div>
+                        <div style="text-align: left;">
+                            <div style="font-weight: 700; color: #2d3748; font-size: 1.3rem; margin-bottom: 5px;">1.
+                                Browse Items</div>
+                            <div style="color: #718096; font-size: 1rem;">Make changes to files (Working Directory)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stagger-arrow"
+                    style="text-align: center; color: #667eea; font-size: 2rem; margin: -15px 0;">↓</div>
+
+                <!-- Step 2: Add to Cart -->
+                <div class="stagger-box" style="display: flex; align-items: center; gap: 20px;">
+                    <div
+                        style="background: #e6fffa; border: 3px solid #81e6d9; border-radius: 12px; padding: 25px 35px; flex: 1; min-height: 100px; display: flex; align-items: center; gap: 20px;">
+                        <div style="font-size: 3rem;">🛒</div>
+                        <div style="text-align: left;">
+                            <div style="font-weight: 700; color: #2d3748; font-size: 1.3rem; margin-bottom: 5px;">2. Add
+                                to Cart</div>
+                            <div style="color: #718096; font-size: 1rem;">Stage specific changes (<code
+                                    style="background: #2d3748; color: #48bb78; padding: 3px 8px; border-radius: 4px;">git add</code>)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stagger-arrow"
+                    style="text-align: center; color: #667eea; font-size: 2rem; margin: -15px 0;">↓</div>
+
+                <!-- Step 3: Review Cart -->
+                <div class="stagger-box" style="display: flex; align-items: center; gap: 20px;">
+                    <div
+                        style="background: #fef5e7; border: 3px solid #fbd38d; border-radius: 12px; padding: 25px 35px; flex: 1; min-height: 100px; display: flex; align-items: center; gap: 20px;">
+                        <div style="font-size: 3rem;">👀</div>
+                        <div style="text-align: left;">
+                            <div style="font-weight: 700; color: #2d3748; font-size: 1.3rem; margin-bottom: 5px;">3.
+                                Review Your Cart</div>
+                            <div style="color: #718096; font-size: 1rem;">Check what's staged (<code
+                                    style="background: #2d3748; color: #48bb78; padding: 3px 8px; border-radius: 4px;">git status</code>)
+                            </div>
+                        </div>
+                    </div>
+                    <div style="font-size: 2.5rem; color: #cbd5e0;">⟲</div>
+                    <div
+                        style="background: #fff5f5; border: 3px solid #fc8181; border-radius: 12px; padding: 20px; min-width: 200px; text-align: center;">
+                        <div style="font-size: 2rem; margin-bottom: 5px;">🗑️</div>
+                        <div style="font-size: 0.9rem; color: #718096;">Remove if needed<br><code
+                                style="background: #2d3748; color: #fc8181; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem;">git reset</code>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stagger-arrow"
+                    style="text-align: center; color: #667eea; font-size: 2rem; margin: -15px 0;">↓</div>
+
+                <!-- Step 4: Checkout -->
+                <div class="stagger-box" style="display: flex; align-items: center; gap: 20px;">
+                    <div
+                        style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: 3px solid #5a67d8; border-radius: 12px; padding: 25px 35px; flex: 1; min-height: 100px; display: flex; align-items: center; gap: 20px; box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);">
+                        <div style="font-size: 3rem;">✅</div>
+                        <div style="text-align: left;">
+                            <div style="font-weight: 700; color: white; font-size: 1.3rem; margin-bottom: 5px;">4.
+                                Checkout / Commit</div>
+                            <div style="color: rgba(255,255,255,0.9); font-size: 1rem;">Save your selections forever
+                                (<code
+                                    style="background: rgba(255,255,255,0.2); color: white; padding: 3px 8px; border-radius: 4px;">git commit</code>)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <p style="margin-top: 30px; color: #667eea; font-weight: 600;">This gives you control over what you save
+                together!</p>
+        </div>
+
+        <!-- Slide 7: Essential Command - git status -->
+        <div class="slide">
+            <h2>Your Best Friend: git status</h2>
+            <div class="emoji">🧭</div>
+            <div class="command-box">git status</div>
+            <p>This command shows you what's happening right now. Use it constantly! It tells you:</p>
+            <div class="visual-box">
+                <ul class="info-list">
+                    <li>Which branch you're on</li>
+                    <li>Which files have changes (red = not staged)</li>
+                    <li>Which files are ready to commit (green = staged)</li>
+                    <li>Whether you're ahead or behind the remote</li>
+                </ul>
+            </div>
+            <p style="color: #667eea; font-weight: 600; margin-top: 20px;">Pro tip: Run git status before and after
+                every command while learning!</p>
+        </div>
+
+        <!-- Slide 8: The Basic Workflow -->
+        <div class="slide">
+            <h2>The Basic Git Workflow</h2>
+            <p>This is the sequence you'll use dozens of times per day. Let's break it down step by step.</p>
+            <div class="visual-box">
+                <img src="git_workflow.svg" alt="Basic Git Workflow" class="svg-visual">
+            </div>
+        </div>
+
+        <!-- Slide 9: git init -->
+        <div class="slide">
+            <h2>Starting a Repository: git init</h2>
+            <div class="command-box">git init</div>
+            <p>This creates a new Git repository in your current folder. Run this once per project in the root
+                directory. It creates a hidden .git folder that stores all your history.</p>
+            <div class="visual-box">
+                <img src="git_init.svg" alt="Git Init Transformation" class="svg-visual">
+            </div>
+        </div>
+
+        <!-- Slide 10: git add -->
+        <div class="slide">
+            <h2>Staging Changes: git add</h2>
+            <div class="command-box">git add filename.txt</div>
+            <div class="command-box">git add .</div>
+            <p>This moves changes from your working directory to the staging area. The dot (.) means "add everything in
+                this directory."</p>
+            <div class="visual-box">
+                <img src="git_add.svg" alt="Git Add Workflow" class="svg-visual">
+            </div>
+        </div>
+
+        <!-- Slide 11: git commit -->
+        <div class="slide">
+            <h2>Saving a Snapshot: git commit</h2>
+            <div class="command-box">git commit -m "Add user login feature"</div>
+            <p>This creates a permanent snapshot of everything in the staging area. The -m flag lets you add a message
+                describing what changed and why.</p>
+            <div class="visual-box">
+                <img src="git_commit.svg" alt="Git Commit Snapshot" class="svg-visual">
+            </div>
+            <div class="highlight-box">
+                <h3>What Makes a Good Commit Message?</h3>
+                <p>✅ "Fix login timeout after 5 minutes"<br>
+                    ✅ "Add dark mode toggle to settings"<br>
+                    ❌ "fix stuff"<br>
+                    ❌ "updates"<br>
+                    ❌ "changes"</p>
+            </div>
+        </div>
+
+        <!-- Slide 12: git log -->
+        <div class="slide">
+            <h2>Viewing History: git log</h2>
+            <div class="command-box">git log --oneline</div>
+            <p>This shows your commit history. Each commit has a unique ID (hash), author, date, and message.</p>
+            <div class="visual-box">
+                <img src="git_log.svg" alt="Git Log Timeline" class="svg-visual">
+            </div>
+            <p>Press 'q' to quit the log view. Use --graph --all for a visual tree!</p>
+        </div>
+
+        <!-- Slide 13: Undoing Changes -->
+        <div class="slide">
+            <h2>Undoing Changes: Your Safety Net</h2>
+            <div class="emoji">↩️</div>
+            <p>Made a mistake? No problem! Git makes it easy to undo changes at any stage.</p>
+
+            <div class="visual-box">
+                <h3 style="color: #667eea; margin-bottom: 20px; text-align: center;">Three Ways to Undo</h3>
+
+                <div class="command-label">1. Undo changes in working directory (not staged):</div>
+                <div class="command-box">git restore filename.txt</div>
+
+                <div class="command-label" style="margin-top: 20px;">2. Unstage files (remove from staging area):</div>
+                <div class="command-box">git restore --staged filename.txt</div>
+
+                <div class="command-label" style="margin-top: 20px;">3. Undo last commit (keep changes in working
+                    directory):</div>
+                <div class="command-box">git reset HEAD~1</div>
+            </div>
+
+            <p style="color: #667eea; font-weight: 600; margin-top: 20px;">Git gives you multiple safety nets - mistakes
+                are never permanent!</p>
+        </div>
+
+        <!-- Slide 13: Git vs GitHub -->
+        <div class="slide">
+            <h2>Git vs GitHub: What's the Difference?</h2>
+            <p>This confuses everyone at first! They're related but completely different things.</p>
+            <div class="visual-box">
+                <img src="git_vs_github.svg" alt="Git vs GitHub" class="svg-visual">
+            </div>
+            <p style="margin-top: 40px;">Git works perfectly offline. GitHub makes collaboration easy!</p>
+        </div>
+
+        <!-- Slide 14: GitHub, GitLab, Bitbucket -->
+        <div class="slide">
+            <h2>Comparing Repository Hosting Platforms</h2>
+            <div class="comparison-grid">
+                <div class="comparison-card">
+                    <h3>GitHub</h3>
+                    <p>👑 86% market share</p>
+                    <p>100M+ developers</p>
+                    <p>Best for: Open source, learning, largest community</p>
+                </div>
+                <div class="comparison-card">
+                    <h3>GitLab</h3>
+                    <p>⚡ DevOps platform</p>
+                    <p>30M+ users</p>
+                    <p>Best for: Built-in CI/CD, self-hosting, enterprises</p>
+                </div>
+                <div class="comparison-card">
+                    <h3>Bitbucket</h3>
+                    <p>🔧 Atlassian ecosystem</p>
+                    <p>10M+ users</p>
+                    <p>Best for: Jira integration, cost-effectiveness</p>
+                </div>
+            </div>
+            <p>All three do the same basic job - hosting Git repositories. Pick what works for your team!</p>
+        </div>
+
+        <!-- Slide 15: Branching Intro -->
+        <div class="slide">
+            <h2>Branching: Your Sandbox for Experiments</h2>
+            <div class="emoji" style="font-size: 3rem; margin: 15px 0;">🌿</div>
+            <p style="max-width: 800px; margin-bottom: 30px;">Branches let you try new ideas without affecting your main
+                code. Think of them as parallel timelines where you can experiment safely!</p>
+
+            <div class="visual-box">
+                <img src="branching_workflow.svg" alt="Branching Workflow" class="svg-visual">
+            </div>
+
+            <p style="margin-top: 30px; color: #667eea; font-weight: 600;">Main branch stays safe while you explore! 🛡️
+            </p>
+        </div>
+
+        <!-- Slide 16: Branch Commands -->
+        <div class="slide">
+            <h2>Working with Branches</h2>
+            <div class="visual-box">
+                <div class="command-label">Create a new branch:</div>
+                <div class="command-box">git branch feature-login</div>
+
+                <div class="command-label" style="margin-top: 20px;">Switch to that branch:</div>
+                <div class="command-box">git switch feature-login</div>
+
+                <div class="command-label" style="margin-top: 20px;">Create and switch in one command:</div>
+                <div class="command-box">git switch -c feature-login</div>
+
+                <div class="command-label" style="margin-top: 20px;">See all branches:</div>
+                <div class="command-box">git branch</div>
+            </div>
+        </div>
+
+        <!-- Slide 17: Remote Workflow -->
+        <div class="slide">
+            <h2>Connecting to Remote Repositories</h2>
+            <p>This is how you collaborate with others and backup your code to the cloud.</p>
+            <div class="visual-box">
+                <img src="remote_workflow.svg" alt="Remote Workflow" class="svg-visual">
+            </div>
+            <p style="margin-top: 30px;">Push sends your commits up. Pull downloads and merges changes from others.</p>
+        </div>
+
+        <!-- Slide 18: git clone -->
+        <div class="slide">
+            <h2>Joining an Existing Project: git clone</h2>
+            <div class="command-box">git clone https://github.com/username/project.git</div>
+            <p>This downloads a complete copy of a remote repository - all files, all history, all branches. It
+                automatically sets up the connection to the remote.</p>
+            <div class="visual-box">
+                <img src="git_clone.svg" alt="Git Clone Process" class="svg-visual">
+            </div>
+        </div>
+
+        <!-- Slide 19: git push and pull -->
+        <div class="slide">
+            <h2>Syncing with the Team</h2>
+            <div class="command-box">git push origin main</div>
+            <p>Uploads your local commits to the remote repository.</p>
+            <div class="command-box" style="margin-top: 30px;">git pull</div>
+            <p>Downloads changes from the remote and merges them into your current branch. Always pull before starting
+                work to get the latest changes!</p>
+            <p style="color: #667eea; font-weight: 600; margin-top: 30px;">Remember: You must commit locally before you
+                can push!</p>
+        </div>
+
+        <!-- Slide 20: Pull Requests -->
+        <div class="slide">
+            <h2>Pull Requests: Code Review Workflow</h2>
+            <div class="emoji">🔍</div>
+            <p>Pull Requests (PRs) let you propose changes and get feedback before merging into the main branch.</p>
+            <div class="visual-box">
+                <img src="pr_workflow.svg" alt="Pull Request Workflow" class="svg-visual">
+            </div>
+        </div>
+
+        <!-- Slide 21: Real-World Scenarios -->
+        <div class="slide">
+            <h2>Real-World Success Stories</h2>
+            <div class="visual-box">
+                <h3 style="color: #667eea; margin-bottom: 20px;">💡 The Disappearing Feature</h3>
+                <p style="text-align: left; margin-bottom: 20px;">
+                    A developer spent two weeks building a feature. Manager: "We don't need that anymore." Two months
+                    later: "We need that feature back!" <strong>With Git:</strong> Found the commits in 30 seconds and
+                    restored the feature. Time saved: 2 weeks of work!
+                </p>
+
+                <h3 style="color: #667eea; margin-bottom: 20px; margin-top: 30px;">🔍 The "Who Broke Production?"
+                    Mystery</h3>
+                <p style="text-align: left;">
+                    Website crashed Friday at 5pm. <strong>With Git:</strong> Ran git log and git blame to find the
+                    problem in 5 minutes instead of 2 hours of detective work and accusations!
+                </p>
+            </div>
+        </div>
+
+        <!-- NEW SECTION: AI CODING ASSISTANT INTEGRATION -->
+
+        <!-- Slide 22: Transition to AI-Powered Development -->
+        <div class="slide dark-theme">
+            <h2>Part 2: AI-Powered Git Workflow</h2>
+            <div class="emoji">🤖</div>
+            <p>Now that you understand Git fundamentals, let's see how AI can supercharge your workflow!</p>
+            <div class="highlight-box">
+                <h3>What if you could...</h3>
+                <p>✨ Talk to your repository in natural language?<br>
+                    ✨ Let AI handle all the Git commands?<br>
+                    ✨ Go from issue to pull request in one conversation?</p>
+            </div>
+            <p style="margin-top: 30px;">This is where your AI coding assistant comes in!</p>
+
+            <div class="visual-box" style="margin-top: 30px; max-width: 900px;">
+                <h3 style="color: #667eea; margin-bottom: 20px; text-align: center;">How AI Assistants Work with Git</h3>
+                <ul class="info-list">
+                    <li>Your coding agents can use the <strong>GitHub CLI (gh)</strong> to interact with your GitHub repositories remotely</li>
+                    <li>They can use <strong>Git commands</strong> in the terminal to manage your local repositories</li>
+                    <li>This enables seamless workflow automation from issue tracking to pull request creation</li>
+                    <li>You communicate in natural language while the agent handles the technical commands</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Slide 23: Traditional vs Coding Agent Workflow -->
+        <div class="slide dark-theme">
+            <h2>Traditional Workflow vs Coding Agent</h2>
+            <div class="split-view">
+                <div class="split-panel">
+                    <h3>❌ Traditional Way</h3>
+                    <div style="text-align: left; color: #b8c5d6; font-size: 1rem; line-height: 1.8;">
+                        1. Browse GitHub issues<br>
+                        2. Copy issue number<br>
+                        3. Switch to terminal<br>
+                        4. Create branch manually<br>
+                        5. Read issue again<br>
+                        6. Write code<br>
+                        7. Stage files<br>
+                        8. Write commit message<br>
+                        9. Push<br>
+                        10. Go to GitHub<br>
+                        11. Create PR manually
+                    </div>
+                </div>
+                <div class="split-panel">
+                    <h3>✅ Coding Agent Way</h3>
+                    <div class="prompt-box" style="margin-top: 30px;">
+                        Show me open issues, fix issue #42, and create a PR
+                    </div>
+                    <p style="color: #48bb78; margin-top: 20px; text-align: center;">Done! ✨</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 24: Setup Your Coding Agent -->
+        <div class="slide dark-theme">
+            <h2>Setting Up Your Coding Agent</h2>
+            <div class="visual-box">
+                <div class="command-label">1. Install GitHub CLI:</div>
+                <div class="command-box">brew install gh</div>
+                <div class="command-label"
+                    style="margin-top: -15px; margin-bottom: 25px; font-size: 0.9rem; color: #cbd5e1;">(or snap install gh, or winget install gh on Windows)</div>
+
+                <div class="command-label" style="margin-top: 20px;">2. Authenticate with GitHub:</div>
+                <div class="command-box">gh auth login</div>
+
+                <div class="command-label" style="margin-top: 20px;">3. Verify GitHub CLI is working:</div>
+                <div class="command-box">gh repo view</div>
+                <div class="command-label"
+                    style="margin-top: -15px; margin-bottom: 25px; font-size: 0.9rem; color: #cbd5e1;">(Run this in a directory with a GitHub repository)</div>
+            </div>
+            <p style="margin-top: 30px;">Your AI coding assistant can now use the GitHub CLI to automate your workflow!</p>
+        </div>
+
+        <!-- Slide 25: Step 1 - Clone with Coding Agent -->
+        <div class="slide dark-theme">
+            <h2>Step 1: Clone a Repository</h2>
+            <div class="demo-box">
+                <h3>Your Prompt</h3>
+                <div class="prompt-box">
+                    Clone this repository to my local machine:<br>
+                    https://github.com/username/practice-repo
+                </div>
+                <div class="response-box">
+                    I'll clone that repository for you.<br><br>
+                    [Runs: git clone https://github.com/username/practice-repo]<br><br>
+                    ✓ Repository cloned successfully<br>
+                    ✓ Switched to directory: practice-repo<br>
+                    ✓ Ready to work with this repository
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 26: Step 2 - List Issues -->
+        <div class="slide dark-theme">
+            <h2>Step 2: Browse Open Issues</h2>
+            <div class="demo-box">
+                <h3>Your Prompt</h3>
+                <div class="prompt-box">
+                    Show me all open issues for this repository
+                </div>
+                <div class="response-box">
+                    I'll fetch the open issues using GitHub CLI.<br><br>
+                    [Runs: gh issue list --state open]
+                </div>
+                <div class="code-output">
+                    #23 bug Fix login timeout after 5 minutes<br>
+                    #42 feature Add dark mode toggle to settings<br>
+                    #51 bug Navigation menu doesn't close on mobile<br>
+                    #67 feature Implement user profile avatars
+                </div>
+            </div>
+            <p>Your coding agent shows you what needs work - no browser required!</p>
+        </div>
+
+        <!-- Slide 29: Step 3 - Select Issue -->
+        <div class="slide dark-theme">
+            <h2>Step 3: Choose Your Issue</h2>
+            <div class="demo-box">
+                <h3>Your Prompt</h3>
+                <div class="prompt-box">
+                    I want to work on issue #42. Show me the details.
+                </div>
+                <div class="response-box">
+                    Let me get the full details for issue #42.<br><br>
+                    [Runs: gh issue view 42]
+                </div>
+                <div class="issue-card">
+                    <h4>#42 Add dark mode toggle to settings</h4>
+                    <p>Users have requested a dark mode option in the settings page. The toggle should:</p>
+                    <ul style="margin: 10px 0; padding-left: 20px; color: #b8c5d6;">
+                        <li>Save preference to localStorage</li>
+                        <li>Apply dark theme immediately</li>
+                        <li>Persist across sessions</li>
+                    </ul>
+                    <span class="issue-label label-feature">enhancement</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 27: Step 3 - Coding Agent Implements -->
+        <div class="slide dark-theme">
+            <h2>Step 3: Your Coding Agent Fixes the Issue</h2>
+            <div class="prompt-box">
+                Fix this issue for me
+            </div>
+            <div class="response-box" style="max-width: 1000px;">
+                I'll implement this feature for you. Here's my plan:<br><br>
+                <strong style="color: #667eea;">1. Create branch</strong> feature/42-dark-mode-toggle<br>
+                <strong style="color: #667eea;">2. Add toggle component</strong> to settings.html<br>
+                <strong style="color: #667eea;">3. Implement CSS</strong> for dark theme<br>
+                <strong style="color: #667eea;">4. Add JavaScript</strong> for localStorage<br><br>
+                [Creating branch and implementing...]<br><br>
+                ✓ Branch created: feature/42-dark-mode-toggle<br>
+                ✓ Modified settings.html<br>
+                ✓ Updated styles.css<br>
+                ✓ Created theme.js<br>
+                ✓ Implementation complete!
+            </div>
+        </div>
+
+        <!-- Slide 28: Step 4 - Review Changes -->
+        <div class="slide dark-theme">
+            <h2>Step 4: Review the Changes</h2>
+            <div class="demo-box">
+                <h3>Your Prompt</h3>
+                <div class="prompt-box">
+                    Show me what you changed
+                </div>
+                <div class="response-box">
+                    Here's a summary of the changes:
+                </div>
+                <div class="split-view">
+                    <div class="split-panel">
+                        <h3>settings.html</h3>
+                        <div class="code-output" style="font-size: 0.85rem;">
+                            &lt;div class="theme-toggle"&gt;<br>
+                            &lt;label&gt;Dark Mode&lt;/label&gt;<br>
+                            &lt;input type="checkbox"<br>
+                            id="darkModeToggle"&gt;<br>
+                            &lt;/div&gt;
+                        </div>
+                    </div>
+                    <div class="split-panel">
+                        <h3>theme.js</h3>
+                        <div class="code-output" style="font-size: 0.85rem;">
+                            const toggle = document<br>
+                            .querySelector('#darkModeToggle');<br>
+                            toggle.addEventListener('change',<br>
+                            applyTheme);
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 29: Step 5 - Create PR -->
+        <div class="slide dark-theme">
+            <h2>Step 5: Create Pull Request</h2>
+            <div class="demo-box">
+                <h3>Your Prompt</h3>
+                <div class="prompt-box">
+                    This looks good! Commit and create a draft PR.
+                </div>
+                <div class="response-box">
+                    I'll commit the changes and create a draft pull request.<br><br>
+                    [Runs: git add .]<br>
+                    [Runs: git commit -m "feat: add dark mode toggle to settings"]<br>
+                    [Runs: git push origin feature/42-dark-mode-toggle]<br>
+                    [Runs: gh pr create --draft --title "Add dark mode toggle" --body "Closes #42"]<br><br>
+                    ✓ Changes committed<br>
+                    ✓ Pushed to remote<br>
+                    ✓ Draft PR created: #73<br><br>
+                    View it here: https://github.com/username/practice-repo/pull/73
+                </div>
+            </div>
+            <p style="color: #48bb78; margin-top: 20px;">🎉 From issue to PR in one conversation!</p>
+        </div>
+
+        <!-- Slide 30: The Complete Workflow -->
+        <div class="slide dark-theme">
+            <h2>What Your Coding Agent Just Did</h2>
+            <div class="highlight-box">
+                <h3>The Complete Workflow</h3>
+                <p>✓ Cloned repository and read context<br>
+                    ✓ Fetched and displayed open issues<br>
+                    ✓ Retrieved detailed requirements<br>
+                    ✓ Created appropriate feature branch<br>
+                    ✓ Analyzed codebase and planned solution<br>
+                    ✓ Implemented complete feature<br>
+                    ✓ Committed with conventional message format<br>
+                    ✓ Pushed changes and created draft PR</p>
+            </div>
+            <div class="emoji">✨</div>
+            <p>All through natural conversation - no manual Git commands needed!</p>
+        </div>
+
+        <!-- Slide 31: The PIV Development Loop -->
+        <div class="slide dark-theme">
+            <h2>The PIV Development Loop</h2>
+            <p style="font-size: 1.3rem; margin-bottom: 10px; color: #667eea;">Plan → Implement → Validate → Repeat</p>
+            <p style="margin-bottom: 40px;">Follow this loop to build features safely with AI assistance and Git checkpoints.</p>
+
+            <div style="display: flex; flex-direction: column; align-items: center; max-width: 1000px; width: 100%;">
+
+                <!-- Plan -->
+                <div style="background: rgba(99, 102, 241, 0.15); border: 2px solid #6366f1; border-radius: 16px; padding: 30px 40px; width: 100%; max-width: 800px; margin: 15px 0;">
+                    <div style="display: flex; align-items: center; gap: 20px;">
+                        <div style="background: #6366f1; color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 700; flex-shrink: 0;">P</div>
+                        <div style="text-align: left; flex: 1;">
+                            <h3 style="color: #6366f1; font-size: 1.5rem; margin-bottom: 8px;">PLAN → Commit</h3>
+                            <p style="color: #b8c5d6; font-size: 1rem; margin-bottom: 8px;">Create a structured plan with your coding assistant, review it, then commit the plan.</p>
+                            <div style="background: rgba(0,0,0,0.3); padding: 10px 15px; border-radius: 8px; font-family: var(--font-mono); font-size: 0.85rem; color: #e0e6ed;">
+                                💬 "Create implementation plan and commit it"
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="color: #667eea; font-size: 2.5rem; margin: 5px 0;">↓</div>
+
+                <!-- Implement -->
+                <div style="background: rgba(16, 185, 129, 0.15); border: 2px solid #10b981; border-radius: 16px; padding: 30px 40px; width: 100%; max-width: 800px; margin: 15px 0;">
+                    <div style="display: flex; align-items: center; gap: 20px;">
+                        <div style="background: #10b981; color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 700; flex-shrink: 0;">I</div>
+                        <div style="text-align: left; flex: 1;">
+                            <h3 style="color: #10b981; font-size: 1.5rem; margin-bottom: 8px;">IMPLEMENT → Commit</h3>
+                            <p style="color: #b8c5d6; font-size: 1rem; margin-bottom: 8px;">Execute one part of the plan. Once done, commit your implementation.</p>
+                            <div style="background: rgba(0,0,0,0.3); padding: 10px 15px; border-radius: 8px; font-family: var(--font-mono); font-size: 0.85rem; color: #e0e6ed;">
+                                💬 "Implement the auth logic and commit when done"
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="color: #667eea; font-size: 2.5rem; margin: 5px 0;">↓</div>
+
+                <!-- Validate -->
+                <div style="background: rgba(245, 158, 11, 0.15); border: 2px solid #f59e0b; border-radius: 16px; padding: 30px 40px; width: 100%; max-width: 800px; margin: 15px 0;">
+                    <div style="display: flex; align-items: center; gap: 20px;">
+                        <div style="background: #f59e0b; color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 700; flex-shrink: 0;">V</div>
+                        <div style="text-align: left; flex: 1;">
+                            <h3 style="color: #f59e0b; font-size: 1.5rem; margin-bottom: 8px;">VALIDATE</h3>
+                            <p style="color: #b8c5d6; font-size: 1rem; margin-bottom: 8px;">Test your changes. If they work, continue the loop. If broken, revert the commit.</p>
+                            <div style="background: rgba(0,0,0,0.3); padding: 10px 15px; border-radius: 8px; font-family: var(--font-mono); font-size: 0.85rem; color: #e0e6ed;">
+                                💬 "That broke the build. Revert last commit."
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="color: #667eea; font-size: 2.5rem; margin: 5px 0; display: flex; align-items: center; gap: 10px;">
+                    <span>🔄</span>
+                    <span style="font-size: 1.2rem; font-family: var(--font-heading); color: #b8c5d6;">Repeat with safe checkpoints!</span>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Slide 32: Summary & Next Steps -->
+        <div class="slide">
+            <h2>You're Ready! 🎉</h2>
+            <div class="highlight-box">
+                <h3>What You Learned Today</h3>
+                <p><strong>Part 1: Git Fundamentals</strong><br>
+                    ✓ Why version control matters<br>
+                    ✓ The four locations in Git's workflow<br>
+                    ✓ Essential commands for daily work<br>
+                    ✓ How to collaborate with GitHub<br><br>
+                    <strong>Part 2: AI-Powered Workflow</strong><br>
+                    ✓ Using AI coding assistants for automation<br>
+                    ✓ Natural language Git operations<br>
+                    ✓ Issue to PR in one conversation<br>
+                    ✓ The PIV loop for safe development
+                </p>
+            </div>
+            <div class="visual-box" style="margin-top: 30px;">
+                <h3 style="color: #667eea; margin-bottom: 15px;">Keep Learning:</h3>
+                <ul class="info-list">
+                    <li>Practice the basic Git workflow daily</li>
+                    <li>Experiment with AI coding agents on your projects</li>
+                    <li>Next: Advanced branching and merge conflicts</li>
+                    <li>Explore: GitHub Actions and CI/CD automation</li>
+                </ul>
+            </div>
+            <p style="margin-top: 40px; font-size: 1.3rem; color: #667eea; font-weight: 600;">Questions? Let's discuss!
+                💬</p>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button id="prevBtn" onclick="changeSlide(-1)">← Previous</button>
+        <button id="nextBtn" onclick="changeSlide(1)">Next →</button>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+
+        function showSlide(n) {
+            if (n >= totalSlides) n = totalSlides - 1;
+            if (n < 0) n = 0;
+
+            slides[currentSlide].classList.remove('active');
+            currentSlide = n;
+            slides[currentSlide].classList.add('active');
+
+            document.getElementById('currentSlide').innerText = currentSlide + 1;
+            document.getElementById('progressBar').style.width = ((currentSlide + 1) / totalSlides) * 100 + '%';
+
+            document.getElementById('prevBtn').disabled = currentSlide === 0;
+            document.getElementById('nextBtn').disabled = currentSlide === totalSlides - 1;
+
+            // Reset and trigger animations for the new slide
+            resetAnimations(slides[currentSlide]);
+        }
+
+        function changeSlide(n) {
+            showSlide(currentSlide + n);
+        }
+
+        function toggleControls() {
+            const controls = document.querySelector('.controls');
+            const toggleBtn = document.getElementById('toggleControlsBtn');
+            controls.classList.toggle('hidden');
+
+            // Change button icon based on state
+            if (controls.classList.contains('hidden')) {
+                toggleBtn.textContent = '👁️‍🗨️'; // Eye with speech bubble (hidden state)
+            } else {
+                toggleBtn.textContent = '👁️'; // Regular eye (visible state)
+            }
+        }
+
+        function resetAnimations(slide) {
+            // Typewriter effect
+            const codeBlocks = slide.querySelectorAll('.command-box, .code-output');
+            codeBlocks.forEach((block, index) => {
+                // Use textContent to preserve spaces and structure better than innerText
+                const text = block.getAttribute('data-text') || block.textContent.trim();
+
+                // Store original text if not already stored
+                if (!block.getAttribute('data-text')) {
+                    block.setAttribute('data-text', text);
+                    block.style.minHeight = block.offsetHeight + 'px'; // Prevent layout shift
+                }
+
+                block.textContent = '';
+                block.style.opacity = '1';
+
+                let i = 0;
+                const speed = 30; // ms per char
+                const startDelay = 500 + (index * 1000); // Stagger multiple blocks
+
+                setTimeout(() => {
+                    block.style.borderRight = '2px solid var(--accent-primary)'; // Cursor
+
+                    function type() {
+                        if (i < text.length) {
+                            block.textContent += text.charAt(i);
+                            i++;
+                            setTimeout(type, speed);
+                        } else {
+                            block.style.borderRight = 'none'; // Remove cursor when done
+                        }
+                    }
+                    type();
+                }, startDelay);
+            });
+
+            // Progressive disclosure for lists
+            const listItems = slide.querySelectorAll('li');
+            listItems.forEach((item, index) => {
+                item.style.opacity = '0';
+                item.style.transform = 'translateX(-20px)';
+                item.style.transition = 'all 0.5s ease';
+                setTimeout(() => {
+                    item.style.opacity = '1';
+                    item.style.transform = 'translateX(0)';
+                }, 300 + (index * 200));
+            });
+
+            // Staggered boxes (Slide 6)
+            const staggerBoxes = slide.querySelectorAll('.stagger-box');
+            staggerBoxes.forEach((box, index) => {
+                box.style.opacity = '0';
+                box.style.transform = 'translateY(30px)';
+                box.style.transition = 'all 0.6s cubic-bezier(0.2, 0.8, 0.2, 1)';
+                setTimeout(() => {
+                    box.style.opacity = '1';
+                    box.style.transform = 'translateY(0)';
+                }, 300 + (index * 600));
+            });
+
+            // Staggered arrows (Slide 6)
+            const staggerArrows = slide.querySelectorAll('.stagger-arrow');
+            staggerArrows.forEach((arrow, index) => {
+                arrow.style.opacity = '0';
+                arrow.style.transform = 'scale(0.5)';
+                arrow.style.transition = 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                setTimeout(() => {
+                    arrow.style.opacity = '1';
+                    arrow.style.transform = 'scale(1)';
+                }, 600 + (index * 600));
+            });
+
+            // Force reload SVG animations
+            // Force reload SVG animations
+            const svgVisuals = slide.querySelectorAll('img.svg-visual');
+            svgVisuals.forEach(svg => {
+                const currentSrc = svg.getAttribute('src'); // Get the original filename
+                // Append a timestamp to force the browser to treat it as a new resource
+                // This is the most reliable way to restart SMIL animations
+                svg.src = `${currentSrc}?t=${Date.now()}`;
+            });
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                changeSlide(1);
+            } else if (e.key === 'ArrowLeft') {
+                changeSlide(-1);
+            }
+        });
+
+        // Initialize
+        showSlide(0);
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,82 @@
+<svg width="100%" height="100%" viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg" style="background-color: #0f172a; font-family: 'Segoe UI', sans-serif;">
+  <defs>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <linearGradient id="mainGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#60a5fa"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Animation Loop Controller -->
+  <rect width="0" height="0">
+    <animate id="cycle" attributeName="opacity" from="0" to="0" dur="8s" begin="0s; cycle.end"/>
+  </rect>
+
+  <!-- Main Branch -->
+  <path d="M 50 300 L 750 300" stroke="#1e293b" stroke-width="4" stroke-linecap="round"/>
+  <text x="50" y="330" fill="#64748b" font-size="12">Main Branch</text>
+
+  <!-- Feature Branch -->
+  <path d="M 100 300 Q 150 300 150 200 L 600 200 Q 650 200 700 300" stroke="#334155" stroke-width="4" fill="none" stroke-linecap="round" stroke-dasharray="10 5"/>
+  
+  <!-- Step 1: Create Branch -->
+  <circle cx="100" cy="300" r="6" fill="#3b82f6" filter="url(#glow)"/>
+  <path d="M 100 300 Q 150 300 150 200" stroke="#10b981" stroke-width="4" fill="none" stroke-linecap="round" stroke-dasharray="200" stroke-dashoffset="200">
+    <animate attributeName="stroke-dashoffset" values="200;0;0;200" keyTimes="0;0.125;0.9;1" begin="cycle.begin" dur="8s" fill="freeze"/>
+  </path>
+  <text x="150" y="180" fill="#10b981" font-size="12" opacity="0">
+    1. Create Branch
+    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.125;0.1875;0.9;1" begin="cycle.begin" dur="8s" fill="freeze"/>
+  </text>
+
+  <!-- Flow Line connecting start to end -->
+  <path d="M 150 200 L 600 200" stroke="#10b981" stroke-width="4" fill="none" stroke-linecap="round" stroke-dasharray="450" stroke-dashoffset="450">
+    <animate attributeName="stroke-dashoffset" values="450;450;0;0;450" keyTimes="0;0.125;0.4375;0.9;1" begin="cycle.begin" dur="8s" fill="freeze"/>
+  </path>
+
+  <!-- Step 2: Commits -->
+  <g opacity="0">
+    <circle cx="200" cy="200" r="8" fill="#10b981" filter="url(#glow)"/>
+    <circle cx="250" cy="200" r="8" fill="#10b981" filter="url(#glow)"/>
+    <text x="255" y="160" text-anchor="middle" fill="#10b981" font-size="12">2. Commits</text>
+    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.25;0.3125;0.9;1" begin="cycle.begin" dur="8s" fill="freeze"/>
+  </g>
+
+  <!-- Step 3: Push -->
+  <g opacity="0">
+    <path d="M 300 200 L 300 100" stroke="#8b5cf6" stroke-width="2" stroke-dasharray="5 5"/>
+    <text x="310" y="150" fill="#8b5cf6" font-size="12">3. Push</text>
+    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.375;0.4375;0.9;1" begin="cycle.begin" dur="8s" fill="freeze"/>
+  </g>
+
+  <!-- Step 4: Open PR -->
+  <g transform="translate(375, 90)" opacity="0">
+    <rect width="100" height="120" rx="5" fill="#1e293b" stroke="#cbd5e1" stroke-width="2"/>
+    <text x="50" y="30" text-anchor="middle" fill="#cbd5e1" font-size="12" font-weight="bold">Pull Request</text>
+    <line x1="20" y1="50" x2="80" y2="50" stroke="#475569" stroke-width="2"/>
+    <line x1="20" y1="70" x2="80" y2="70" stroke="#475569" stroke-width="2"/>
+    <rect x="20" y="90" width="60" height="20" rx="2" fill="#10b981"/>
+    <text x="50" y="105" text-anchor="middle" fill="#fff" font-size="10">Merge</text>
+    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.4375;0.5;0.9;1" begin="cycle.begin" dur="8s" fill="freeze"/>
+  </g>
+
+  <!-- Step 5: Merge -->
+    <text x="680" y="250" fill="#8b5cf6" font-size="12" opacity="0">
+    5. Merge
+    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.5625;0.625;0.9;1" begin="cycle.begin" dur="8s" fill="freeze"/>
+  </text>
+  <path d="M 600 200 Q 650 200 700 300" stroke="#8b5cf6" stroke-width="4" fill="none" stroke-linecap="round" stroke-dasharray="200" stroke-dashoffset="200">
+    <animate attributeName="stroke-dashoffset" values="200;200;0;0;200" keyTimes="0;0.5625;0.6875;0.9;1" begin="cycle.begin" dur="8s" fill="freeze"/>
+  </path>
+  <circle cx="700" cy="300" r="8" fill="#8b5cf6" filter="url(#glow)" opacity="0">
+    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.6875;0.725;0.9;1" begin="cycle.begin" dur="8s" fill="freeze"/>
+  </circle>
+
+
+</svg>

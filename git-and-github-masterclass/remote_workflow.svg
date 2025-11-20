@@ -1,0 +1,58 @@
+<svg width="100%" height="100%" viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg" style="background-color: #0f172a; font-family: 'Segoe UI', sans-serif;">
+  <defs>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <linearGradient id="boxGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#334155"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Animation Loop Controller -->
+  <rect width="0" height="0">
+    <animate id="cycle" attributeName="opacity" from="0" to="0" dur="4s" begin="0s; cycle.end"/>
+  </rect>
+
+  <!-- Local Repo (Left) -->
+  <g transform="translate(100, 100)">
+    <rect width="200" height="200" rx="10" fill="url(#boxGrad)" stroke="#64748b" stroke-width="4"/>
+    <text x="100" y="40" text-anchor="middle" fill="#94a3b8" font-size="16" font-weight="bold">Local Repo</text>
+    <text x="100" y="180" text-anchor="middle" fill="#64748b" font-size="14">Your Computer</text>
+    
+    <!-- Laptop Icon -->
+    <rect x="60" y="80" width="80" height="50" rx="2" fill="#cbd5e1"/>
+    <path d="M 50 130 L 150 130 L 160 140 L 40 140 Z" fill="#94a3b8"/>
+  </g>
+
+  <!-- Remote Repo (Right) -->
+  <g transform="translate(500, 100)">
+    <rect width="200" height="200" rx="10" fill="url(#boxGrad)" stroke="#64748b" stroke-width="4"/>
+    <text x="100" y="40" text-anchor="middle" fill="#94a3b8" font-size="16" font-weight="bold">Remote Repo</text>
+    <text x="100" y="180" text-anchor="middle" fill="#64748b" font-size="14">GitHub / Cloud</text>
+    
+    <!-- Cloud Icon -->
+    <path d="M 60 100 Q 70 70 100 80 Q 120 60 140 80 Q 160 90 150 110 Q 170 120 150 130 Q 130 140 100 130 Q 70 140 60 120 Q 40 110 60 100" fill="#cbd5e1"/>
+  </g>
+
+  <!-- Push Arrow (Top) -->
+  <g>
+    <path d="M 320 150 L 480 150" stroke="#8b5cf6" stroke-width="4" marker-end="url(#arrow)">
+      <animate attributeName="stroke-dasharray" from="0 160" to="160 0" begin="cycle.begin" dur="1s" fill="freeze"/>
+    </path>
+    <text x="400" y="140" text-anchor="middle" fill="#8b5cf6" font-size="14" font-weight="bold">git push</text>
+  </g>
+
+  <!-- Pull Arrow (Bottom) -->
+  <g>
+    <path d="M 480 250 L 320 250" stroke="#10b981" stroke-width="4" marker-end="url(#arrow)">
+      <animate attributeName="stroke-dasharray" from="0 160" to="160 0" begin="cycle.begin + 1.5s" dur="1s" fill="freeze"/>
+    </path>
+    <text x="400" y="280" text-anchor="middle" fill="#10b981" font-size="14" font-weight="bold">git pull</text>
+  </g>
+
+</svg>

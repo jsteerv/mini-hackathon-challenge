@@ -1,0 +1,93 @@
+<svg width="100%" height="100%" viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg" style="background-color: #0f172a; font-family: 'Segoe UI', sans-serif;">
+  <defs>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+      <feOffset dx="2" dy="4" result="offsetblur"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.3"/>
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Animation Loop Controller -->
+  <rect width="0" height="0">
+    <animate id="cycle" attributeName="opacity" from="0" to="0" dur="6s" begin="0s; cycle.end"/>
+  </rect>
+
+  <!-- Background Folder Icon (Subtle) -->
+  <path d="M 100 50 L 300 50 L 350 100 L 700 100 L 700 350 L 100 350 Z" fill="#1e293b" stroke="#334155" stroke-width="4" opacity="0.5"/>
+
+  <!-- Files Group -->
+  <g id="files">
+    <!-- File 1 -->
+    <g transform="translate(150, 150) rotate(-5)" filter="url(#shadow)">
+      <rect width="100" height="120" rx="5" fill="#f8fafc"/>
+      <rect x="10" y="10" width="80" height="60" fill="#e2e8f0"/>
+      <text x="50" y="100" text-anchor="middle" font-size="12" fill="#ef4444" font-weight="bold">project.js</text>
+      <animateTransform attributeName="transform" type="translate" values="150,150; 150,160; 150,150" dur="4s" repeatCount="indefinite"/>
+    </g>
+
+    <!-- File 2 -->
+    <g transform="translate(280, 120) rotate(3)" filter="url(#shadow)">
+      <rect width="100" height="120" rx="5" fill="#f8fafc"/>
+      <rect x="10" y="10" width="80" height="60" fill="#e2e8f0"/>
+      <text x="50" y="100" text-anchor="middle" font-size="12" fill="#ef4444" font-weight="bold">project_final.js</text>
+      <animateTransform attributeName="transform" type="translate" values="280,120; 280,110; 280,120" dur="5s" repeatCount="indefinite"/>
+    </g>
+
+    <!-- File 3 -->
+    <g transform="translate(420, 160) rotate(-2)" filter="url(#shadow)" opacity="0">
+      <rect width="100" height="120" rx="5" fill="#f8fafc"/>
+      <rect x="10" y="10" width="80" height="60" fill="#e2e8f0"/>
+      <text x="50" y="100" text-anchor="middle" font-size="12" fill="#ef4444" font-weight="bold">final_v2.js</text>
+      <animate attributeName="opacity" from="0" to="1" begin="cycle.begin + 0.5s" dur="0.5s" fill="freeze"/>
+      <animateTransform attributeName="transform" type="scale" values="0;1" begin="cycle.begin + 0.5s" dur="0.5s" fill="freeze" additive="sum"/>
+    </g>
+
+    <!-- File 4 -->
+    <g transform="translate(200, 220) rotate(8)" filter="url(#shadow)" opacity="0">
+      <rect width="100" height="120" rx="5" fill="#f8fafc"/>
+      <rect x="10" y="10" width="80" height="60" fill="#e2e8f0"/>
+      <text x="50" y="100" text-anchor="middle" font-size="12" fill="#ef4444" font-weight="bold">REAL_final.js</text>
+      <animate attributeName="opacity" from="0" to="1" begin="cycle.begin + 1.0s" dur="0.5s" fill="freeze"/>
+      <animateTransform attributeName="transform" type="scale" values="0;1" begin="cycle.begin + 1.0s" dur="0.5s" fill="freeze" additive="sum"/>
+    </g>
+
+    <!-- File 5 -->
+    <g transform="translate(500, 100) rotate(-8)" filter="url(#shadow)" opacity="0">
+      <rect width="100" height="120" rx="5" fill="#f8fafc"/>
+      <rect x="10" y="10" width="80" height="60" fill="#e2e8f0"/>
+      <text x="50" y="100" text-anchor="middle" font-size="10" fill="#ef4444" font-weight="bold">final_FINAL.js</text>
+      <animate attributeName="opacity" from="0" to="1" begin="cycle.begin + 1.5s" dur="0.5s" fill="freeze"/>
+      <animateTransform attributeName="transform" type="scale" values="0;1" begin="cycle.begin + 1.5s" dur="0.5s" fill="freeze" additive="sum"/>
+    </g>
+
+    <!-- File 6 -->
+    <g transform="translate(550, 200) rotate(5)" filter="url(#shadow)" opacity="0">
+      <rect width="100" height="120" rx="5" fill="#f8fafc"/>
+      <rect x="10" y="10" width="80" height="60" fill="#e2e8f0"/>
+      <text x="50" y="100" text-anchor="middle" font-size="10" fill="#ef4444" font-weight="bold">OLD_do_not_use.js</text>
+      <animate attributeName="opacity" from="0" to="1" begin="cycle.begin + 2.0s" dur="0.5s" fill="freeze"/>
+      <animateTransform attributeName="transform" type="scale" values="0;1" begin="cycle.begin + 2.0s" dur="0.5s" fill="freeze" additive="sum"/>
+    </g>
+  </g>
+
+  <!-- Chaos Lines -->
+  <path d="M 200 200 Q 300 150 400 200" stroke="#ef4444" stroke-width="4" fill="none" stroke-dasharray="5 5" opacity="0">
+    <animate attributeName="opacity" from="0" to="0.5" begin="cycle.begin + 2.5s" dur="0.5s" fill="freeze"/>
+  </path>
+  <path d="M 450 180 Q 500 250 550 200" stroke="#ef4444" stroke-width="4" fill="none" stroke-dasharray="5 5" opacity="0">
+    <animate attributeName="opacity" from="0" to="0.5" begin="cycle.begin + 2.7s" dur="0.5s" fill="freeze"/>
+  </path>
+
+  <!-- Emoji -->
+  <text x="400" y="350" text-anchor="middle" font-size="40" opacity="0">
+    😱
+    <animate attributeName="opacity" from="0" to="1" begin="cycle.begin + 3s" dur="0.5s" fill="freeze"/>
+    <animateTransform attributeName="transform" type="scale" values="0;1.5;1" begin="cycle.begin + 3s" dur="0.5s" fill="freeze" additive="sum"/>
+  </text>
+</svg>

@@ -1,0 +1,47 @@
+<svg width="100%" height="100%" viewBox="0 0 800 300" xmlns="http://www.w3.org/2000/svg" style="background-color: #0f172a; font-family: 'Segoe UI', sans-serif;">
+  <defs>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <linearGradient id="cloneGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Cloud (Remote) -->
+  <g transform="translate(400, 50)">
+    <path d="M -40,10 Q -20,-30 10,-10 Q 40,-30 60,10 Q 70,30 50,50 Q 10,60 -30,50 Q -50,30 -40,10" fill="#1e293b" stroke="#94a3b8" stroke-width="4"/>
+    <text x="10" y="25" text-anchor="middle" fill="#cbd5e1" font-size="14" font-weight="bold">Remote Repo</text>
+  </g>
+
+  <!-- Computer (Local) -->
+  <g transform="translate(400, 250)">
+    <rect x="-60" y="-40" width="120" height="80" rx="5" fill="#1e293b" stroke="#94a3b8" stroke-width="4"/>
+    <path d="M -70 40 L 70 40 L 80 50 L -80 50 Z" fill="#334155"/>
+    <text x="0" y="0" text-anchor="middle" fill="#cbd5e1" font-size="14" font-weight="bold">Local Machine</text>
+  </g>
+
+  <!-- Clone Path -->
+  <path d="M 400 100 L 400 210" stroke="#334155" stroke-width="4" stroke-dasharray="10 5"/>
+
+  <!-- Downloading Files Animation -->
+  <g>
+    <rect x="385" y="100" width="30" height="40" rx="4" fill="url(#cloneGrad)" filter="url(#glow)">
+      <animate attributeName="y" from="100" to="210" dur="1.5s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.1;0.9;1" dur="1.5s" repeatCount="indefinite"/>
+    </rect>
+    
+    <rect x="385" y="100" width="30" height="40" rx="4" fill="url(#cloneGrad)" filter="url(#glow)">
+      <animate attributeName="y" from="100" to="210" begin="0.75s" dur="1.5s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.1;0.9;1" begin="0.75s" dur="1.5s" repeatCount="indefinite"/>
+    </rect>
+  </g>
+
+  <text x="450" y="160" fill="#8b5cf6" font-size="14" font-weight="bold">git clone</text>
+
+</svg>
