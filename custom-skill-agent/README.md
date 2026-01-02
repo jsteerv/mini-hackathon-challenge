@@ -30,44 +30,6 @@ Level 3: Resources (loaded on-demand)
 
 This pattern allows an agent to have access to potentially hundreds of skills without overwhelming the context window.
 
-## Architecture
-
-```
-custom-skill-agent/
-|-- src/                      # Core agent implementation
-|   |-- agent.py              # Pydantic AI agent with skill tools
-|   |-- skill_loader.py       # Skill discovery and metadata parsing
-|   |-- skill_tools.py        # Progressive disclosure tools
-|   |-- http_tools.py         # HTTP request tools
-|   |-- dependencies.py       # Agent dependencies
-|   |-- providers.py          # LLM provider configuration
-|   |-- settings.py           # Pydantic Settings configuration
-|   |-- prompts.py            # System prompt templates
-|   +-- cli.py                # Rich-based CLI interface
-|
-|-- skills/                   # Skill library
-|   |-- weather/              # Simple weather skill
-|   |   |-- SKILL.md          # Skill instructions
-|   |   +-- references/       # API documentation
-|   |       +-- api_reference.md
-|   |
-|   +-- code_review/          # Advanced code review skill
-|       |-- SKILL.md          # Multi-step review workflow
-|       |-- references/       # Extensive documentation (~45KB)
-|       |   |-- best_practices.md
-|       |   |-- security_checklist.md
-|       |   +-- common_antipatterns.md
-|       +-- scripts/          # Helper scripts
-|           +-- lint_patterns.py
-|
-|-- tests/                    # Test suite
-|   |-- test_skill_loader.py  # Skill loader tests
-|   |-- test_skill_tools.py   # Tool tests
-|   +-- test_agent.py         # Agent integration tests
-|
-+-- examples/                 # Reference implementations (MongoDB RAG)
-```
-
 ## Quick Start
 
 ### Prerequisites
@@ -80,8 +42,8 @@ custom-skill-agent/
 1. Clone the repository:
 
 ```bash
-git clone <repository-url>
-cd custom-skill-agent
+git clone https://github.com/dynamous-community/workshops.git
+cd workshops/custom-skill-agent
 ```
 
 2. Create and activate a virtual environment:
@@ -115,13 +77,6 @@ LLM_PROVIDER=openrouter
 LLM_API_KEY=sk-or-v1-your-api-key-here
 LLM_MODEL=anthropic/claude-sonnet-4
 LLM_BASE_URL=https://openrouter.ai/api/v1
-
-# Skills Configuration
-SKILLS_DIR=skills
-
-# Application Settings
-APP_ENV=development
-LOG_LEVEL=INFO
 ```
 
 ### Running the Agent
@@ -166,6 +121,44 @@ Example interaction:
 User: Review this authentication code for security issues
 Agent: [loads code_review skill] [loads security_checklist]
        I'll analyze this against security best practices...
+```
+
+## Architecture
+
+```
+custom-skill-agent/
+|-- src/                      # Core agent implementation
+|   |-- agent.py              # Pydantic AI agent with skill tools
+|   |-- skill_loader.py       # Skill discovery and metadata parsing
+|   |-- skill_tools.py        # Progressive disclosure tools
+|   |-- http_tools.py         # HTTP request tools
+|   |-- dependencies.py       # Agent dependencies
+|   |-- providers.py          # LLM provider configuration
+|   |-- settings.py           # Pydantic Settings configuration
+|   |-- prompts.py            # System prompt templates
+|   +-- cli.py                # Rich-based CLI interface
+|
+|-- skills/                   # Skill library
+|   |-- weather/              # Simple weather skill
+|   |   |-- SKILL.md          # Skill instructions
+|   |   +-- references/       # API documentation
+|   |       +-- api_reference.md
+|   |
+|   +-- code_review/          # Advanced code review skill
+|       |-- SKILL.md          # Multi-step review workflow
+|       |-- references/       # Extensive documentation (~45KB)
+|       |   |-- best_practices.md
+|       |   |-- security_checklist.md
+|       |   +-- common_antipatterns.md
+|       +-- scripts/          # Helper scripts
+|           +-- lint_patterns.py
+|
+|-- tests/                    # Test suite
+|   |-- test_skill_loader.py  # Skill loader tests
+|   |-- test_skill_tools.py   # Tool tests
+|   +-- test_agent.py         # Agent integration tests
+|
++-- examples/                 # Reference implementations (MongoDB RAG)
 ```
 
 ## Creating Your Own Skill
@@ -278,77 +271,6 @@ api_docs = await read_skill_file_tool(
 )
 ```
 
-## Testing
-
-Run the test suite:
-
-```bash
-# Run all tests
-pytest tests/ -v
-
-# Run specific test files
-pytest tests/test_skill_loader.py -v
-pytest tests/test_skill_tools.py -v
-pytest tests/test_agent.py -v
-```
-
-Note: If you encounter pytest plugin conflicts, you can run tests directly:
-
-```bash
-python -c "
-import asyncio
-from pathlib import Path
-from src.skill_loader import SkillLoader
-
-loader = SkillLoader(Path('skills'))
-skills = loader.discover_skills()
-print(f'Discovered {len(skills)} skills: {[s.name for s in skills]}')
-assert len(skills) >= 2, 'Expected at least 2 skills'
-print('PASSED')
-"
-```
-
-## Project Configuration
-
-### Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `LLM_PROVIDER` | Provider name (openrouter, openai, anthropic) | openrouter |
-| `LLM_API_KEY` | API key for the LLM provider | Required |
-| `LLM_MODEL` | Model identifier | anthropic/claude-sonnet-4 |
-| `LLM_BASE_URL` | Base URL for API requests | Provider default |
-| `SKILLS_DIR` | Directory containing skills | skills |
-| `LOG_LEVEL` | Logging level | INFO |
-
-### Pydantic Settings
-
-Settings are loaded from environment variables and `.env` file:
-
-```python
-from src.settings import load_settings
-
-settings = load_settings()
-print(f"Skills directory: {settings.skills_dir}")
-print(f"Model: {settings.llm_model}")
-```
-
-## Workshop Context
-
-This project was created for a workshop demonstrating:
-
-1. **Pattern Extraction**: How to identify and extract successful patterns from proprietary AI systems
-2. **Framework Independence**: Building portable, framework-agnostic components
-3. **Context Management**: Using progressive disclosure to scale beyond context limits
-4. **Type-Safe Agents**: Building maintainable agents with Pydantic AI
-
-### Key Takeaways
-
-- Progressive disclosure eliminates context window constraints
-- Skills are portable across any AI framework
-- Type safety and testing are essential for production agents
-- Simple implementations beat over-engineered abstractions
-
 ## Available Tools
 
 The agent has access to these tools:
@@ -360,37 +282,3 @@ The agent has access to these tools:
 | `list_skill_files_tool` | List available files in a skill |
 | `http_get_tool` | Make HTTP GET requests |
 | `http_post_tool` | Make HTTP POST requests |
-
-## Troubleshooting
-
-### Skills Not Found
-
-Ensure your skill has:
-- A `SKILL.md` file in the skill directory
-- Valid YAML frontmatter with `name` and `description` fields
-- Properly formatted YAML (check for syntax errors)
-
-### API Errors
-
-Check that:
-- Your `.env` file exists and contains valid API credentials
-- The `LLM_API_KEY` environment variable is set
-- The model you specified is available from your provider
-
-### Import Errors
-
-If you see import errors:
-- Ensure you've activated your virtual environment
-- Run `pip install -r requirements.txt` to install dependencies
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run tests to ensure everything passes
-5. Submit a pull request
-
-## License
-
-MIT License - see LICENSE file for details.
