@@ -75,7 +75,7 @@ export function ProTips() {
       icon: '🔄',
       title: '3-5 Iterations Max',
       front: 'If you\'re iterating more than 5 times, your prompts need work.',
-      back: 'Each iteration should refine, not redesign. If you're making big changes, step back and improve your context and specificity.',
+      back: "Each iteration should refine, not redesign. If you're making big changes, step back and improve your context and specificity.",
       color: '#00d9c0'
     },
     {

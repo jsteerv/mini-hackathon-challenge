@@ -1,7 +1,7 @@
 import { Hero } from './components/Hero/Hero'
 import { Workflow } from './components/Workflow/Workflow'
 import { PromptPatterns } from './components/PromptPatterns/PromptPatterns'
-import { Section } from './components/common/Section'
+import { ProTips } from './components/ProTips/ProTips'
 
 function App() {
   return (
@@ -10,28 +10,19 @@ function App() {
       <Hero />
 
       {/* Workflow Section */}
-      <Section id="workflow" className="bg-[#0f1529]">
+      <section id="workflow" className="bg-[#0f1529]">
         <Workflow />
-      </Section>
+      </section>
 
       {/* Prompt Patterns Section */}
-      <Section id="prompts">
+      <section id="prompts">
         <PromptPatterns />
-      </Section>
+      </section>
 
       {/* Pro Tips Section */}
-      <Section id="tips" className="bg-[#0f1529]">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-4xl md:text-5xl font-bold mb-12 text-center neon-text">
-            Pro Tips & Gotchas
-          </h2>
-          <div className="text-center text-gray-400">
-            <p className="terminal">
-              Cards with tips and warnings coming soon...
-            </p>
-          </div>
-        </div>
-      </Section>
+      <section id="tips" className="bg-[#0f1529]">
+        <ProTips />
+      </section>
     </div>
   )
 }
