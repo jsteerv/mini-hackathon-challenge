@@ -1,5 +1,6 @@
-import { Section } from './components/common/Section'
 import { Hero } from './components/Hero/Hero'
+import { Workflow } from './components/Workflow/Workflow'
+import { Section } from './components/common/Section'
 
 function App() {
   return (
@@ -9,16 +10,7 @@ function App() {
 
       {/* Workflow Section */}
       <Section id="workflow" className="bg-[#0f1529]">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-4xl md:text-5xl font-bold mb-12 text-center neon-text">
-            The Workflow: PIV × PRP
-          </h2>
-          <div className="text-center text-gray-400">
-            <p className="terminal">
-              Interactive process diagram coming soon...
-            </p>
-          </div>
-        </div>
+        <Workflow />
       </Section>
 
       {/* Prompt Patterns Section */}
