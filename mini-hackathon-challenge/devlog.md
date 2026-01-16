@@ -159,6 +159,169 @@ npm run build
 
 ---
 
+## Phase 1.5: Skills & Design Integration ✅
+
+**Status:** Completed
+**Started:** 2026-01-16
+**Ended:** 2026-01-16
+
+### Resources Integrated
+
+#### 1. Frontend Design Skill (Anthropic)
+**Source:** https://github.com/anthropics/claude-code/tree/main/plugins/frontend-design
+
+**Key Principles Adopted:**
+- **Design Thinking**: Understand purpose, tone, constraints before coding
+- **Bold Aesthetic Direction**: Cyberpunk/retro-futuristic for this project
+- **Typography**: Distinctive fonts, avoid Inter/Roboto overuse
+- **Motion**: High-impact moments (page load, scroll-triggered)
+- **Spatial Composition**: Asymmetry, overlap, diagonal flow
+- **Backgrounds**: Gradient meshes, noise textures, geometric patterns
+
+**Anti-Patterns to Avoid:**
+- Generic AI aesthetics (purple gradients on white)
+- Overused fonts (Space Grotesk, Inter-only)
+- Cliched color schemes
+- Cookie-cutter designs
+
+#### 2. Playwright Skill
+**Source:** https://github.com/lackeyjb/playwright-skill
+
+**Integration:**
+- Installed `@playwright/test` as dev dependency
+- Created `playwright.config.js` with:
+  - Desktop (Chrome) and mobile (iPhone 12) viewports
+  - Auto-start dev server on testing
+  - Screenshots on failure
+  - HTML reporter
+- Created test suite: `tests/e2e/landing-page.spec.js`
+  - Core functionality tests (headings, sections, colors)
+  - Responsive tests (375px, 1920px)
+  - Accessibility tests (heading hierarchy, contrast)
+  - Console error detection
+- Added npm scripts:
+  - `npm run test:e2e` - Run all tests
+  - `npm run test:e2e:ui` - Run with UI
+  - `npm run test:e2e:debug` - Debug mode
+
+#### 3. Gemini King Mode Protocol
+**Source:** https://github.com/aicodeking/yt-tutorial/blob/main/gemini-king-mode.md
+
+**Protocols Integrated:**
+
+**A. Operational Directives:**
+- Follow instructions immediately
+- Zero fluff: concise answers
+- Output first: prioritize code and visual solutions
+- "ULTRATHINK" mode: deep reasoning when triggered
+
+**B. Design Philosophy: "Intentional Minimalism"**
+- Anti-generic: reject template layouts
+- Uniqueness: bespoke layouts, asymmetry
+- The "Why" Factor: every element has a purpose
+- Minimalism: reduction is sophistication
+
+**C. Frontend Standards:**
+- Modern stack (React, Tailwind CSS v4)
+- Focus on micro-interactions and spacing
+- Invisible UX: it just works
+
+### Files Created
+
+1. **CLAUDE.md** - Project-specific guidelines for Claude
+   - Core principles (Intentional Minimalism, Cyberpunk × Sunset)
+   - Technical stack documentation
+   - Component guidelines
+   - Development workflow (PIV Loop)
+   - Testing protocol
+   - Design patterns
+   - Success metrics
+
+2. **DESIGN_PRINCIPLES.md** - Comprehensive design guide
+   - Aesthetic philosophy
+   - Visual language (color, typography, space)
+   - Motion as information
+   - Component design patterns
+   - Accessibility standards
+   - Performance guidelines
+   - Anti-patterns to avoid
+   - Meta design layer
+   - Testing checklist
+
+3. **playwright.config.js** - Test configuration
+   - Dual viewport testing (desktop + mobile)
+   - Auto-server management
+   - Screenshot + trace on retry
+
+4. **tests/e2e/landing-page.spec.js** - Test suite
+   - 10 tests covering:
+     - Content visibility
+     - Color scheme validation
+     - Responsive design
+     - Smooth scroll
+     - Heading hierarchy
+     - Console error detection
+     - Basic accessibility
+
+5. **src/index.css** - Enhanced with:
+   - Advanced animations (glitch, float, pulse-glow)
+   - Scroll reveal classes
+   - Stagger children animations
+   - Typing cursor effect
+   - Grid background pattern
+   - Gradient border
+   - Custom scrollbar
+   - Terminal/code block styles
+   - Print styles
+
+6. **package.json** - Updated with test scripts
+
+### Design System Enhancements
+
+**New Component Classes:**
+- `.neon-text` - Multi-layer glow effect
+- `.neon-border` - Interactive border glow
+- `.gradient-text` - Orange-to-teal gradient
+- `.glass-card` - Glass morphism with backdrop blur
+- `.terminal` - Code block with terminal styling
+- `.glitch-hover` - Glitch animation on hover
+- `.scroll-reveal` - Scroll-triggered fade-in
+- `.stagger-children` - Sequential child animations
+- `.float` - Floating animation
+- `.pulse-glow` - Pulsing glow effect
+- `.typing-cursor` - Blinking cursor for terminal text
+- `.grid-bg` - Subtle grid background
+- `.gradient-border` - Animated gradient border
+
+### Color Palette Refined
+
+**Primary:**
+- Deep Slate: `#0a0e27` (background)
+- Slate Dark: `#0f1529` (section alt)
+- Slate Light: `#1a2133` (cards)
+
+**Accents:**
+- Neon Orange: `#ff6b35` (primary accent, glow)
+- Teal: `#00d9c0` (secondary accent)
+
+### Build Verification
+```bash
+npm run build
+✓ built in 3.21s
+CSS: 17.54 kB (4.24 kB gzipped) ✅
+JS: 195.21 kB (61.28 kB gzipped) ✅
+```
+
+### Key Decisions
+
+1. **CSS-First Animations**: All animations in CSS for performance
+2. **Accessibility**: WCAG AAA compliance (7:1 contrast ratio target)
+3. **Mobile-First**: Responsive design from 375px up
+4. **Test Coverage**: Playwright for E2E, responsive, a11y
+5. **Meta Documentation**: CLAUDE.md and DESIGN_PRINCIPLES.md guide all future work
+
+---
+
 ## Phase 2: Build Hero Section
 
 **Status:** Pending
