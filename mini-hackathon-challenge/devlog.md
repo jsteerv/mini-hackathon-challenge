@@ -554,7 +554,162 @@ JS: 208.63 kB (64.27 kB gzipped)
 
 ---
 
-## Phase 4: Build Prompt Patterns Section
+## Phase 4: Build Prompt Patterns Section ✅
+
+**Status:** Completed
+**Started:** 2026-01-16
+**Ended:** 2026-01-16
+
+### Implementation
+
+#### PromptPatterns Component Created (`src/components/PromptPatterns/PromptPatterns.jsx`)
+
+**Four Expandable Prompt Cards:**
+
+1. **Context Setting** (Teal accent)
+   - Title: "Provide Context Upfront"
+   - Icon: 📋
+   - Real prompt from Hero section build
+   - Before/After comparison
+   - 4 key principles
+
+2. **Specificity** (Orange accent)
+   - Title: "Be Specific About Requirements"
+   - Icon: 🎯
+   - Real prompt for animation specs
+   - Before/After comparison
+   - 4 key principles
+
+3. **Iterative Refinement** (Orange accent)
+   - Title: "Iterate with Precision"
+   - Icon: 🔄
+   - Real iteration 2 prompt for neon glow
+   - Before/After comparison
+   - 4 key principles
+
+4. **Meta Prompts** (Teal accent)
+   - Title: "Use Meta Prompting"
+   - Icon: 🎭
+   - Example of meta-prompting technique
+   - Before/After comparison
+   - 4 key principles
+
+**Features:**
+- **Click to expand/collapse** each prompt card
+- **Before/After comparison** side-by-side
+- **Copy to clipboard** buttons on code blocks
+- **Scroll-triggered animations** (200ms staggered delays)
+- **Custom scrollbar** on long code blocks
+- **Real prompts** from actual project development
+
+#### Interactive Elements
+
+**Expand/Collapse:**
+- Click card header to toggle expanded content
+- Chevron icon rotates on expand
+- Smooth transition (300ms)
+- Only one card can be expanded at a time
+
+**Copy to Clipboard:**
+- Copy buttons on both "Before" and "After" code blocks
+- Visual feedback: ✓ checkmark when copied
+- Auto-clears after 2 seconds
+- Toast-style inline feedback
+
+**Scroll Animations:**
+- Intersection Observer for section visibility
+- Staggered card reveals (200ms between cards)
+- Fade in + slide up effect
+- Cards reveal in sequence
+
+#### Layout & Design
+
+**Card Structure:**
+```
+Card Header (always visible)
+- Icon (color-coded)
+- Category badge
+- Title
+- Why it works description
+- Expand/collapse indicator
+
+Expanded Content (click to reveal)
+- Before (vague prompt) - terminal style
+- After (specific prompt) - terminal style
+- Key Principles - bullet points
+```
+
+**Color Coding:**
+- Context/Meta: Teal (#00d9c0)
+- Specificity/Iteration: Orange (#ff6b35)
+
+**Terminal Style:**
+- Dark background (#0f1529)
+- Orange border
+- Monospace font
+- Custom scrollbar
+- ">" prefix indicator
+
+### Technical Details
+
+**State Management:**
+- `expandedPrompt` - Which card is expanded (null | id)
+- `copiedPrompt` - Which prompt was just copied (for feedback)
+- `visibleCards` - Which cards have been revealed
+
+**Data Structure:**
+```js
+const prompts = [
+  {
+    id, category, title, icon, color,
+    before: 'vague prompt',
+    after: 'specific prompt',
+    why: 'explanation',
+    tips: ['tip1', 'tip2', ...]
+  },
+  ...
+]
+```
+
+**Effects:**
+1. Intersection Observer for scroll detection
+2. Staggered reveal timeouts (0ms, 200ms, 400ms, 600ms)
+3. Copy feedback timeout (2s)
+
+### Real Prompts Used
+
+All "After" prompts are actual prompts used in building this project:
+- **Hero section context prompt** - Set up entire visual direction
+- **Animation specs prompt** - Defined exact timing and effects
+- **Iteration 2 prompt** - Added neon glow and ambient effects
+- **Meta-prompt example** - Demonstrated self-reflection technique
+
+### App Integration
+
+Updated `src/App.jsx`:
+- Imported and rendered `<PromptPatterns />` component
+- Wrapped in `<Section id="prompts" />` (default bg color)
+
+### Build Verification
+```bash
+npm run build
+✓ built in 3.15s
+CSS: 30.96 kB (6.41 kB gzipped)
+JS: 217.93 kB (66.94 kB gzipped)
+```
+
+### Design Decisions
+
+1. **Real prompts authenticity**: Every "After" prompt is genuine, not fabricated
+2. **Before/After comparison**: Shows transformation clearly
+3. **Copy functionality**: Users can actually use these prompts
+4. **Expandable cards**: Keeps UI clean, reveals detail on demand
+5. **Terminal styling**: Fits cyberpunk theme, makes code stand out
+6. **Meta note**: Reinforces authenticity of examples
+
+---
+
+## Phase 5: Build Pro Tips Section
 
 **Status:** Pending
-**Next:** Create prompt examples with real prompts from this project
+**Next:** Create flip-card style tips and gotchas

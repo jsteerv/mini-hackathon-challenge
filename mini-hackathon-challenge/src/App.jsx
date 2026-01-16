@@ -1,5 +1,6 @@
 import { Hero } from './components/Hero/Hero'
 import { Workflow } from './components/Workflow/Workflow'
+import { PromptPatterns } from './components/PromptPatterns/PromptPatterns'
 import { Section } from './components/common/Section'
 
 function App() {
@@ -15,16 +16,7 @@ function App() {
 
       {/* Prompt Patterns Section */}
       <Section id="prompts">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-4xl md:text-5xl font-bold mb-12 text-center neon-text">
-            Prompt Patterns Deep-Dive
-          </h2>
-          <div className="text-center text-gray-400">
-            <p className="terminal">
-              Real prompts and examples coming soon...
-            </p>
-          </div>
-        </div>
+        <PromptPatterns />
       </Section>
 
       {/* Pro Tips Section */}
