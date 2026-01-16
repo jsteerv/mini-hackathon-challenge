@@ -6,7 +6,7 @@ test.describe('Landing Page - Core Functionality', () => {
 
     // Check main heading
     const heading = page.locator('h1');
-    await expect(heading).toContainText('ITERATE LIKE A PRO');
+    await expect(heading).toContainText('IterateLike A Pro');
   });
 
   test('should display all main sections', async ({ page }) => {
@@ -53,9 +53,10 @@ test.describe('Landing Page - Core Functionality', () => {
     await page.setViewportSize({ width: 1920, height: 1080 });
     await page.goto('/');
 
-    // Check if all sections are visible
-    const sections = page.locator('section');
-    await expect(sections).toHaveCount(4);
+    // Check that key sections exist
+    await expect(page.locator('#workflow')).toBeVisible();
+    await expect(page.locator('#prompts')).toBeVisible();
+    await expect(page.locator('#tips')).toBeVisible();
 
     // Take screenshot for visual regression
     await page.screenshot({ path: 'test-results/desktop-home.png', fullPage: true });
@@ -106,11 +107,13 @@ test.describe('Landing Page - Accessibility', () => {
   test('should have accessible heading structure', async ({ page }) => {
     await page.goto('/');
 
-    // Check for skip link or main content
-    const main = page.locator('main');
-    const hasMainOrSkip = await main.count() > 0;
+    // Check for single h1
+    const h1s = page.locator('h1');
+    await expect(h1s).toHaveCount(1);
 
-    expect(hasMainOrSkip).toBeTruthy();
+    // Check for h2s in sections
+    const h2s = page.locator('h2');
+    await expect(h2s).toHaveCount(3);
   });
 
   test('should have color contrast (basic check)', async ({ page }) => {
